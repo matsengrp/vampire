@@ -1,5 +1,12 @@
 # vampire
 
+## Setup
+
+```
+conda install biopython jupyter keras matplotlib scikit-learn
+scp /fh/fast/matsen_e/data/dnnir/spurf_heavy_chain_AHo.fasta ..
+```
+
 
 ## TCRA
 
