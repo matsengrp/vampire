@@ -8,7 +8,7 @@ scp /fh/fast/matsen_e/data/dnnir/spurf_heavy_chain_AHo.fasta ..
 ```
 
 
-## TCRA
+## TCRB
 
 ### Plan 1
 
@@ -36,3 +36,16 @@ Evaluate using joint distribution of summary statistics:
 * germline gene use
 * AA frequencies (per-site and joint)
 * biochemical properties
+
+
+## Data
+TCR data: `/fh/fast/matsen_e/kdavidse/data/seshadri/data/Adaptive/clinical_cohort`
+
+Remove junk (require gene annotation, in frame CDR3, cysteine at the CDR3 start and phenylalanine at the CDR3 end) and extract CDR3 sequence, V gene and J gene:
+`cut -f 2,3,11,17 /fh/fast/matsen_e/kdavidse/data/seshadri/data/Adaptive/clinical_cohort/02-0249_TCRB.tsv | grep -v 'unresolved' | grep -P '\tIn\t' | cut -f 1,3,4 | grep '^C' | grep -P 'F\t' > /fh/fast/matsen_e/kdavidse/data/dnnir/Ab-VAE/vampire/02-0249_TCRB_KD_cut.tsv`
+
+Do it for all TCRB files and remove duplicates:
+`cut -f 2,3,11,17 /fh/fast/matsen_e/kdavidse/data/seshadri/data/Adaptive/clinical_cohort/*_TCRB.tsv | grep -v 'unresolved' | grep -P '\tIn\t' | cut -f 1,3,4 | grep '^C' | grep -P 'F\t' | sort -u > /fh/fast/matsen_e/kdavidse/data/dnnir/Ab-VAE/vampire/all_TCRB_KD_cut.tsv`
+
+
+
