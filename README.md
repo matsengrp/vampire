@@ -26,6 +26,11 @@ scp /fh/fast/matsen_e/data/dnnir/spurf_heavy_chain_AHo.fasta ..
 ## Architecture
 
 1. Kristian's existing two-layer VAE
+
+![Simple TCR VAE](layout_plots/vae_TCR.svg)
+
+
+
 2. [VRNN](http://arxiv.org/abs/1506.02216)
 
 
