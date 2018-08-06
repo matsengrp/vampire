@@ -55,3 +55,26 @@ Do it for all TCRB files and remove duplicates:
 
 
 
+## Using Jupyter Notebook on quokka/stoat
+Start clean with no modules loaded:
+```
+module purge
+```
+
+Then load the necessary Python module:
+```
+module load Python/3.6.3-foss-2016b-fh1
+```
+
+Navigate to desired home of the notebook and start Jupyter:
+```
+jupyter notebook --no-browser --ip=0.0.0.0
+```
+
+A link with a token will appear e.g.:
+```
+http://0.0.0.0:8888/?token=f140bc529444bef792c501c5c74c2f38f87e1e89df12208c
+```
+
+Copy paste link into browser and replace `0.0.0.0` with `quokka` or `stoat` depending on which machine you are logged on.
+
