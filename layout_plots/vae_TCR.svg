@@ -9,8 +9,8 @@
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 1060)">
 <title>G</title>
 <polygon fill="white" stroke="none" points="-4,4 -4,-1060 1030,-1060 1030,4 -4,4"/>
-<!-- 139645503030328 -->
-<g id="node1" class="node"><title>139645503030328</title>
+<!-- 140179133905496 -->
+<g id="node1" class="node"><title>140179133905496</title>
 <polygon fill="none" stroke="black" points="41,-1009 41,-1055 357,-1055 357,-1009 41,-1009"/>
 <text text-anchor="middle" x="123" y="-1028.3" font-family="Times,serif" font-size="14.00">onehot_CDR3: InputLayer</text>
 <polyline fill="none" stroke="black" points="205,-1009 205,-1055 "/>
@@ -22,8 +22,8 @@
 <polyline fill="none" stroke="black" points="261,-1032 357,-1032 "/>
 <text text-anchor="middle" x="309" y="-1016.8" font-family="Times,serif" font-size="14.00">(None, 30, 21)</text>
 </g>
-<!-- 139645503031840 -->
-<g id="node2" class="node"><title>139645503031840</title>
+<!-- 140179133905832 -->
+<g id="node2" class="node"><title>140179133905832</title>
 <polygon fill="none" stroke="black" points="-0.5,-925 -0.5,-971 398.5,-971 398.5,-925 -0.5,-925"/>
 <text text-anchor="middle" x="123" y="-944.3" font-family="Times,serif" font-size="14.00">CDR3_embedding: OnehotEmbedding2D</text>
 <polyline fill="none" stroke="black" points="246.5,-925 246.5,-971 "/>
@@ -35,13 +35,13 @@
 <polyline fill="none" stroke="black" points="302.5,-948 398.5,-948 "/>
 <text text-anchor="middle" x="350.5" y="-932.8" font-family="Times,serif" font-size="14.00">(None, 30, 10)</text>
 </g>
-<!-- 139645503030328&#45;&gt;139645503031840 -->
-<g id="edge1" class="edge"><title>139645503030328&#45;&gt;139645503031840</title>
+<!-- 140179133905496&#45;&gt;140179133905832 -->
+<g id="edge1" class="edge"><title>140179133905496&#45;&gt;140179133905832</title>
 <path fill="none" stroke="black" d="M199,-1008.59C199,-1000.12 199,-990.297 199,-981.104"/>
 <polygon fill="black" stroke="black" points="202.5,-981.096 199,-971.096 195.5,-981.096 202.5,-981.096"/>
 </g>
-<!-- 139645502848528 -->
-<g id="node5" class="node"><title>139645502848528</title>
+<!-- 140179133895904 -->
+<g id="node5" class="node"><title>140179133895904</title>
 <polygon fill="none" stroke="black" points="38.5,-841 38.5,-887 387.5,-887 387.5,-841 38.5,-841"/>
 <text text-anchor="middle" x="137" y="-860.3" font-family="Times,serif" font-size="14.00">CDR3_embedding_flat: Reshape</text>
 <polyline fill="none" stroke="black" points="235.5,-841 235.5,-887 "/>
@@ -53,13 +53,13 @@
 <polyline fill="none" stroke="black" points="291.5,-864 387.5,-864 "/>
 <text text-anchor="middle" x="339.5" y="-848.8" font-family="Times,serif" font-size="14.00">(None, 300)</text>
 </g>
-<!-- 139645503031840&#45;&gt;139645502848528 -->
-<g id="edge2" class="edge"><title>139645503031840&#45;&gt;139645502848528</title>
+<!-- 140179133905832&#45;&gt;140179133895904 -->
+<g id="edge2" class="edge"><title>140179133905832&#45;&gt;140179133895904</title>
 <path fill="none" stroke="black" d="M202.826,-924.593C204.273,-916.118 205.949,-906.297 207.519,-897.104"/>
 <polygon fill="black" stroke="black" points="210.995,-897.542 209.228,-887.096 204.094,-896.364 210.995,-897.542"/>
 </g>
-<!-- 139645503031560 -->
-<g id="node3" class="node"><title>139645503031560</title>
+<!-- 140179133905608 -->
+<g id="node3" class="node"><title>140179133905608</title>
 <polygon fill="none" stroke="black" points="416,-925 416,-971 714,-971 714,-925 416,-925"/>
 <text text-anchor="middle" x="498.5" y="-944.3" font-family="Times,serif" font-size="14.00">onehot_Vgene: InputLayer</text>
 <polyline fill="none" stroke="black" points="581,-925 581,-971 "/>
@@ -67,12 +67,12 @@
 <polyline fill="none" stroke="black" points="581,-948 637,-948 "/>
 <text text-anchor="middle" x="609" y="-932.8" font-family="Times,serif" font-size="14.00">output:</text>
 <polyline fill="none" stroke="black" points="637,-925 637,-971 "/>
-<text text-anchor="middle" x="675.5" y="-955.8" font-family="Times,serif" font-size="14.00">(None, 59)</text>
+<text text-anchor="middle" x="675.5" y="-955.8" font-family="Times,serif" font-size="14.00">(None, 67)</text>
 <polyline fill="none" stroke="black" points="637,-948 714,-948 "/>
-<text text-anchor="middle" x="675.5" y="-932.8" font-family="Times,serif" font-size="14.00">(None, 59)</text>
+<text text-anchor="middle" x="675.5" y="-932.8" font-family="Times,serif" font-size="14.00">(None, 67)</text>
 </g>
-<!-- 139645502848864 -->
-<g id="node6" class="node"><title>139645502848864</title>
+<!-- 140178739498904 -->
+<g id="node6" class="node"><title>140178739498904</title>
 <polygon fill="none" stroke="black" points="418.5,-841 418.5,-887 711.5,-887 711.5,-841 418.5,-841"/>
 <text text-anchor="middle" x="498.5" y="-860.3" font-family="Times,serif" font-size="14.00">Vgene_embedding: Dense</text>
 <polyline fill="none" stroke="black" points="578.5,-841 578.5,-887 "/>
@@ -80,17 +80,17 @@
 <polyline fill="none" stroke="black" points="578.5,-864 634.5,-864 "/>
 <text text-anchor="middle" x="606.5" y="-848.8" font-family="Times,serif" font-size="14.00">output:</text>
 <polyline fill="none" stroke="black" points="634.5,-841 634.5,-887 "/>
-<text text-anchor="middle" x="673" y="-871.8" font-family="Times,serif" font-size="14.00">(None, 59)</text>
+<text text-anchor="middle" x="673" y="-871.8" font-family="Times,serif" font-size="14.00">(None, 67)</text>
 <polyline fill="none" stroke="black" points="634.5,-864 711.5,-864 "/>
 <text text-anchor="middle" x="673" y="-848.8" font-family="Times,serif" font-size="14.00">(None, 10)</text>
 </g>
-<!-- 139645503031560&#45;&gt;139645502848864 -->
-<g id="edge3" class="edge"><title>139645503031560&#45;&gt;139645502848864</title>
+<!-- 140179133905608&#45;&gt;140178739498904 -->
+<g id="edge3" class="edge"><title>140179133905608&#45;&gt;140178739498904</title>
 <path fill="none" stroke="black" d="M565,-924.593C565,-916.118 565,-906.297 565,-897.104"/>
 <polygon fill="black" stroke="black" points="568.5,-897.096 565,-887.096 561.5,-897.096 568.5,-897.096"/>
 </g>
-<!-- 139645503032400 -->
-<g id="node4" class="node"><title>139645503032400</title>
+<!-- 140179133906224 -->
+<g id="node4" class="node"><title>140179133906224</title>
 <polygon fill="none" stroke="black" points="732,-925 732,-971 1026,-971 1026,-925 732,-925"/>
 <text text-anchor="middle" x="812.5" y="-944.3" font-family="Times,serif" font-size="14.00">onehot_Jgene: InputLayer</text>
 <polyline fill="none" stroke="black" points="893,-925 893,-971 "/>
@@ -102,8 +102,8 @@
 <polyline fill="none" stroke="black" points="949,-948 1026,-948 "/>
 <text text-anchor="middle" x="987.5" y="-932.8" font-family="Times,serif" font-size="14.00">(None, 13)</text>
 </g>
-<!-- 139645537937616 -->
-<g id="node7" class="node"><title>139645537937616</title>
+<!-- 140179133906896 -->
+<g id="node7" class="node"><title>140179133906896</title>
 <polygon fill="none" stroke="black" points="732,-841 732,-887 1020,-887 1020,-841 732,-841"/>
 <text text-anchor="middle" x="809.5" y="-860.3" font-family="Times,serif" font-size="14.00">Jgene_embedding: Dense</text>
 <polyline fill="none" stroke="black" points="887,-841 887,-887 "/>
@@ -115,13 +115,13 @@
 <polyline fill="none" stroke="black" points="943,-864 1020,-864 "/>
 <text text-anchor="middle" x="981.5" y="-848.8" font-family="Times,serif" font-size="14.00">(None, 5)</text>
 </g>
-<!-- 139645503032400&#45;&gt;139645537937616 -->
-<g id="edge4" class="edge"><title>139645503032400&#45;&gt;139645537937616</title>
+<!-- 140179133906224&#45;&gt;140179133906896 -->
+<g id="edge4" class="edge"><title>140179133906224&#45;&gt;140179133906896</title>
 <path fill="none" stroke="black" d="M878.18,-924.593C877.87,-916.118 877.511,-906.297 877.175,-897.104"/>
 <polygon fill="black" stroke="black" points="880.672,-896.961 876.808,-887.096 873.676,-897.217 880.672,-896.961"/>
 </g>
-<!-- 139645503224800 -->
-<g id="node8" class="node"><title>139645503224800</title>
+<!-- 140178756577880 -->
+<g id="node8" class="node"><title>140178756577880</title>
 <polygon fill="none" stroke="black" points="312,-757 312,-803 818,-803 818,-757 312,-757"/>
 <text text-anchor="middle" x="428" y="-776.3" font-family="Times,serif" font-size="14.00">flat_CDR3_Vgene_Jgene: Concatenate</text>
 <polyline fill="none" stroke="black" points="544,-757 544,-803 "/>
@@ -133,23 +133,23 @@
 <polyline fill="none" stroke="black" points="600,-780 818,-780 "/>
 <text text-anchor="middle" x="709" y="-764.8" font-family="Times,serif" font-size="14.00">(None, 315)</text>
 </g>
-<!-- 139645502848528&#45;&gt;139645503224800 -->
-<g id="edge5" class="edge"><title>139645502848528&#45;&gt;139645503224800</title>
+<!-- 140179133895904&#45;&gt;140178756577880 -->
+<g id="edge5" class="edge"><title>140179133895904&#45;&gt;140178756577880</title>
 <path fill="none" stroke="black" d="M307.793,-840.918C354.942,-829.934 412.05,-816.63 460.467,-805.352"/>
 <polygon fill="black" stroke="black" points="461.398,-808.728 470.344,-803.051 459.81,-801.911 461.398,-808.728"/>
 </g>
-<!-- 139645502848864&#45;&gt;139645503224800 -->
-<g id="edge6" class="edge"><title>139645502848864&#45;&gt;139645503224800</title>
+<!-- 140178739498904&#45;&gt;140178756577880 -->
+<g id="edge6" class="edge"><title>140178739498904&#45;&gt;140178756577880</title>
 <path fill="none" stroke="black" d="M565,-840.593C565,-832.118 565,-822.297 565,-813.104"/>
 <polygon fill="black" stroke="black" points="568.5,-813.096 565,-803.096 561.5,-813.096 568.5,-813.096"/>
 </g>
-<!-- 139645537937616&#45;&gt;139645503224800 -->
-<g id="edge7" class="edge"><title>139645537937616&#45;&gt;139645503224800</title>
+<!-- 140179133906896&#45;&gt;140178756577880 -->
+<g id="edge7" class="edge"><title>140179133906896&#45;&gt;140178756577880</title>
 <path fill="none" stroke="black" d="M792.249,-840.918C750.939,-830.026 700.977,-816.852 658.431,-805.634"/>
 <polygon fill="black" stroke="black" points="659.193,-802.216 648.631,-803.051 657.408,-808.985 659.193,-802.216"/>
 </g>
-<!-- 139645502821096 -->
-<g id="node9" class="node"><title>139645502821096</title>
+<!-- 140178739683112 -->
+<g id="node9" class="node"><title>140178739683112</title>
 <polygon fill="none" stroke="black" points="419,-673 419,-719 711,-719 711,-673 419,-673"/>
 <text text-anchor="middle" x="495.5" y="-692.3" font-family="Times,serif" font-size="14.00">encoder_dense_1: Dense</text>
 <polyline fill="none" stroke="black" points="572,-673 572,-719 "/>
@@ -159,15 +159,15 @@
 <polyline fill="none" stroke="black" points="628,-673 628,-719 "/>
 <text text-anchor="middle" x="669.5" y="-703.8" font-family="Times,serif" font-size="14.00">(None, 315)</text>
 <polyline fill="none" stroke="black" points="628,-696 711,-696 "/>
-<text text-anchor="middle" x="669.5" y="-680.8" font-family="Times,serif" font-size="14.00">(None, 200)</text>
+<text text-anchor="middle" x="669.5" y="-680.8" font-family="Times,serif" font-size="14.00">(None, 100)</text>
 </g>
-<!-- 139645503224800&#45;&gt;139645502821096 -->
-<g id="edge8" class="edge"><title>139645503224800&#45;&gt;139645502821096</title>
+<!-- 140178756577880&#45;&gt;140178739683112 -->
+<g id="edge8" class="edge"><title>140178756577880&#45;&gt;140178739683112</title>
 <path fill="none" stroke="black" d="M565,-756.593C565,-748.118 565,-738.297 565,-729.104"/>
 <polygon fill="black" stroke="black" points="568.5,-729.096 565,-719.096 561.5,-729.096 568.5,-729.096"/>
 </g>
-<!-- 139645503032568 -->
-<g id="node10" class="node"><title>139645503032568</title>
+<!-- 140178756653744 -->
+<g id="node10" class="node"><title>140178756653744</title>
 <polygon fill="none" stroke="black" points="419,-589 419,-635 711,-635 711,-589 419,-589"/>
 <text text-anchor="middle" x="495.5" y="-608.3" font-family="Times,serif" font-size="14.00">encoder_dense_2: Dense</text>
 <polyline fill="none" stroke="black" points="572,-589 572,-635 "/>
@@ -175,17 +175,17 @@
 <polyline fill="none" stroke="black" points="572,-612 628,-612 "/>
 <text text-anchor="middle" x="600" y="-596.8" font-family="Times,serif" font-size="14.00">output:</text>
 <polyline fill="none" stroke="black" points="628,-589 628,-635 "/>
-<text text-anchor="middle" x="669.5" y="-619.8" font-family="Times,serif" font-size="14.00">(None, 200)</text>
+<text text-anchor="middle" x="669.5" y="-619.8" font-family="Times,serif" font-size="14.00">(None, 100)</text>
 <polyline fill="none" stroke="black" points="628,-612 711,-612 "/>
-<text text-anchor="middle" x="669.5" y="-596.8" font-family="Times,serif" font-size="14.00">(None, 200)</text>
+<text text-anchor="middle" x="669.5" y="-596.8" font-family="Times,serif" font-size="14.00">(None, 100)</text>
 </g>
-<!-- 139645502821096&#45;&gt;139645503032568 -->
-<g id="edge9" class="edge"><title>139645502821096&#45;&gt;139645503032568</title>
+<!-- 140178739683112&#45;&gt;140178756653744 -->
+<g id="edge9" class="edge"><title>140178739683112&#45;&gt;140178756653744</title>
 <path fill="none" stroke="black" d="M565,-672.593C565,-664.118 565,-654.297 565,-645.104"/>
 <polygon fill="black" stroke="black" points="568.5,-645.096 565,-635.096 561.5,-645.096 568.5,-645.096"/>
 </g>
-<!-- 139645540088520 -->
-<g id="node11" class="node"><title>139645540088520</title>
+<!-- 140179132931880 -->
+<g id="node11" class="node"><title>140179132931880</title>
 <polygon fill="none" stroke="black" points="314,-505 314,-551 554,-551 554,-505 314,-505"/>
 <text text-anchor="middle" x="364.5" y="-524.3" font-family="Times,serif" font-size="14.00">z_mean: Dense</text>
 <polyline fill="none" stroke="black" points="415,-505 415,-551 "/>
@@ -193,17 +193,17 @@
 <polyline fill="none" stroke="black" points="415,-528 471,-528 "/>
 <text text-anchor="middle" x="443" y="-512.8" font-family="Times,serif" font-size="14.00">output:</text>
 <polyline fill="none" stroke="black" points="471,-505 471,-551 "/>
-<text text-anchor="middle" x="512.5" y="-535.8" font-family="Times,serif" font-size="14.00">(None, 200)</text>
+<text text-anchor="middle" x="512.5" y="-535.8" font-family="Times,serif" font-size="14.00">(None, 100)</text>
 <polyline fill="none" stroke="black" points="471,-528 554,-528 "/>
-<text text-anchor="middle" x="512.5" y="-512.8" font-family="Times,serif" font-size="14.00">(None, 50)</text>
+<text text-anchor="middle" x="512.5" y="-512.8" font-family="Times,serif" font-size="14.00">(None, 20)</text>
 </g>
-<!-- 139645503032568&#45;&gt;139645540088520 -->
-<g id="edge10" class="edge"><title>139645503032568&#45;&gt;139645540088520</title>
+<!-- 140178756653744&#45;&gt;140179132931880 -->
+<g id="edge10" class="edge"><title>140178756653744&#45;&gt;140179132931880</title>
 <path fill="none" stroke="black" d="M529.55,-588.81C513.676,-578.874 494.797,-567.056 478.028,-556.56"/>
 <polygon fill="black" stroke="black" points="479.812,-553.547 469.479,-551.208 476.098,-559.481 479.812,-553.547"/>
 </g>
-<!-- 139645540486168 -->
-<g id="node12" class="node"><title>139645540486168</title>
+<!-- 140179133143304 -->
+<g id="node12" class="node"><title>140179133143304</title>
 <polygon fill="none" stroke="black" points="572,-505 572,-551 822,-551 822,-505 572,-505"/>
 <text text-anchor="middle" x="627.5" y="-524.3" font-family="Times,serif" font-size="14.00">z_log_var: Dense</text>
 <polyline fill="none" stroke="black" points="683,-505 683,-551 "/>
@@ -211,17 +211,17 @@
 <polyline fill="none" stroke="black" points="683,-528 739,-528 "/>
 <text text-anchor="middle" x="711" y="-512.8" font-family="Times,serif" font-size="14.00">output:</text>
 <polyline fill="none" stroke="black" points="739,-505 739,-551 "/>
-<text text-anchor="middle" x="780.5" y="-535.8" font-family="Times,serif" font-size="14.00">(None, 200)</text>
+<text text-anchor="middle" x="780.5" y="-535.8" font-family="Times,serif" font-size="14.00">(None, 100)</text>
 <polyline fill="none" stroke="black" points="739,-528 822,-528 "/>
-<text text-anchor="middle" x="780.5" y="-512.8" font-family="Times,serif" font-size="14.00">(None, 50)</text>
+<text text-anchor="middle" x="780.5" y="-512.8" font-family="Times,serif" font-size="14.00">(None, 20)</text>
 </g>
-<!-- 139645503032568&#45;&gt;139645540486168 -->
-<g id="edge11" class="edge"><title>139645503032568&#45;&gt;139645540486168</title>
+<!-- 140178756653744&#45;&gt;140179133143304 -->
+<g id="edge11" class="edge"><title>140178756653744&#45;&gt;140179133143304</title>
 <path fill="none" stroke="black" d="M600.721,-588.81C616.716,-578.874 635.739,-567.056 652.636,-556.56"/>
 <polygon fill="black" stroke="black" points="654.603,-559.458 661.25,-551.208 650.909,-553.512 654.603,-559.458"/>
 </g>
-<!-- 139645503029936 -->
-<g id="node13" class="node"><title>139645503029936</title>
+<!-- 140179133613504 -->
+<g id="node13" class="node"><title>140179133613504</title>
 <polygon fill="none" stroke="black" points="357.5,-421 357.5,-467 772.5,-467 772.5,-421 357.5,-421"/>
 <text text-anchor="middle" x="461" y="-440.3" font-family="Times,serif" font-size="14.00">reparameterization_trick: Lambda</text>
 <polyline fill="none" stroke="black" points="564.5,-421 564.5,-467 "/>
@@ -229,22 +229,22 @@
 <polyline fill="none" stroke="black" points="564.5,-444 620.5,-444 "/>
 <text text-anchor="middle" x="592.5" y="-428.8" font-family="Times,serif" font-size="14.00">output:</text>
 <polyline fill="none" stroke="black" points="620.5,-421 620.5,-467 "/>
-<text text-anchor="middle" x="696.5" y="-451.8" font-family="Times,serif" font-size="14.00">[(None, 50), (None, 50)]</text>
+<text text-anchor="middle" x="696.5" y="-451.8" font-family="Times,serif" font-size="14.00">[(None, 20), (None, 20)]</text>
 <polyline fill="none" stroke="black" points="620.5,-444 772.5,-444 "/>
-<text text-anchor="middle" x="696.5" y="-428.8" font-family="Times,serif" font-size="14.00">(None, 50)</text>
+<text text-anchor="middle" x="696.5" y="-428.8" font-family="Times,serif" font-size="14.00">(None, 20)</text>
 </g>
-<!-- 139645540088520&#45;&gt;139645503029936 -->
-<g id="edge12" class="edge"><title>139645540088520&#45;&gt;139645503029936</title>
+<!-- 140179132931880&#45;&gt;140179133613504 -->
+<g id="edge12" class="edge"><title>140179132931880&#45;&gt;140179133613504</title>
 <path fill="none" stroke="black" d="M469.45,-504.81C485.324,-494.874 504.203,-483.056 520.972,-472.56"/>
 <polygon fill="black" stroke="black" points="522.902,-475.481 529.521,-467.208 519.188,-469.547 522.902,-475.481"/>
 </g>
-<!-- 139645540486168&#45;&gt;139645503029936 -->
-<g id="edge13" class="edge"><title>139645540486168&#45;&gt;139645503029936</title>
+<!-- 140179133143304&#45;&gt;140179133613504 -->
+<g id="edge13" class="edge"><title>140179133143304&#45;&gt;140179133613504</title>
 <path fill="none" stroke="black" d="M661.279,-504.81C645.284,-494.874 626.261,-483.056 609.364,-472.56"/>
 <polygon fill="black" stroke="black" points="611.091,-469.512 600.75,-467.208 607.397,-475.458 611.091,-469.512"/>
 </g>
-<!-- 139645503030160 -->
-<g id="node14" class="node"><title>139645503030160</title>
+<!-- 140179133883784 -->
+<g id="node14" class="node"><title>140179133883784</title>
 <polygon fill="none" stroke="black" points="419.5,-337 419.5,-383 710.5,-383 710.5,-337 419.5,-337"/>
 <text text-anchor="middle" x="495.5" y="-356.3" font-family="Times,serif" font-size="14.00">decoder_dense_1: Dense</text>
 <polyline fill="none" stroke="black" points="571.5,-337 571.5,-383 "/>
@@ -252,17 +252,17 @@
 <polyline fill="none" stroke="black" points="571.5,-360 627.5,-360 "/>
 <text text-anchor="middle" x="599.5" y="-344.8" font-family="Times,serif" font-size="14.00">output:</text>
 <polyline fill="none" stroke="black" points="627.5,-337 627.5,-383 "/>
-<text text-anchor="middle" x="669" y="-367.8" font-family="Times,serif" font-size="14.00">(None, 50)</text>
+<text text-anchor="middle" x="669" y="-367.8" font-family="Times,serif" font-size="14.00">(None, 20)</text>
 <polyline fill="none" stroke="black" points="627.5,-360 710.5,-360 "/>
-<text text-anchor="middle" x="669" y="-344.8" font-family="Times,serif" font-size="14.00">(None, 200)</text>
+<text text-anchor="middle" x="669" y="-344.8" font-family="Times,serif" font-size="14.00">(None, 100)</text>
 </g>
-<!-- 139645503029936&#45;&gt;139645503030160 -->
-<g id="edge18" class="edge"><title>139645503029936&#45;&gt;139645503030160</title>
+<!-- 140179133613504&#45;&gt;140179133883784 -->
+<g id="edge18" class="edge"><title>140179133613504&#45;&gt;140179133883784</title>
 <path fill="none" stroke="black" d="M565,-420.593C565,-412.118 565,-402.297 565,-393.104"/>
 <polygon fill="black" stroke="black" points="568.5,-393.096 565,-383.096 561.5,-393.096 568.5,-393.096"/>
 </g>
-<!-- 139645503030720 -->
-<g id="node15" class="node"><title>139645503030720</title>
+<!-- 140179133883952 -->
+<g id="node15" class="node"><title>140179133883952</title>
 <polygon fill="none" stroke="black" points="419.5,-253 419.5,-299 710.5,-299 710.5,-253 419.5,-253"/>
 <text text-anchor="middle" x="495.5" y="-272.3" font-family="Times,serif" font-size="14.00">decoder_dense_2: Dense</text>
 <polyline fill="none" stroke="black" points="571.5,-253 571.5,-299 "/>
@@ -270,17 +270,17 @@
 <polyline fill="none" stroke="black" points="571.5,-276 627.5,-276 "/>
 <text text-anchor="middle" x="599.5" y="-260.8" font-family="Times,serif" font-size="14.00">output:</text>
 <polyline fill="none" stroke="black" points="627.5,-253 627.5,-299 "/>
-<text text-anchor="middle" x="669" y="-283.8" font-family="Times,serif" font-size="14.00">(None, 200)</text>
+<text text-anchor="middle" x="669" y="-283.8" font-family="Times,serif" font-size="14.00">(None, 100)</text>
 <polyline fill="none" stroke="black" points="627.5,-276 710.5,-276 "/>
-<text text-anchor="middle" x="669" y="-260.8" font-family="Times,serif" font-size="14.00">(None, 200)</text>
+<text text-anchor="middle" x="669" y="-260.8" font-family="Times,serif" font-size="14.00">(None, 100)</text>
 </g>
-<!-- 139645503030160&#45;&gt;139645503030720 -->
-<g id="edge21" class="edge"><title>139645503030160&#45;&gt;139645503030720</title>
+<!-- 140179133883784&#45;&gt;140179133883952 -->
+<g id="edge21" class="edge"><title>140179133883784&#45;&gt;140179133883952</title>
 <path fill="none" stroke="black" d="M565,-336.593C565,-328.118 565,-318.297 565,-309.104"/>
 <polygon fill="black" stroke="black" points="568.5,-309.096 565,-299.096 561.5,-309.096 568.5,-309.096"/>
 </g>
-<!-- 139645503030496 -->
-<g id="node16" class="node"><title>139645503030496</title>
+<!-- 140179133884288 -->
+<g id="node16" class="node"><title>140179133884288</title>
 <polygon fill="none" stroke="black" points="129,-169 129,-215 403,-215 403,-169 129,-169"/>
 <text text-anchor="middle" x="196.5" y="-188.3" font-family="Times,serif" font-size="14.00">flat_CDR_out: Dense</text>
 <polyline fill="none" stroke="black" points="264,-169 264,-215 "/>
@@ -288,17 +288,17 @@
 <polyline fill="none" stroke="black" points="264,-192 320,-192 "/>
 <text text-anchor="middle" x="292" y="-176.8" font-family="Times,serif" font-size="14.00">output:</text>
 <polyline fill="none" stroke="black" points="320,-169 320,-215 "/>
-<text text-anchor="middle" x="361.5" y="-199.8" font-family="Times,serif" font-size="14.00">(None, 200)</text>
+<text text-anchor="middle" x="361.5" y="-199.8" font-family="Times,serif" font-size="14.00">(None, 100)</text>
 <polyline fill="none" stroke="black" points="320,-192 403,-192 "/>
 <text text-anchor="middle" x="361.5" y="-176.8" font-family="Times,serif" font-size="14.00">(None, 630)</text>
 </g>
-<!-- 139645503030720&#45;&gt;139645503030496 -->
-<g id="edge24" class="edge"><title>139645503030720&#45;&gt;139645503030496</title>
+<!-- 140179133883952&#45;&gt;140179133884288 -->
+<g id="edge24" class="edge"><title>140179133883952&#45;&gt;140179133884288</title>
 <path fill="none" stroke="black" d="M484.48,-252.918C444.848,-242.049 396.932,-228.908 356.084,-217.705"/>
 <polygon fill="black" stroke="black" points="356.974,-214.32 346.404,-215.051 355.122,-221.071 356.974,-214.32"/>
 </g>
-<!-- 139645503030832 -->
-<g id="node19" class="node"><title>139645503030832</title>
+<!-- 140179133885016 -->
+<g id="node19" class="node"><title>140179133885016</title>
 <polygon fill="none" stroke="black" points="421,-169 421,-215 709,-215 709,-169 421,-169"/>
 <text text-anchor="middle" x="495.5" y="-188.3" font-family="Times,serif" font-size="14.00">Vgene_prob_out: Dense</text>
 <polyline fill="none" stroke="black" points="570,-169 570,-215 "/>
@@ -306,17 +306,17 @@
 <polyline fill="none" stroke="black" points="570,-192 626,-192 "/>
 <text text-anchor="middle" x="598" y="-176.8" font-family="Times,serif" font-size="14.00">output:</text>
 <polyline fill="none" stroke="black" points="626,-169 626,-215 "/>
-<text text-anchor="middle" x="667.5" y="-199.8" font-family="Times,serif" font-size="14.00">(None, 200)</text>
+<text text-anchor="middle" x="667.5" y="-199.8" font-family="Times,serif" font-size="14.00">(None, 100)</text>
 <polyline fill="none" stroke="black" points="626,-192 709,-192 "/>
-<text text-anchor="middle" x="667.5" y="-176.8" font-family="Times,serif" font-size="14.00">(None, 59)</text>
+<text text-anchor="middle" x="667.5" y="-176.8" font-family="Times,serif" font-size="14.00">(None, 67)</text>
 </g>
-<!-- 139645503030720&#45;&gt;139645503030832 -->
-<g id="edge27" class="edge"><title>139645503030720&#45;&gt;139645503030832</title>
+<!-- 140179133883952&#45;&gt;140179133885016 -->
+<g id="edge27" class="edge"><title>140179133883952&#45;&gt;140179133885016</title>
 <path fill="none" stroke="black" d="M565,-252.593C565,-244.118 565,-234.297 565,-225.104"/>
 <polygon fill="black" stroke="black" points="568.5,-225.096 565,-215.096 561.5,-225.096 568.5,-225.096"/>
 </g>
-<!-- 139645503030608 -->
-<g id="node20" class="node"><title>139645503030608</title>
+<!-- 140179133884792 -->
+<g id="node20" class="node"><title>140179133884792</title>
 <polygon fill="none" stroke="black" points="727,-169 727,-215 1011,-215 1011,-169 727,-169"/>
 <text text-anchor="middle" x="799.5" y="-188.3" font-family="Times,serif" font-size="14.00">Jgene_prob_out: Dense</text>
 <polyline fill="none" stroke="black" points="872,-169 872,-215 "/>
@@ -324,17 +324,17 @@
 <polyline fill="none" stroke="black" points="872,-192 928,-192 "/>
 <text text-anchor="middle" x="900" y="-176.8" font-family="Times,serif" font-size="14.00">output:</text>
 <polyline fill="none" stroke="black" points="928,-169 928,-215 "/>
-<text text-anchor="middle" x="969.5" y="-199.8" font-family="Times,serif" font-size="14.00">(None, 200)</text>
+<text text-anchor="middle" x="969.5" y="-199.8" font-family="Times,serif" font-size="14.00">(None, 100)</text>
 <polyline fill="none" stroke="black" points="928,-192 1011,-192 "/>
 <text text-anchor="middle" x="969.5" y="-176.8" font-family="Times,serif" font-size="14.00">(None, 13)</text>
 </g>
-<!-- 139645503030720&#45;&gt;139645503030608 -->
-<g id="edge28" class="edge"><title>139645503030720&#45;&gt;139645503030608</title>
+<!-- 140179133883952&#45;&gt;140179133884792 -->
+<g id="edge28" class="edge"><title>140179133883952&#45;&gt;140179133884792</title>
 <path fill="none" stroke="black" d="M646.866,-252.918C687.161,-242.049 735.878,-228.908 777.409,-217.705"/>
 <polygon fill="black" stroke="black" points="778.508,-221.034 787.251,-215.051 776.685,-214.276 778.508,-221.034"/>
 </g>
-<!-- 139645503031448 -->
-<g id="node17" class="node"><title>139645503031448</title>
+<!-- 140179133884512 -->
+<g id="node17" class="node"><title>140179133884512</title>
 <polygon fill="none" stroke="black" points="129,-85 129,-131 403,-131 403,-85 129,-85"/>
 <text text-anchor="middle" x="190" y="-104.3" font-family="Times,serif" font-size="14.00">CDR_out: Reshape</text>
 <polyline fill="none" stroke="black" points="251,-85 251,-131 "/>
@@ -346,13 +346,13 @@
 <polyline fill="none" stroke="black" points="307,-108 403,-108 "/>
 <text text-anchor="middle" x="355" y="-92.8" font-family="Times,serif" font-size="14.00">(None, 30, 21)</text>
 </g>
-<!-- 139645503030496&#45;&gt;139645503031448 -->
-<g id="edge25" class="edge"><title>139645503030496&#45;&gt;139645503031448</title>
+<!-- 140179133884288&#45;&gt;140179133884512 -->
+<g id="edge25" class="edge"><title>140179133884288&#45;&gt;140179133884512</title>
 <path fill="none" stroke="black" d="M266,-168.593C266,-160.118 266,-150.297 266,-141.104"/>
 <polygon fill="black" stroke="black" points="269.5,-141.096 266,-131.096 262.5,-141.096 269.5,-141.096"/>
 </g>
-<!-- 139645503031504 -->
-<g id="node18" class="node"><title>139645503031504</title>
+<!-- 140179133884904 -->
+<g id="node18" class="node"><title>140179133884904</title>
 <polygon fill="none" stroke="black" points="106,-1 106,-47 426,-47 426,-1 106,-1"/>
 <text text-anchor="middle" x="190" y="-20.3" font-family="Times,serif" font-size="14.00">CDR_prob_out: Activation</text>
 <polyline fill="none" stroke="black" points="274,-1 274,-47 "/>
@@ -364,8 +364,8 @@
 <polyline fill="none" stroke="black" points="330,-24 426,-24 "/>
 <text text-anchor="middle" x="378" y="-8.8" font-family="Times,serif" font-size="14.00">(None, 30, 21)</text>
 </g>
-<!-- 139645503031448&#45;&gt;139645503031504 -->
-<g id="edge26" class="edge"><title>139645503031448&#45;&gt;139645503031504</title>
+<!-- 140179133884512&#45;&gt;140179133884904 -->
+<g id="edge26" class="edge"><title>140179133884512&#45;&gt;140179133884904</title>
 <path fill="none" stroke="black" d="M266,-84.5931C266,-76.1177 266,-66.2974 266,-57.104"/>
 <polygon fill="black" stroke="black" points="269.5,-57.0958 266,-47.0959 262.5,-57.0959 269.5,-57.0958"/>
 </g>
