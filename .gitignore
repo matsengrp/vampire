@@ -1,3 +1,4 @@
 *.fasta
 .ipynb_checkpoints/*
 *.h5
+*.p
