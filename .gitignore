@@ -4,3 +4,5 @@
 *.p
 TCR_data/*
 BCR_clustering/clusters/*
+.ipynb_checkpoints/*
+BCR_clustering/.ipynb_checkpoints/*
