@@ -2,3 +2,5 @@
 .ipynb_checkpoints/*
 *.h5
 *.p
+TCR_data/*
+BCR_clustering/clusters/*
