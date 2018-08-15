@@ -4,6 +4,7 @@ from Bio.SeqUtils import GC
 import matplotlib.pyplot as plt
 import numpy as np
 import random
+import re
 
 # May need to move this to /fh/fast/
 sys.path.insert(0, '/home/bolson2/Software/IGoR')
@@ -57,14 +58,31 @@ def run_igor(input_file, \
                          sep=";")
 
 # Get and write annotation dataframe via pygor subpackage routine
-def write_gene_info(igor_wd):
+def get_annotations(igor_wd, chain):
     scenarios_filename = "igor_generated/generated_realizations_werr.csv"
     scenarios_file = os.path.join(igor_wd, scenarios_filename)
     model_parms_filename = "igor_evaluate/final_parms.txt"
     model_parms_file = os.path.join(igor_wd, model_parms_filename)
-    bs = bestscenarios.read_bestscenarios_values(scenarios_file, model_parms_file)
+    annotation_dat = bestscenarios.read_bestscenarios_values(scenarios_file, model_parms_file)
+
+    annotation_dat['v_gene'] = annotation_dat['v_choice'].apply( \
+            lambda(x): extract_gene_from_full_string(x, chain, "V") )
+    annotation_dat['j_gene'] = annotation_dat['j_choice'].apply( \
+            lambda(x): extract_gene_from_full_string(x, chain, "J") )
+
+    # Write annotations dataset to file
     output_file = "annotations.csv"
-    bs.to_csv(os.path.join(igor_wd, output_file))
+    annotation_dat.to_csv(os.path.join(igor_wd, output_file))
+    return annotation_dat
+
+def extract_gene_from_full_string(s, chain, gene):
+    chain_letter = {"beta": "B",
+                    "alpha": "A"}
+    regex = "TR" + chain_letter[chain] + gene + "[0-9]+([-][0-9]+)?[*][0-9]+"
+    regex_result = re.search(regex, s)
+    gene_string = regex_result.group(0) if regex_result is not None else None
+    
+    return(gene_string)
 
 if __name__ == "__main__":
     cwd = os.getcwd()
@@ -72,22 +90,23 @@ if __name__ == "__main__":
     get_seqs_from_tsv(
         "/fh/fast/matsen_e/kdavidse/data/dnnir/vampire/summary_stats/all_seshadri_data/all_TCRB_KD_cut.tsv",
         os.path.join(cwd, agg_seq_file),
-        subsample=True)
+        subsample=True,
+        sample_count=100)
     agg_dir = "igor_aggregate"
     agg_wd = os.path.join(cwd, agg_dir)
     if not os.path.exists(agg_wd):
         os.makedirs(agg_wd)
     run_igor(agg_seq_file, agg_wd)
-    write_gene_info(agg_wd)
+    agg_annotations = get_annotations(agg_wd, "beta")
 
-    cmv_seq_file = "cmv_seqs.txt"
-    get_seqs_from_tsv( 
-        "/fh/fast/matsen_e/kdavidse/data/dnnir/vampire/summary_stats/largest_CMV_sample/HIP13427_KD_cut.tsv",
-        os.path.join(cwd, cmv_seq_file), 
-        subsample=True)
-    cmv_dir = "igor_cmv"
-    cmv_wd = os.path.join(cwd, cmv_dir)
-    if not os.path.exists(cmv_wd):
-        os.makedirs(cmv_wd)
-    run_igor(cmv_seq_file, cmv_wd)
-    write_gene_info(cmv_wd)
+    # cmv_seq_file = "cmv_seqs.txt"
+    # get_seqs_from_tsv( 
+    #     "/fh/fast/matsen_e/kdavidse/data/dnnir/vampire/summary_stats/largest_CMV_sample/HIP13427_KD_cut.tsv",
+    #     os.path.join(cwd, cmv_seq_file), 
+    #     subsample=False)
+    # cmv_dir = "igor_cmv"
+    # cmv_wd = os.path.join(cwd, cmv_dir)
+    # if not os.path.exists(cmv_wd):
+    #     os.makedirs(cmv_wd)
+    # run_igor(cmv_seq_file, cmv_wd)
+    # cmv_annotations = get_annotations(cmv_wd)
