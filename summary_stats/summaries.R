@@ -25,8 +25,6 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, rows=1, layout=NULL) {
     numPlots = length(plots)
 
     if(is.null(layout)) {
-        print(rows)
-        print(cols)
         layout <- matrix(seq(1, cols * rows),
                          ncol = cols, nrow = rows)
     }
@@ -44,18 +42,14 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, rows=1, layout=NULL) {
 } 
 
 agg_file <- "/fh/fast/matsen_e/data/dnnir/vampire/summary_stats/all_seshadri_data/all_TCRB_KD_cut.tsv"
-igor_agg_file <- file.path(getwd(),
-                           "igor_aggregate/igor_generated/generated_seqs_werr_CDR3_info.csv"
-                           )
+igor_agg_file <- "/fh/fast/matsen_e/data/dnnir/vampire/summary_stats/agg_igor_gen_seqs.csv"
 vae_agg_file <- "/fh/fast/matsen_e/data/dnnir/vampire/summary_stats/all_seshadri_data/all_TCRB_KD_cut_predictions.tsv"
 cmv_file <- "/fh/fast/matsen_e/data/dnnir/vampire/summary_stats/largest_CMV_sample/HIP13427_KD_cut.tsv"
-igor_cmv_file <- file.path(getwd(),
-                           "igor_cmv/igor_generated/generated_seqs_werr_CDR3_info.csv"
-                           )
+igor_cmv_file <- "/fh/fast/matsen_e/data/dnnir/vampire/summary_stats/cmv_igor_gen_seqs.csv"
 vae_cmv_file <- "/fh/fast/matsen_e/data/dnnir/vampire/summary_stats/largest_CMV_sample/all_TCRB_KD_cut_predictions_HIP13427.tsv"
 
 
-read_files <- FALSE
+read_files <- TRUE
 if(read_files) {
     agg_dat <- data.table::fread(agg_file, header=FALSE)
     names(agg_dat) <- c("cdr3s", "cdr3_aa", "v_gene", "j_gene")
@@ -180,26 +174,25 @@ if(do_full) {
 do_aa <- TRUE
 if(do_aa) {
     aa_dat <- dat_list %>%
-        lapply(function(x) { x %$% cdr3_aa }) %>%
         lapply(getAminoAcidDistribution) %>%
         lapply(data.frame) %>%
         Map(cbind, ., dat_types) %>%
         Map(cbind, ., dat_labels) %>%
         lapply(setNames, c("AA", "Frequency", "Dataset", "Label")) %>%
         do.call(rbind, .)
-
-    p1 <- ggplot(aa_dat[aa_dat$Label == "Aggregate", ], 
-                 aes(x=AA, y=Frequency, fill=Dataset)) +
-            geom_bar(stat="identity", position="dodge") +
-            title("Amino acid frequencies for aggregate data")
-    p2 <- ggplot(aa_dat[aa_dat$Label == "Individual", ], 
-                 aes(x=AA, y=Frequency, fill=Dataset)) +
-            geom_bar(stat="identity", position="dodge") +
-            ggtitle("Amino acid frequencies for individual data")
-    pdf("aa.pdf", width=10, height=6)
-    multiplot(plotlist=list(p1, p2), cols=1, rows=2)
-    dev.off()
 }
+
+p1 <- ggplot(aa_dat[aa_dat$Label == "Aggregate", ], 
+             aes(x=AA, y=Frequency, fill=Dataset)) +
+        geom_bar(stat="identity", position="dodge") +
+        ggtitle("Amino acid frequencies for aggregate data")
+p2 <- ggplot(aa_dat[aa_dat$Label == "Individual", ], 
+             aes(x=AA, y=Frequency, fill=Dataset)) +
+        geom_bar(stat="identity", position="dodge") +
+        ggtitle("Amino acid frequencies for individual data")
+pdf("aa.pdf", width=10, height=6)
+multiplot(plotlist=list(p1, p2), cols=1, rows=2)
+dev.off()
 
 do_divergences <- TRUE
 if(do_divergences) {
