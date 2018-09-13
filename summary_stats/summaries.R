@@ -49,7 +49,7 @@ igor_cmv_file <- "/fh/fast/matsen_e/data/dnnir/vampire/summary_stats/cmv_igor_ge
 vae_cmv_file <- "/fh/fast/matsen_e/data/dnnir/vampire/summary_stats/largest_CMV_sample/all_TCRB_KD_cut_predictions_HIP13427.tsv"
 
 
-read_files <- TRUE
+read_files <- FALSE
 if(read_files) {
     agg_dat <- data.table::fread(agg_file, header=FALSE)
     names(agg_dat) <- c("cdr3s", "cdr3_aa", "v_gene", "j_gene")
@@ -74,6 +74,8 @@ if(read_files) {
 
     vae_cmv_dat <- data.table::fread(vae_cmv_file, header=FALSE)
     names(vae_cmv_dat) <- c("cdr3_aa", "v_gene", "j_gene")
+    vae_cmv_dat <- vae_cmv_dat %>% 
+        subsample(nrow(cmv_dat))
 }
 
 dat_list <- list(agg_dat, 
@@ -83,8 +85,11 @@ dat_list <- list(agg_dat,
                  igor_cmv_dat,
                  vae_cmv_dat
                  )
-dat_types <- rep(c("Observed", "Igor sim", "VAE sim"), 2)
+dat_types <- rep(c("Observed", "IGoR sim", "VAE sim"), 2)
 dat_labels <- c(rep("Aggregate", 3), rep("Individual", 3))
+ggplot_text_size <- theme_get() %$%
+    text %$%
+    size
 
 getSummaryDat <- function(dat,
                           dat_name,
@@ -120,7 +125,7 @@ compareSequenceLengthDistributions <- function(dat_a,
     return(divergence)
 }
 
-do_full <- TRUE
+do_full <- FALSE
 if(do_full) { 
     summary_functions <- list("getSequenceLengthDistribution",
                               "getHydrophobicityDistribution",
@@ -137,6 +142,8 @@ if(do_full) {
     smoothness <- list(6, 1, 1.5, 1)
     
     plots <- {}
+    agg_plots <- {}
+    cmv_plots <- {}
     i <- 1
     for(summary_function in summary_functions) {
         summary_string <- paste0(summary_function, "_dists")
@@ -164,10 +171,41 @@ if(do_full) {
             xlab(summary_labels[[i]]) +
             ylab("Density")
 
+        agg_plots[[i]] <- ggplot(summary_dat[summary_dat$Label == "Aggregate", ],
+                             aes(x=Summary, 
+                                 colour=Dataset
+                                 )
+                             ) + 
+            geom_density(adjust=smoothness[[i]]) +
+            xlab(summary_labels[[i]]) +
+            ylab("Density")
+
+        cmv_plots[[i]] <- ggplot(summary_dat[summary_dat$Label == "Individual", ],
+                             aes(x=Summary, 
+                                 colour=Dataset
+                                 )
+                             ) + 
+            geom_density(adjust=smoothness[[i]]) +
+            xlab(summary_labels[[i]]) +
+            ylab("Density") +
+            theme(axis.title=element_text(size=1.8*ggplot_text_size),
+                  legend.title=element_text(size=1.8*ggplot_text_size),
+                  axis.text=element_text(size=1.5*ggplot_text_size),
+                  legend.text=element_text(size=1.5*ggplot_text_size))
+
+
         i <- i + 1
     }
     pdf("physiochem.pdf", width=10, height=6)
     multiplot(plotlist=plots, cols=2, rows=2)
+    dev.off()
+
+    pdf("physiochem_agg.pdf", width=10, height=6)
+    multiplot(plotlist=agg_plots, cols=2, rows=2)
+    dev.off()
+
+    pdf("physiochem_cmv.pdf", width=10, height=6)
+    multiplot(plotlist=cmv_plots, cols=2, rows=2)
     dev.off()
 }
 
@@ -185,11 +223,19 @@ if(do_aa) {
 p1 <- ggplot(aa_dat[aa_dat$Label == "Aggregate", ], 
              aes(x=AA, y=Frequency, fill=Dataset)) +
         geom_bar(stat="identity", position="dodge") +
-        ggtitle("Amino acid frequencies for aggregate data")
+        xlab("Amino acid") +
+        theme(axis.title=element_text(size=1.8*ggplot_text_size),
+              legend.title=element_text(size=1.8*ggplot_text_size),
+              axis.text=element_text(size=1.5*ggplot_text_size),
+              legend.text=element_text(size=1.5*ggplot_text_size))
 p2 <- ggplot(aa_dat[aa_dat$Label == "Individual", ], 
              aes(x=AA, y=Frequency, fill=Dataset)) +
         geom_bar(stat="identity", position="dodge") +
-        ggtitle("Amino acid frequencies for individual data")
+        xlab("Amino acid") +
+        theme(axis.title=element_text(size=1.8*ggplot_text_size),
+              legend.title=element_text(size=1.8*ggplot_text_size),
+              axis.text=element_text(size=1.5*ggplot_text_size),
+              legend.text=element_text(size=1.5*ggplot_text_size))
 pdf("aa.pdf", width=10, height=6)
 multiplot(plotlist=list(p1, p2), cols=1, rows=2)
 dev.off()
@@ -197,7 +243,6 @@ dev.off()
 do_divergences <- TRUE
 if(do_divergences) {
     div_functions <- list("compareSequenceLengthDistributions",
-                          "compareHydrophobicityDistributions",
                           "compareAliphaticIndexDistributions",
                           "compareGRAVYDistributions",
                           "compareAminoAcidDistributions",
@@ -239,19 +284,17 @@ if(do_divergences) {
 }
 
 div_labels <- c("CDR3 lengths (AA)",
-                "Hydrophobicities",
                 "Aliphatic indices",
                 "GRAVY indices",
                 "Amino acid frequencies",
                 "Amino acid 2mer frequencies"
                )
 
-div_types <- c("JS divergence",
-               "JS divergence",
-               "JS divergence",
-               "JS divergence",
-               "Sum of absolute differences",
-               "Sum of absolute differences"
+div_types <- c("JS",
+               "JS",
+               "JS",
+               "$\\ell_1$",
+               "$\\ell_1$"
               )
 
 agg_table <- cbind.data.frame(div_labels,
@@ -265,9 +308,9 @@ cmv_table <- cbind.data.frame(div_labels,
                               div_types)
 
 table_names <- c("Summary", 
-                 "Div(Observed, Igor)", 
-                 "Div(Observed, VAE)", 
-                 "Divergence type"
+                 "Div to IGoR", 
+                 "Div to VAE", 
+                 "Div"
                 )
 agg_table %>%
     setNames(table_names) %>%
