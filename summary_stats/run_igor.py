@@ -9,10 +9,10 @@ import re
 # May need to move this to /fh/fast/
 sys.path.insert(0, '/home/bolson2/Software/IGoR')
 
-import pygor
-from pygor import counters
-from pygor.counters import bestscenarios
-from pygor.counters.bestscenarios import bestscenarios
+# import pygor
+# from pygor import counters
+# from pygor.counters import bestscenarios
+# from pygor.counters.bestscenarios import bestscenarios
 
 def get_seqs_from_tsv(input_file, \
                       output_file, \
@@ -81,32 +81,44 @@ def extract_gene_from_full_string(s, chain, gene):
     regex = "TR" + chain_letter[chain] + gene + "[0-9]+([-][0-9]+)?[*][0-9]+"
     regex_result = re.search(regex, s)
     gene_string = regex_result.group(0) if regex_result is not None else None
-    
     return(gene_string)
 
-if __name__ == "__main__":
+def run_igor_analysis(input_file,
+                      sequences_filename,
+                      igor_dir_name,
+                      subsample=False,
+                      chain="beta"
+                     ):
     cwd = os.getcwd()
-    agg_seq_file = "agg_seqs.txt"
-    get_seqs_from_tsv(
-        "/fh/fast/matsen_e/kdavidse/data/dnnir/vampire/summary_stats/all_seshadri_data/all_TCRB_KD_cut.tsv",
-        os.path.join(cwd, agg_seq_file),
-        subsample=True,
-        sample_count=100)
-    agg_dir = "igor_aggregate"
-    agg_wd = os.path.join(cwd, agg_dir)
-    if not os.path.exists(agg_wd):
-        os.makedirs(agg_wd)
-    run_igor(agg_seq_file, agg_wd)
-    agg_annotations = get_annotations(agg_wd, "beta")
+    sequence_file = os.path.join(cwd, sequences_filename)
+    get_seqs_from_tsv( 
+        input_file,
+        sequence_file,
+        subsample=False)
+    igor_directory = os.path.join(cwd, igor_dir_name)
+    if not os.path.exists(igor_directory):
+        os.makedirs(igor_directory)
+    run_igor(sequences_filename, igor_directory)
+    # annotations = get_annotations(igor_directory, chain)
+    return 32
 
-    # cmv_seq_file = "cmv_seqs.txt"
-    # get_seqs_from_tsv( 
-    #     "/fh/fast/matsen_e/kdavidse/data/dnnir/vampire/summary_stats/largest_CMV_sample/HIP13427_KD_cut.tsv",
-    #     os.path.join(cwd, cmv_seq_file), 
-    #     subsample=False)
-    # cmv_dir = "igor_cmv"
-    # cmv_wd = os.path.join(cwd, cmv_dir)
-    # if not os.path.exists(cmv_wd):
-    #     os.makedirs(cmv_wd)
-    # run_igor(cmv_seq_file, cmv_wd)
-    # cmv_annotations = get_annotations(cmv_wd)
+
+if __name__ == "__main__":
+    do_aggregate = False
+    if do_aggregate:
+        agg_annotations = run_igor_analysis(
+            "/fh/fast/matsen_e/kdavidse/data/dnnir/vampire/summary_stats/all_seshadri_data/all_TCRB_KD_cut.tsv",
+            "agg_seqs.txt",
+            "tmp_aggregate_quoll",
+            True
+        )
+
+    do_individual = True
+    if do_individual:
+        cmv_annotations = run_igor_analysis(
+            "/fh/fast/matsen_e/kdavidse/data/dnnir/vampire/summary_stats/largest_CMV_sample/HIP13427_BJO_train.tsv",
+            "cmv_seqs.txt",
+            "igor_cmv",
+            False,
+            "beta"
+        )

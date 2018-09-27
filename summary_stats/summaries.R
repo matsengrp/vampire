@@ -44,9 +44,9 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, rows=1, layout=NULL) {
 agg_file <- "/fh/fast/matsen_e/data/dnnir/vampire/summary_stats/all_seshadri_data/all_TCRB_KD_cut.tsv"
 igor_agg_file <- "/fh/fast/matsen_e/data/dnnir/vampire/summary_stats/agg_igor_gen_seqs.csv"
 vae_agg_file <- "/fh/fast/matsen_e/data/dnnir/vampire/summary_stats/all_seshadri_data/all_TCRB_KD_cut_predictions.tsv"
-cmv_file <- "/fh/fast/matsen_e/data/dnnir/vampire/summary_stats/largest_CMV_sample/HIP13427_KD_cut.tsv"
-igor_cmv_file <- "/fh/fast/matsen_e/data/dnnir/vampire/summary_stats/cmv_igor_gen_seqs.csv"
-vae_cmv_file <- "/fh/fast/matsen_e/data/dnnir/vampire/summary_stats/largest_CMV_sample/all_TCRB_KD_cut_predictions_HIP13427.tsv"
+cmv_file <- "/fh/fast/matsen_e/data/dnnir/vampire/summary_stats/largest_CMV_sample/HIP13427_BJO_test.tsv"
+igor_cmv_file <- "/home/bolson2/Code/vampire/summary_stats/igor_cmv/igor_generated/generated_seqs_werr_CDR3_info.csv"
+vae_cmv_file <- "/fh/fast/matsen_e/data/dnnir/vampire/summary_stats/largest_CMV_sample/all_TCRB_EH_cut_predictions_HIP13427.tsv"
 
 
 read_files <- FALSE
@@ -125,21 +125,19 @@ compareSequenceLengthDistributions <- function(dat_a,
     return(divergence)
 }
 
-do_full <- FALSE
+do_full <- TRUE
 if(do_full) { 
     summary_functions <- list("getSequenceLengthDistribution",
-                              "getHydrophobicityDistribution",
-                              "getAliphaticIndexDistribution",
-                              "getGRAVYDistribution"
+                              "getGRAVYDistribution",
+                              "getAliphaticIndexDistribution"
                              )
     
     summary_labels <- list("CDR3 length (AA)",
-                           "Hydrophobicity",
-                           "Aliphatic Index",
-                           "GRAVY index"
+                           "GRAVY index",
+                           "Aliphatic Index"
                           )
     
-    smoothness <- list(6, 1, 1.5, 1)
+    smoothness <- list(6, 1, 1.5)
     
     plots <- {}
     agg_plots <- {}
@@ -182,7 +180,8 @@ if(do_full) {
 
         cmv_plots[[i]] <- ggplot(summary_dat[summary_dat$Label == "Individual", ],
                              aes(x=Summary, 
-                                 colour=Dataset
+                                 colour=Dataset,
+                                 lty=Dataset
                                  )
                              ) + 
             geom_density(adjust=smoothness[[i]]) +
@@ -191,7 +190,12 @@ if(do_full) {
             theme(axis.title=element_text(size=1.8*ggplot_text_size),
                   legend.title=element_text(size=1.8*ggplot_text_size),
                   axis.text=element_text(size=1.5*ggplot_text_size),
-                  legend.text=element_text(size=1.5*ggplot_text_size))
+                  legend.text=element_text(size=1.5*ggplot_text_size),
+                  panel.background=element_blank(),
+                  panel.grid.major=element_blank(),
+                  panel.grid.minor=element_blank(),
+                  axis.line=element_line(colour="grey")
+            )
 
 
         i <- i + 1
@@ -220,22 +224,27 @@ if(do_aa) {
         do.call(rbind, .)
 }
 
-p1 <- ggplot(aa_dat[aa_dat$Label == "Aggregate", ], 
-             aes(x=AA, y=Frequency, fill=Dataset)) +
-        geom_bar(stat="identity", position="dodge") +
-        xlab("Amino acid") +
-        theme(axis.title=element_text(size=1.8*ggplot_text_size),
-              legend.title=element_text(size=1.8*ggplot_text_size),
-              axis.text=element_text(size=1.5*ggplot_text_size),
-              legend.text=element_text(size=1.5*ggplot_text_size))
+# p1 <- ggplot(aa_dat[aa_dat$Label == "Aggregate", ], 
+#              aes(x=AA, y=Frequency, fill=Dataset)) +
+#         geom_bar(stat="identity", position="dodge") +
+#         xlab("Amino acid") +
+#         theme(axis.title=element_text(size=1.8*ggplot_text_size),
+#               legend.title=element_text(size=1.8*ggplot_text_size),
+#               axis.text=element_text(size=1.5*ggplot_text_size),
+#               legend.text=element_text(size=1.5*ggplot_text_size))
 p2 <- ggplot(aa_dat[aa_dat$Label == "Individual", ], 
-             aes(x=AA, y=Frequency, fill=Dataset)) +
+             aes(x=AA, y=Frequency, fill=Dataset, lty=Dataset)) +
         geom_bar(stat="identity", position="dodge") +
         xlab("Amino acid") +
         theme(axis.title=element_text(size=1.8*ggplot_text_size),
               legend.title=element_text(size=1.8*ggplot_text_size),
               axis.text=element_text(size=1.5*ggplot_text_size),
-              legend.text=element_text(size=1.5*ggplot_text_size))
+              legend.text=element_text(size=1.5*ggplot_text_size),
+              panel.background=element_blank(),
+              panel.grid.major=element_blank(),
+              panel.grid.minor=element_blank(),
+              axis.line=element_line(colour="grey")
+             )
 pdf("aa.pdf", width=10, height=6)
 multiplot(plotlist=list(p1, p2), cols=1, rows=2)
 dev.off()
