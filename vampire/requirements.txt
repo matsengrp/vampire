@@ -1,0 +1,11 @@
+biopython
+click
+flake8
+keras
+matplotlib
+nestly
+pandas
+pytest
+scikit-learn
+scons
+yapf

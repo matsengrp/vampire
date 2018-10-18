@@ -1,0 +1,27 @@
+#!/usr/bin/env scons
+
+"""
+The master SConstruct file; particular analyses run via SConscript files in subdirectories.
+"""
+
+import os
+
+from os.path import join
+from nestly.scons import SConsWrap
+from nestly import Nest
+from SCons.Script import Environment
+from SCons.Script import AddOption
+
+vars = Variables()
+vars.Add('action', 'Which directory to run', default='scons_test')
+
+env = Environment(ENV=os.environ, variables=vars)
+
+Export('env')
+
+AddOption('--action',
+          type='string',
+          help="Action to take",
+          default='test_scons')
+
+SConscript(join(GetOption('action'),'SConscript'))

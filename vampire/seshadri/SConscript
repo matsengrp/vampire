@@ -1,0 +1,31 @@
+import os
+
+from os.path import join
+from nestly.scons import SConsWrap
+from nestly import Nest
+
+Import('env')
+localenv = env.Clone()
+
+nest = SConsWrap(Nest(), alias_environment=localenv)
+
+
+def sample_name(in_path):
+    return os.path.splitext(os.path.basename(in_path))[0]
+
+
+nest.add(
+    'data', [
+        '/fh/fast/matsen_e/data/seshadri/data/Adaptive/clinical_cohort/02-0249_TCRB.tsv',
+        '/fh/fast/matsen_e/data/seshadri/data/Adaptive/clinical_cohort/09-0306_TCRB.tsv'
+    ], label_func=lambda p: '_output_'+sample_name(p))
+
+
+@nest.add_target_with_env(localenv)
+def preprocess_data(env, outdir, c):
+    in_path = c['data']
+    return env.Command(
+        join(
+            outdir,
+            sample_name(in_path) + '.processed.csv'),
+        in_path, 'python3 preprocess_adaptive.py $SOURCE $TARGET')
