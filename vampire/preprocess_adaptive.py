@@ -1,3 +1,10 @@
+"""
+Preprocess data coming from Adaptive immunoSEQ.
+
+https://clients.adaptivebiotech.com/assets/downloads/immunoSEQ_AnalyzerManual.pdf
+"""
+
+
 def filter_and_drop_frame(df):
     """
     Select in-frame sequences and then drop that column.
@@ -10,9 +17,8 @@ def filter_on_cdr3_bounding_aas(df):
     Only take sequences that have a C at the beginning and a F or a YV at the
     end of the `amino_acid` column.
 
-    Note that according to the
-    [Adaptive docs](https://clients.adaptivebiotech.com/assets/downloads/immunoSEQ_AnalyzerManual.pdf)
-    the `amino_acid` column is indeed the CDR3 amino acid.
+    Note that according to the Adaptive docs the `amino_acid` column is indeed
+    the CDR3 amino acid.
     """
     return df[df['amino_acid'].str.contains('^C.*F$')
               | df['amino_acid'].str.contains('^C.*YV$')]
