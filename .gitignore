@@ -1,4 +1,6 @@
 _ignore
+_output_*
+.sconsign.dblite
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
