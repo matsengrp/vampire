@@ -44,7 +44,7 @@ def apply_all_filters(df):
     df = filter_and_drop_frame(df)
     click.echo(f"Restricting to in-frame: {len(df)} rows")
     df = filter_on_cdr3_bounding_aas(df)
-    click.echo(f"Requiring cys-phe: {len(df)} rows")
+    click.echo(f"Requiring sane CDR3 bounding AAs: {len(df)} rows")
     df = filter_on_TCRB(df)
     click.echo(f"Requiring resolved TCRB genes: {len(df)} rows")
     return df.reset_index(drop=True)
