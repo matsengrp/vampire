@@ -22,7 +22,7 @@ nest.add(
 
 
 @nest.add_target_with_env(localenv)
-def read_gestalt(env, outdir, c):
+def preprocess_data(env, outdir, c):
     in_path = c['data']
     return env.Command(
         join(
