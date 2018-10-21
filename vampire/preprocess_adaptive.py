@@ -6,7 +6,10 @@ https://clients.adaptivebiotech.com/assets/downloads/immunoSEQ_AnalyzerManual.pd
 """
 
 import click
+import collections
+import numpy as np
 import pandas as pd
+import random
 
 
 def filter_and_drop_frame(df):
@@ -50,6 +53,34 @@ def apply_all_filters(df):
     return df.reset_index(drop=True)
 
 
+def collect_protein_duplicates(df):
+    """
+    Build a dictionary mapping protein sequences to rows containing that
+    protein sequence.
+    """
+    d = collections.defaultdict(list)
+
+    for idx, row in df.iterrows():
+        d[row['amino_acid']].append(idx)
+
+    # nan means no protein sequence. We don't care about those.
+    if np.nan in d:
+        d.pop(np.nan)
+
+    return d
+
+
+def dedup_on_proteins(df):
+    """
+    Given a data frame of sequences, sample one representative per protein
+    sequence uniformly.
+    """
+    dup_dict = collect_protein_duplicates(df)
+    indices = sum([random.sample(v, 1) for (_, v) in dup_dict.items()], [])
+    indices.sort()
+    return df.loc[indices].reset_index(drop=True)
+
+
 def read_adaptive_tsv(f):
     """
     Read an Adaptive TSV file and extract the columns we use.
@@ -63,8 +94,10 @@ def read_adaptive_tsv(f):
 def preprocess_tsv(in_tsv, out_csv):
     """
     Preprocess the Adaptive TSV at IN_TSV and output to OUT_CSV.
+
+    This includes doing filters as well as deduplicating on proteins.
     """
-    df = apply_all_filters(read_adaptive_tsv(in_tsv))
+    df = dedup_on_proteins(apply_all_filters(read_adaptive_tsv(in_tsv)))
     df.to_csv(out_csv, index=False)
 
 
