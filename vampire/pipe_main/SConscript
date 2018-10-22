@@ -32,7 +32,7 @@ def strip_dirpath_extn(in_path):
     """
     Strips the directory path and the extension.
     """
-    return os.path.splitext(os.path.basename(in_path))[0]
+    return os.path.splitext(os.path.basename(str(in_path)))[0]
 
 
 # ### Nests and targets ###
@@ -52,9 +52,21 @@ nest.add(
 
 
 @nest.add_target_with_env(localenv)
-def preprocess_data(env, outdir, c):
+def preprocess(env, outdir, c):
     in_path = c['sample']
-    return env.Command(
+    outfile, = env.Command(
         join(outdir,
              strip_dirpath_extn(in_path) + '.processed.csv'), in_path,
         'python3 preprocess_adaptive.py $SOURCE $TARGET')
+    return outfile
+
+
+@nest.add_target_with_env(localenv)
+def split(env, outdir, c):
+    in_path = c['preprocess']
+    return env.Command([
+        join(outdir,
+             strip_dirpath_extn(in_path) + '.train.csv'),
+        join(outdir,
+             strip_dirpath_extn(in_path) + '.test.csv')
+    ], in_path, 'python3 util.py split $SOURCE $TARGETS')
