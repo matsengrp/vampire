@@ -15,7 +15,7 @@ seshadri_path = join(data_path, 'seshadri/data/Adaptive/clinical_cohort/')
 
 DATA = {
     'test': {
-        'paths': ['data/02-0249_TCRB.head.tsv']
+        'paths': ['sample_data/02-0249_TCRB.head.tsv']
     },
     'seshadri': {
         'paths': [
@@ -38,7 +38,7 @@ nest = ns.SConsWrap(nestly.Nest(), alias_environment=localenv)
 
 nest.add(
     'data', [localenv['data']],
-    label_func=lambda p: '_output_' + os.path.basename(p))
+    label_func=lambda p: '_output_' + p)
 
 nest.add('sample', DATA[localenv['data']]['paths'], label_func=sample_name)
 
