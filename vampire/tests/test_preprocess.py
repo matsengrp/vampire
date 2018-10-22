@@ -15,5 +15,5 @@ def test_dedup():
     original = pd.read_csv("vampire/data/protein-dedup-test.csv")
     correct = pd.read_csv("vampire/data/protein-dedup-test.correct.csv")
     random.seed(1)
-    deduped = pre.dedup_on_proteins(original)
+    deduped = pre.dedup_on_vjcdr3(original)
     assert correct.equals(deduped)

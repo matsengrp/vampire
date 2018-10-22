@@ -53,31 +53,36 @@ def apply_all_filters(df):
     return df.reset_index(drop=True)
 
 
-def collect_protein_duplicates(df):
+def collect_vjcdr3_duplicates(df):
     """
-    Build a dictionary mapping protein sequences to rows containing that
-    protein sequence.
+    Define a vjcdr3 to be the concatenation of the V label,
+    the J label, and the CDR3 protein sequence. Here we build
+    a dictionary mapping vjcdr3 sequences to rows containing
+    that vjcdr3 sequence.
+
+    We only include sequences with a CDR3 amino acid sequence.
     """
     d = collections.defaultdict(list)
 
     for idx, row in df.iterrows():
-        d[row['amino_acid']].append(idx)
+        if row['amino_acid'] == np.nan:
+            # nan means no CDR3 sequence. We don't care about those.
+            continue
 
-    # nan means no protein sequence. We don't care about those.
-    if np.nan in d:
-        d.pop(np.nan)
+        key = '_'.join([row['v_gene'], row['j_gene'], row['amino_acid']])
+        d[key].append(idx)
 
     return d
 
 
-def dedup_on_proteins(df):
+def dedup_on_vjcdr3(df):
     """
-    Given a data frame of sequences, sample one representative per protein
-    sequence uniformly.
+    Given a data frame of sequences, sample one
+    representative per vjcdr3 uniformly.
     """
-    dup_dict = collect_protein_duplicates(df)
+    dup_dict = collect_vjcdr3_duplicates(df)
     c = collections.Counter([len(v) for (_, v) in dup_dict.items()])
-    click.echo("A count of the frequency of protein duplicates:")
+    click.echo("A count of the frequency of vjcdr3 duplicates:")
     click.echo(c)
     indices = sum([random.sample(v, 1) for (_, v) in dup_dict.items()], [])
     indices.sort()
@@ -98,9 +103,9 @@ def preprocess_tsv(in_tsv, out_csv):
     """
     Preprocess the Adaptive TSV at IN_TSV and output to OUT_CSV.
 
-    This includes doing filters as well as deduplicating on proteins.
+    This includes doing filters as well as deduplicating on vjcdr3s.
     """
-    df = dedup_on_proteins(apply_all_filters(read_adaptive_tsv(in_tsv)))
+    df = dedup_on_vjcdr3(apply_all_filters(read_adaptive_tsv(in_tsv)))
     df.to_csv(out_csv, index=False)
 
 
