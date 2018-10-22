@@ -28,11 +28,18 @@ DATA = {
 # ### Utility functions ###
 
 
+def strip_extn(in_path):
+    """
+    Strips the extension.
+    """
+    return os.path.splitext(str(in_path))[0]
+
+
 def strip_dirpath_extn(in_path):
     """
     Strips the directory path and the extension.
     """
-    return os.path.splitext(os.path.basename(str(in_path)))[0]
+    return os.path.basename(strip_extn(in_path))
 
 
 # ### Nests and targets ###
@@ -61,12 +68,20 @@ def preprocess(env, outdir, c):
     return outfile
 
 
-@nest.add_target_with_env(localenv)
+@nest.add_target_with_env(localenv, 'split')
+@ns.name_targets
 def split(env, outdir, c):
     in_path = c['preprocess']
-    return env.Command([
+    return 'train', 'test', env.Command([
         join(outdir,
              strip_dirpath_extn(in_path) + '.train.csv'),
         join(outdir,
              strip_dirpath_extn(in_path) + '.test.csv')
     ], in_path, 'python3 util.py split $SOURCE $TARGETS')
+
+
+@nest.add_target_with_env(localenv)
+def wc(env, outdir, c):
+    return env.Command(
+        strip_extn(c['split']['train']) + '.wc.txt',
+        c['split']['train'], 'wc $SOURCE > $TARGET')
