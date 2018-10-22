@@ -28,7 +28,10 @@ DATA = {
 # ### Utility functions ###
 
 
-def sample_name(in_path):
+def strip_dirpath_extn(in_path):
+    """
+    Strips the directory path and the extension.
+    """
     return os.path.splitext(os.path.basename(in_path))[0]
 
 
@@ -36,11 +39,16 @@ def sample_name(in_path):
 
 nest = ns.SConsWrap(nestly.Nest(), alias_environment=localenv)
 
+# The first nest just shows what the data name is, prepended with `_output_`.
 nest.add(
-    'data', [localenv['data']],
+    'data_label', [localenv['data_label']],
     label_func=lambda p: '_output_' + p)
 
-nest.add('sample', DATA[localenv['data']]['paths'], label_func=sample_name)
+# The second nest shows the sample name.
+nest.add(
+    'sample',
+    DATA[localenv['data_label']]['paths'],
+    label_func=strip_dirpath_extn)
 
 
 @nest.add_target_with_env(localenv)
@@ -48,5 +56,5 @@ def preprocess_data(env, outdir, c):
     in_path = c['sample']
     return env.Command(
         join(outdir,
-             sample_name(in_path) + '.processed.csv'), in_path,
+             strip_dirpath_extn(in_path) + '.processed.csv'), in_path,
         'python3 preprocess_adaptive.py $SOURCE $TARGET')

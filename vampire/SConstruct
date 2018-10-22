@@ -21,11 +21,11 @@ sc.AddOption(
 sc.AddOption(
     '--data',
     type='string',
-    help="Which data to run in the specified pipeline.",
+    help="The label of the data to be run in the specified pipeline.",
     default='test')
 
 # Set up environment and run  \m/ ( -_- ) \m/
 
-env = sc.Environment(ENV=os.environ, data=sc.GetOption('data'))
+env = sc.Environment(ENV=os.environ, data_label=sc.GetOption('data'))
 sc.Export('env')
 sc.SConscript(join(sc.GetOption('pipe'), 'SConscript'))
