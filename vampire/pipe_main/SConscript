@@ -1,0 +1,52 @@
+import os
+
+from os.path import join
+import nestly
+import nestly.scons as ns
+import SCons.Script as sc
+
+sc.Import('env')
+localenv = env.Clone()  # noqa
+
+# ### Paths and data sets ###
+
+data_path = '/fh/fast/matsen_e/data/'
+seshadri_path = join(data_path, 'seshadri/data/Adaptive/clinical_cohort/')
+
+DATA = {
+    'test': {
+        'paths': ['data/02-0249_TCRB.head.tsv']
+    },
+    'seshadri': {
+        'paths': [
+            join(seshadri_path, '02-0249_TCRB.tsv'),
+            join(seshadri_path, '09-0306_TCRB.tsv')
+        ]
+    }
+}
+
+# ### Utility functions ###
+
+
+def sample_name(in_path):
+    return os.path.splitext(os.path.basename(in_path))[0]
+
+
+# ### Nests and targets ###
+
+nest = ns.SConsWrap(nestly.Nest(), alias_environment=localenv)
+
+nest.add(
+    'data', [localenv['data']],
+    label_func=lambda p: '_output_' + os.path.basename(p))
+
+nest.add('sample', DATA[localenv['data']]['paths'], label_func=sample_name)
+
+
+@nest.add_target_with_env(localenv)
+def preprocess_data(env, outdir, c):
+    in_path = c['sample']
+    return env.Command(
+        join(outdir,
+             sample_name(in_path) + '.processed.csv'), in_path,
+        'python3 preprocess_adaptive.py $SOURCE $TARGET')

@@ -1,27 +1,31 @@
 #!/usr/bin/env scons
-
 """
-The master SConstruct file; particular analyses run via SConscript files in subdirectories.
+The master SConstruct file; particular analyses run via SConscript files in
+subdirectories.
 """
 
 import os
 
 from os.path import join
-from nestly.scons import SConsWrap
-from nestly import Nest
-from SCons.Script import Environment
-from SCons.Script import AddOption
 
-vars = Variables()
-vars.Add('action', 'Which directory to run', default='scons_test')
+import SCons.Script as sc
 
-env = Environment(ENV=os.environ, variables=vars)
+# Command line options
 
-Export('env')
+sc.AddOption(
+    '--pipe',
+    type='string',
+    help="Which pipeline to run.",
+    default='pipe_main')
 
-AddOption('--action',
-          type='string',
-          help="Action to take",
-          default='test_scons')
+sc.AddOption(
+    '--data',
+    type='string',
+    help="Which data to run in the specified pipeline.",
+    default='test')
 
-SConscript(join(GetOption('action'),'SConscript'))
+# Set up environment and run  \m/ ( -_- ) \m/
+
+env = sc.Environment(ENV=os.environ, data=sc.GetOption('data'))
+sc.Export('env')
+sc.SConscript(join(sc.GetOption('pipe'), 'SConscript'))

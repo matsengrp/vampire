@@ -76,8 +76,8 @@ def dedup_on_proteins(df):
     sequence uniformly.
     """
     dup_dict = collect_protein_duplicates(df)
-    c = collections.Counter([len(v) for (_,v) in dup_dict.items()])
-    click.echo("A 'histogram' of the frequency of protein duplicates:")
+    c = collections.Counter([len(v) for (_, v) in dup_dict.items()])
+    click.echo("A count of the frequency of protein duplicates:")
     click.echo(c)
     indices = sum([random.sample(v, 1) for (_, v) in dup_dict.items()], [])
     indices.sort()
