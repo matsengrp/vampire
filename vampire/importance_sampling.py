@@ -21,13 +21,15 @@ def compute_log_probability(one_hot_seq, pwm):
 
 def compute_log_probability_with_importance_sampling(x, x_prob_z, z_mean, z_sd,
                                                      z_sample):
-    '''
-    x is the input one hot encoded sequence
-    x_prob_z is the VAE predicted probability of each position in x
-    z_mean is the encoder output
-    z_sd is the encoder output
-    z_sample is a sample from the posterior of the latent space q(z|x)
-    '''
+    """
+    :param x: the input one-hot-encoded sequence
+    :param x_prob_z: the VAE-predicted probability of each possible amino acid
+        for each position in x
+    :param z_mean: the encoder-obtained mean for q(z|x)
+    :param z_sd: the encoder-obtained standard deviation for q(z|x)
+    :param z_sample: a sample from q(z|x), (i.e. a normal with the above mean
+        and sd.)
+    """
     # This gets us log of p(x|z):
     prod_mat = np.matmul(x, x_prob_z.T)
     log_prod_diag = np.log(prod_mat.diagonal())
