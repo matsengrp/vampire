@@ -1,0 +1,94 @@
+import os
+
+from os.path import join
+import nestly
+import nestly.scons as ns
+import SCons.Script as sc
+
+sc.Import('env')
+localenv = env.Clone()  # noqa
+
+# ### Paths and data sets ###
+
+data_path = '/fh/fast/matsen_e/data/'
+seshadri_path = join(data_path, 'seshadri/data/Adaptive/clinical_cohort/')
+
+DATA = {
+    'test': {
+        'paths': ['sample_data/02-0249_TCRB.head.tsv']
+    },
+    'seshadri': {
+        'paths': [
+            join(seshadri_path, '02-0249_TCRB.tsv'),
+            join(seshadri_path, '09-0306_TCRB.tsv')
+        ]
+    }
+}
+
+# ### Utility functions ###
+
+
+def strip_extn(in_path):
+    """
+    Strips the extension.
+    """
+    return os.path.splitext(str(in_path))[0]
+
+
+def strip_dirpath_extn(in_path):
+    """
+    Strips the directory path and the extension.
+    """
+    return os.path.basename(strip_extn(in_path))
+
+
+# ### Nests and targets ###
+
+nest = ns.SConsWrap(nestly.Nest(), alias_environment=localenv)
+
+# The first nest represents the data set choice, named via data name is,
+# prepended with `_output_`.
+nest.add(
+    'data_label', [localenv['data_label']],
+    label_func=lambda p: '_output_' + p)
+
+# The second nest represents the sample, named by sample name.
+nest.add(
+    'sample',
+    DATA[localenv['data_label']]['paths'],
+    label_func=strip_dirpath_extn)
+
+
+@nest.add_target_with_env(localenv)
+def preprocess(env, outdir, c):
+    """
+    Run the preprocess_adaptive.py script.
+    """
+    in_path = c['sample']
+    outfile, = env.Command(
+        join(outdir,
+             strip_dirpath_extn(in_path) + '.processed.csv'), in_path,
+        'python3 preprocess_adaptive.py $SOURCE $TARGET')
+    return outfile
+
+
+@nest.add_target_with_env(localenv, 'split')
+@ns.name_targets
+def split(env, outdir, c):
+    """
+    Split the sample evenly into test and train.
+    """
+    in_path = c['preprocess']
+    return 'train', 'test', env.Command([
+        join(outdir,
+             strip_dirpath_extn(in_path) + '.train.csv'),
+        join(outdir,
+             strip_dirpath_extn(in_path) + '.test.csv')
+    ], in_path, 'python3 util.py split $SOURCE $TARGETS')
+
+
+@nest.add_target_with_env(localenv)
+def wc(env, outdir, c):
+    return env.Command(
+        strip_extn(c['split']['train']) + '.wc.txt', c['split']['train'],
+        'wc $SOURCE > $TARGET')
