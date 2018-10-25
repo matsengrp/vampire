@@ -46,12 +46,13 @@ def strip_dirpath_extn(in_path):
 
 nest = ns.SConsWrap(nestly.Nest(), alias_environment=localenv)
 
-# The first nest just shows what the data name is, prepended with `_output_`.
+# The first nest represents the data set choice, named via data name is,
+# prepended with `_output_`.
 nest.add(
     'data_label', [localenv['data_label']],
     label_func=lambda p: '_output_' + p)
 
-# The second nest shows the sample name.
+# The second nest represents the sample, named by sample name.
 nest.add(
     'sample',
     DATA[localenv['data_label']]['paths'],
@@ -60,6 +61,9 @@ nest.add(
 
 @nest.add_target_with_env(localenv)
 def preprocess(env, outdir, c):
+    """
+    Run the preprocess_adaptive.py script.
+    """
     in_path = c['sample']
     outfile, = env.Command(
         join(outdir,
@@ -71,6 +75,9 @@ def preprocess(env, outdir, c):
 @nest.add_target_with_env(localenv, 'split')
 @ns.name_targets
 def split(env, outdir, c):
+    """
+    Split the sample evenly into test and train.
+    """
     in_path = c['preprocess']
     return 'train', 'test', env.Command([
         join(outdir,
@@ -83,5 +90,5 @@ def split(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def wc(env, outdir, c):
     return env.Command(
-        strip_extn(c['split']['train']) + '.wc.txt',
-        c['split']['train'], 'wc $SOURCE > $TARGET')
+        strip_extn(c['split']['train']) + '.wc.txt', c['split']['train'],
+        'wc $SOURCE > $TARGET')

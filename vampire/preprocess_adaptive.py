@@ -65,12 +65,10 @@ def collect_vjcdr3_duplicates(df):
     d = collections.defaultdict(list)
 
     for idx, row in df.iterrows():
-        if row['amino_acid'] == np.nan:
-            # nan means no CDR3 sequence. We don't care about those.
-            continue
-
-        key = '_'.join([row['v_gene'], row['j_gene'], row['amino_acid']])
-        d[key].append(idx)
+        # nan means no CDR3 sequence. We don't want to include those.
+        if row['amino_acid'] is not np.nan:
+            key = '_'.join([row['v_gene'], row['j_gene'], row['amino_acid']])
+            d[key].append(idx)
 
     return d
 
