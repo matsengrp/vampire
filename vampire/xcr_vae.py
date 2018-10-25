@@ -38,7 +38,6 @@ class OnehotEmbedding2D(Layer):
 
 
 def encoder_decoder_vae(input_shape,
-                        max_len=30,
                         batch_size=100,
                         embedding_output_dim=[21, 30, 13],
                         latent_dim=40,

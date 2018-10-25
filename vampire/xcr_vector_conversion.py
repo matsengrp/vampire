@@ -1,3 +1,10 @@
+"""
+Encoding TCRs as one-hot vectors and back again.
+Someday this may do the same for BCRs.
+
+The current gene names are for Adaptive data.
+"""
+
 import numpy as np
 
 # ### Amino Acids ###
@@ -40,10 +47,10 @@ TCRB_J_GENE_SET = set(TCRB_J_GENE_LIST)
 
 
 def tcrb2onehot(TCRB_list):
-    '''
+    """
     Translate a list of TCR betas into onehot encodings.
     NB. all CDR3 sequences must be of equal length.
-    '''
+    """
     seqlen = len(TCRB_list[0][0])
     assert (not [True for s in TCRB_list if len(s[0]) != seqlen])
     onehot_seq = np.zeros((len(TCRB_list), seqlen, len(AA_SET)))
@@ -59,9 +66,9 @@ def tcrb2onehot(TCRB_list):
 
 
 def onehot2tcrb(onehot_seq, onehot_vgene, onehot_jgene):
-    '''
+    """
     Convert back from onehot encodings to TCR betas.
-    '''
+    """
     TCRB_list = list()
     for i in range(onehot_seq.shape[0]):
         seq = list()
