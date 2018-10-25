@@ -89,7 +89,8 @@ def dedup_on_vjcdr3(df):
 
 def read_adaptive_tsv(f):
     """
-    Read an Adaptive TSV file and extract the columns we use.
+    Read an Adaptive TSV file and extract the columns we use, namely
+    rearrangement, amino_acid, frame_type, v_gene,and j_gene.
     """
     return pd.read_csv(f, delimiter='\t', usecols=[0, 1, 2, 10, 16])
 
