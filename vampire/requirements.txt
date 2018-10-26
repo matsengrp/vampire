@@ -5,6 +5,7 @@ keras
 matplotlib
 nestly
 pandas
+pydot
 pytest
 scikit-learn
 scons
