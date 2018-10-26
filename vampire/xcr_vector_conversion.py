@@ -52,6 +52,7 @@ def tcrb2onehot(TCRB_list):
     NB. all CDR3 sequences must be of equal length.
     """
     seqlen = len(TCRB_list[0][0])
+    # TODO verify that this assertion works.
     assert (not [True for s in TCRB_list if len(s[0]) != seqlen])
     onehot_seq = np.zeros((len(TCRB_list), seqlen, len(AA_SET)))
     onehot_vgene = np.zeros((len(TCRB_list), len(TCRB_V_GENE_SET)))
