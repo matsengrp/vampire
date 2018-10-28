@@ -31,6 +31,13 @@ def filter_on_cdr3_bounding_aas(df):
               | df['amino_acid'].str.contains('^C.*YV$')]
 
 
+def filter_on_cdr3_length(df, max_len):
+    """
+    Only take sequences that have a CDR3 of at most `max_len` length.
+    """
+    return df[df['amino_acid'].apply(len) <= max_len]
+
+
 def filter_on_TCRB(df):
     """
     Only take sequences that have a resolved TCRB gene for V and J.
@@ -39,7 +46,7 @@ def filter_on_TCRB(df):
               & df['j_gene'].str.contains('^TCRB')]
 
 
-def apply_all_filters(df):
+def apply_all_filters(df, max_len=30):
     """
     Apply all filters.
     """
@@ -48,6 +55,9 @@ def apply_all_filters(df):
     click.echo(f"Restricting to in-frame: {len(df)} rows")
     df = filter_on_cdr3_bounding_aas(df)
     click.echo(f"Requiring sane CDR3 bounding AAs: {len(df)} rows")
+    df = filter_on_cdr3_length(df, max_len)
+    click.echo(
+        f"Requiring CDR3 to be <= {max_len} amino acids: {len(df)} rows")
     df = filter_on_TCRB(df)
     click.echo(f"Requiring resolved TCRB genes: {len(df)} rows")
     return df.reset_index(drop=True)
