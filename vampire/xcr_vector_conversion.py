@@ -6,6 +6,7 @@ The current gene names are for Adaptive data.
 """
 
 import numpy as np
+import pandas as pd
 
 # ### Amino Acids ###
 
@@ -14,6 +15,18 @@ AA_LIST = list(AA_ORDER)
 AA_DICT = {c: i for i, c in enumerate(AA_LIST)}
 AA_DICT_REV = {i: c for i, c in enumerate(AA_LIST)}
 AA_SET = set(AA_LIST)
+
+
+def seq_to_onehot(seq):
+    v = np.zeros((len(seq), len(AA_SET)))
+    for i, a in enumerate(seq):
+        v[i][AA_DICT[a]] = 1
+    return v
+
+
+def onehot_to_seq(onehot):
+    return ''.join([AA_DICT_REV[v.argmax()] for v in onehot])
+
 
 # ### TCRB ###
 # V genes:
@@ -35,6 +48,17 @@ TCRB_V_GENE_DICT = {c: i for i, c in enumerate(TCRB_V_GENE_LIST)}
 TCRB_V_GENE_DICT_REV = {i: c for i, c in enumerate(TCRB_V_GENE_LIST)}
 TCRB_V_GENE_SET = set(TCRB_V_GENE_LIST)
 
+
+def vgene_to_onehot(v_gene):
+    v = np.zeros(len(TCRB_V_GENE_SET))
+    v[TCRB_V_GENE_DICT[v_gene]] = 1
+    return v
+
+
+def onehot_to_vgene(onehot):
+    return TCRB_V_GENE_DICT_REV[onehot.argmax()]
+
+
 # J genes:
 TCRB_J_GENE_LIST = [
     'TCRBJ01-01', 'TCRBJ01-02', 'TCRBJ01-03', 'TCRBJ01-04', 'TCRBJ01-05',
@@ -46,37 +70,54 @@ TCRB_J_GENE_DICT_REV = {i: c for i, c in enumerate(TCRB_J_GENE_LIST)}
 TCRB_J_GENE_SET = set(TCRB_J_GENE_LIST)
 
 
-def tcrb2onehot(TCRB_list):
-    """
-    Translate a list of TCR betas into onehot encodings.
-    NB. all CDR3 sequences must be of equal length.
-    """
-    seqlen = len(TCRB_list[0][0])
-    # TODO verify that this assertion works.
-    assert (not [True for s in TCRB_list if len(s[0]) != seqlen])
-    onehot_seq = np.zeros((len(TCRB_list), seqlen, len(AA_SET)))
-    onehot_vgene = np.zeros((len(TCRB_list), len(TCRB_V_GENE_SET)))
-    onehot_jgene = np.zeros((len(TCRB_list), len(TCRB_J_GENE_SET)))
-    for i, el in enumerate(TCRB_list):
-        seq, vgene, jgene = el
-        onehot_vgene[i][TCRB_V_GENE_DICT[vgene]] = 1
-        onehot_jgene[i][TCRB_J_GENE_DICT[jgene]] = 1
-        for j, a in enumerate(seq):
-            onehot_seq[i][j][AA_DICT[a]] = 1
-    return (onehot_seq, onehot_vgene, onehot_jgene)
+def jgene_to_onehot(j_gene):
+    v = np.zeros(len(TCRB_J_GENE_SET))
+    v[TCRB_J_GENE_DICT[j_gene]] = 1
+    return v
 
 
-def onehot2tcrb(onehot_seq, onehot_vgene, onehot_jgene):
+def onehot_to_jgene(onehot):
+    return TCRB_J_GENE_DICT_REV[onehot.argmax()]
+
+
+def pad_middle(seq, desired_length):
+    """
+    Pad the middle of a sequence with gaps so that it is a desired length.
+    Fail assertion if it's already longer than `desired_length`.
+    """
+    seq_len = len(seq)
+    assert seq_len <= desired_length
+    pad_start = seq_len // 2
+    pad_len = desired_length - seq_len
+    return seq[:pad_start] + '-' * pad_len + seq[pad_start:]
+
+
+def unpadded_tcrbs_to_onehot(df, desired_length):
+    """
+    Translate a data frame of TCR betas written as (CDR3 sequence, V gene name,
+    J gene name) into onehot-encoded format with CDR3 padding out to
+    `desired_length`.
+    If a CDR3 sequence exceeds `desired_length` this will fail an assertion.
+    """
+
+    return pd.DataFrame({
+        'amino_acid':
+        df['amino_acid'].apply(
+            lambda s: seq_to_onehot(pad_middle(s, desired_length))),
+        'v_gene':
+        df['v_gene'].apply(vgene_to_onehot),
+        'j_gene':
+        df['j_gene'].apply(jgene_to_onehot)
+    })
+
+
+def onehot_to_padded_tcrbs(df):
     """
     Convert back from onehot encodings to TCR betas.
     """
-    TCRB_list = list()
-    for i in range(onehot_seq.shape[0]):
-        seq = list()
-        for j in range(onehot_seq.shape[1]):
-            seq.append(AA_DICT_REV[onehot_seq[i][j].argmax()])
-        seq = ''.join(seq)
-        vgene = TCRB_V_GENE_DICT_REV[onehot_vgene[i].argmax()]
-        jgene = TCRB_J_GENE_DICT_REV[onehot_jgene[i].argmax()]
-        TCRB_list.append((seq, vgene, jgene))
-    return (TCRB_list)
+
+    return pd.DataFrame({
+        'amino_acid': df['amino_acid'].apply(onehot_to_seq),
+        'v_gene': df['v_gene'].apply(onehot_to_vgene),
+        'j_gene': df['j_gene'].apply(onehot_to_jgene)
+    })
