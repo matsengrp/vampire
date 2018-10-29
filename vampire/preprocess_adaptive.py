@@ -106,7 +106,9 @@ def read_adaptive_tsv(f):
 
 
 @click.command()
-@click.argument('in_tsv', type=click.File('r'))
+# Below we use Path rather than File because we don't want to have to figure
+# out whether a file is compressed or not-- Pandas will figure that out for us.
+@click.argument('in_tsv', type=click.Path(exists=True))
 @click.argument('out_csv', type=click.File('w'))
 def preprocess_tsv(in_tsv, out_csv):
     """
