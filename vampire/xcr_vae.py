@@ -1,11 +1,18 @@
+import click
+import json
 import numpy as np
+import os
+import pandas as pd
 
 import keras
 from keras.models import Model
 from keras.layers import Input, Dense, Lambda, Activation, Reshape
 from keras import backend as K
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.engine.topology import Layer
 from keras import objectives
+
+import vampire.xcr_vector_conversion as conversion
 
 
 class OnehotEmbedding2D(Layer):
@@ -37,11 +44,8 @@ class OnehotEmbedding2D(Layer):
         return (input_shape[0], input_shape[1], self.Nembeddings)
 
 
-def encoder_decoder_vae(input_shape,
-                        batch_size=100,
-                        embedding_output_dim=[21, 30, 13],
-                        latent_dim=40,
-                        dense_nodes=125):
+def encoder_decoder_vae(input_shape, batch_size, embedding_output_dim,
+                        latent_dim, dense_nodes):
     """
     Build us a encoder, a decoder, and a VAE!
     """
@@ -156,3 +160,160 @@ def encoder_decoder_vae(input_shape,
     vae.compile(optimizer="adam", loss=vae_loss)
 
     return (encoder, decoder, vae)
+
+
+def cols_of_df(df):
+    """
+    Extract the data columns of a dataframe into a list of appropriately-sized
+    numpy arrays.
+    """
+    return [np.stack(col.values) for _, col in df.items()]
+
+
+class XCRVAE:
+    def __init__(
+            self,
+            *,  # Forces everything after this to be a keyword argument.
+            input_shape,
+            batch_size=100,
+            embedding_output_dim=[21, 30, 13],
+            latent_dim=40,
+            dense_nodes=125):
+        kwargs = dict(locals())
+        kwargs.pop('self')
+        (self.encoder, self.decoder, self.vae) = encoder_decoder_vae(**kwargs)
+        self.params = kwargs
+
+    @classmethod
+    def of_json_file(cls, fname):
+        """
+        Build a XCRVAE from a parameter dictionary dumped to JSON.
+        """
+        with open(fname, 'r') as fp:
+            return cls(**json.load(fp))
+
+    @classmethod
+    def of_directory(cls, path):
+        """
+        Build an XCRVAE from the information contained in a directory.
+
+        By convention we are dumping information to a parameter file called
+        `model_params.json` and a weights file called `best_weights.h5`. Here
+        we load that information in.
+        """
+        v = cls.of_json_file(os.path.join(path, 'model_params.json'))
+        v.vae.load_weights(os.path.join(path, 'best_weights.h5'))
+        return v
+
+    def serialize_params(self, fp):
+        """
+        Dump model parameters to a file.
+        """
+        return json.dump(self.params, fp)
+
+    def fit(self,
+            df: pd.DataFrame,
+            epochs: int,
+            validation_split: float,
+            best_weights_fname: str,
+            patience=10):
+        """
+        Fit the model with early stopping.
+        """
+        data = cols_of_df(df)
+        early_stopping = EarlyStopping(monitor='val_loss', patience=patience)
+        save_best_weights = ModelCheckpoint(
+            best_weights_fname,
+            monitor='val_loss',
+            verbose=1,
+            save_best_only=True,
+            mode='min')
+        self.vae.fit(
+            x=data,  # y=X for a VAE.
+            y=data,
+            epochs=epochs,
+            batch_size=self.params['batch_size'],
+            validation_split=validation_split,
+            callbacks=[early_stopping, save_best_weights])
+
+    def evaluate(self, df):
+        """
+        Wrapping Model.evaluate for this setting.
+        """
+        data = cols_of_df(df)
+        return self.vae.evaluate(
+            x=data, y=data, batch_size=self.params['batch_size'])
+
+    def assess_losses(self, train, test):
+        """
+        Print out the losses on the train vs. the hold out test set.
+        """
+        trainset_loss = self.evaluate(train)
+        testset_loss = self.evaluate(test)
+
+        print("Component-wise loss Train vs. Test:")
+        for i in [1, 2, 3]:
+            print('{}: {:.2f} vs. {:.2f}'.format(self.vae.metrics_names[i],
+                                                 float(trainset_loss[i]),
+                                                 float(testset_loss[i])))
+        print('# Sum of losses #\nTrain set: {:.2f}\nTest set: {:.2f}'.format(
+            float(trainset_loss[0]), float(testset_loss[0])))
+        print('# Difference of summed of losses #\ntest-train : {:.2f}'.format(
+            float(testset_loss[0]) - float(trainset_loss[0])))
+
+
+# ### CLI ###
+
+
+@click.group()
+def cli():
+    pass
+
+
+@cli.command()
+@click.argument('train_csv', type=click.File('r'))
+@click.argument('test_csv', type=click.File('r'))
+@click.argument('best_weights_fname', type=click.Path(writable=True))
+@click.argument('model_params_fname', type=click.File('w'))
+def train_tcr(train_csv, test_csv, best_weights_fname, model_params_fname):
+    """
+    Train the model, print out a model assessment, saving the best weights
+    to BEST_WEIGHTS_FNAME and the input model params to MODEL_PARAMS_FNAME.
+    """
+
+    # TODO: less stupid
+    MAX_LEN = 30
+    epochs = 300
+    validation_split = 0.1
+    validation_split_multiplier = 10
+    sub_chunk_size = validation_split * validation_split_multiplier
+    # If this fails then we may have problems with chunks of the data being the
+    # wrong length.
+    assert sub_chunk_size == float(int(sub_chunk_size))
+    batch_size = 100
+    min_data_size = validation_split_multiplier * batch_size
+    input_shape = [(MAX_LEN, len(conversion.AA_LIST)),
+                   (len(conversion.TCRB_V_GENE_LIST), ),
+                   (len(conversion.TCRB_J_GENE_LIST), )]
+
+    def get_data(fname):
+        df = pd.read_csv(fname, usecols=['amino_acid', 'v_gene', 'j_gene'])
+        assert len(df) >= min_data_size
+        # If we deliver chunks of data to Keras of min_data_size then it will
+        # be able to split them into its internal train and test sets for
+        # val_loss. Here we trim off the extra that won't fit into such a
+        # setup.
+        n_to_take = len(df) - len(df) % min_data_size
+        return conversion.unpadded_tcrbs_to_onehot(df[:n_to_take], MAX_LEN)
+
+    train = get_data(train_csv)
+    test = get_data(test_csv)
+
+    tcr_vae = XCRVAE(input_shape=input_shape, batch_size=batch_size)
+    tcr_vae.fit(train, epochs, validation_split, best_weights_fname)
+    tcr_vae.assess_losses(train, test)
+    tcr_vae.serialize_params(model_params_fname)
+
+
+if __name__ == '__main__':
+    cli()
