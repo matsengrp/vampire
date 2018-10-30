@@ -1,6 +1,7 @@
 import click
 import json
 import numpy as np
+import os
 import pandas as pd
 
 import keras
@@ -184,11 +185,30 @@ class XCRVAE:
         self.params = kwargs
 
     @classmethod
-    def from_json_file(cls, fname):
+    def of_json_file(cls, fname):
+        """
+        Build a XCRVAE from a parameter dictionary dumped to JSON.
+        """
         with open(fname, 'r') as fp:
             return cls(**json.load(fp))
 
+    @classmethod
+    def of_directory(cls, path):
+        """
+        Build an XCRVAE from the information contained in a directory.
+
+        By convention we are dumping information to a parameter file called
+        `model_params.json` and a weights file called `best_weights.h5`. Here
+        we load that information in.
+        """
+        v = cls.of_json_file(os.path.join(path, 'model_params.json'))
+        v.vae.load_weights(os.path.join(path, 'best_weights.h5'))
+        return v
+
     def serialize_params(self, fp):
+        """
+        Dump model parameters to a file.
+        """
         return json.dump(self.params, fp)
 
     def fit(self,
