@@ -12,6 +12,8 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.engine.topology import Layer
 from keras import objectives
 
+import scipy.stats as stats
+
 import vampire.xcr_vector_conversion as conversion
 
 
@@ -170,6 +172,23 @@ def cols_of_df(df):
     return [np.stack(col.values) for _, col in df.items()]
 
 
+def logprob_of_obs_vect(probs, obs):
+    """
+    Calculate the log of probability of the observations.
+
+    :param probs: a matrix with each row giving the probability of
+        observations.
+    :param obs: a matrix with each row one-hot-encoding an observation.
+
+    Kristian implemented this as
+        np.sum(np.log(np.matmul(probs, obs.T).diagonal()))
+    but that's equivalent but harder to follow.
+    """
+    # Here axis=1 means sum across columns (the sum will be empty except for
+    # the single nonzero entry).
+    return np.sum(np.log(np.sum(probs * obs, axis=1)))
+
+
 class XCRVAE:
     def __init__(
             self,
@@ -244,6 +263,25 @@ class XCRVAE:
         return self.vae.evaluate(
             x=data, y=data, batch_size=self.params['batch_size'])
 
+    def encode(self, x_df):
+        """
+        Get the VAE encoding of a given collection of sequences x.
+
+        :param x_df: A onehot encoded dataframe representing input sequences.
+
+        :return: z_mean and z_sd, the embedding mean and standard deviation.
+        """
+        z_mean, z_log_var = self.encoder.predict(cols_of_df(x_df))
+        z_sd = np.sqrt(np.exp(z_log_var))
+        return z_mean, z_sd
+
+    def decode(self, z):
+        """
+        Get the decoding of z in the latent space.
+
+        """
+        return self.decoder.predict(z)
+
     def assess_losses(self, train, test):
         """
         Print out the losses on the train vs. the hold out test set.
@@ -260,6 +298,64 @@ class XCRVAE:
             float(trainset_loss[0]), float(testset_loss[0])))
         print('# Difference of summed of losses #\ntest-train : {:.2f}'.format(
             float(testset_loss[0]) - float(trainset_loss[0])))
+
+    def log_p_of_x_importance_sample(self, x_df, out_ps):
+        """
+        One importance sample to calculate the probability of generating some
+        observed x's by decoding from the prior on z.
+
+        Say we just have one x. We want p(x), which we can calculate as the
+        expectation of p(x|z) where z is drawn from p(z). Instead, we use
+        importance sampling, calculating the expectation of
+
+        p(x|z) (p(x) / q(z|x))
+
+        where the ratio in parentheses is the importance weight.
+
+        We emphasize that this is _one_ importance sample. Run this lots and
+        take the average to get a good estimate.
+
+        Stupid notes:
+        * We could save time by only computing the encoding and the _obs
+        variables once.
+        * Perhaps there is some way to avoid looping like this?
+
+        :param x_df: A onehot encoded dataframe representing input sequences.
+        :param out_ps: An np array in which to store the importance sampled ps.
+        """
+
+        # We're going to be getting a one-sample estimate
+        assert (len(x_df) == len(out_ps))
+
+        # Get encoding of x in the latent space.
+        z_mean, z_sd = self.encode(x_df)
+        # Get samples from q(z|x) in the latent space, one for each input x.
+        z_sample = stats.norm.rvs(z_mean, z_sd)
+        # These are decoded samples from z. They are, thus, probability vectors
+        # that get sampled if we want to realize actual sequences.
+        aa_probs, v_gene_probs, j_gene_probs = self.decode(z_sample)
+
+        # Onehot-encoded observations.
+        aa_obs, v_gene_obs, j_gene_obs = cols_of_df(x_df)
+
+        # Loop over observations.
+        for i in range(len(x_df)):
+            log_p_x_given_z = \
+                logprob_of_obs_vect(aa_probs[i], aa_obs[i]) + \
+                np.log(np.sum(v_gene_probs[i] * v_gene_obs[i])) + \
+                np.log(np.sum(j_gene_probs[i] * j_gene_obs[i]))
+            # p(z)
+            # Here we use that the PDF of a multivariate normal with
+            # diagonal covariance is the product of the PDF of the
+            # individual normal distributions.
+            log_p_z = np.sum(stats.norm.logpdf(z_sample[i], 0, 1))
+            # q(z|x)
+            log_q_z_given_x = np.sum(
+                stats.norm.logpdf(z_sample[i], z_mean[i], z_sd[i]))
+            # Importance weight: p(z)/q(z|x)
+            log_imp_weight = log_p_z - log_q_z_given_x
+            # p(x|z) p(z) / q(z|x)
+            out_ps[i] = log_p_x_given_z + log_imp_weight
 
 
 # ### CLI ###
