@@ -56,6 +56,9 @@ nest.add('data_label', [localenv['data_label']], label_func=lambda p: '_output_'
 # The second nest represents the sample, named by sample name.
 nest.add('sample', DATA[localenv['data_label']]['paths'], label_func=strip_dirpath_extn)
 
+# The third nest represents the dimension of the latent space, named by la name.
+nest.add('latent_dim', [30, 40])
+
 
 @nest.add_target_with_env(localenv)
 def preprocess(env, outdir, c):

@@ -322,10 +322,11 @@ def cli():
 
 
 @cli.command()
+@click.option('--latent-dim', default=40, show_default=True, help='Number of latent space dimensions.')
 @click.argument('train_csv', type=click.File('r'))
 @click.argument('model_params_fname', type=click.File('w'))
 @click.argument('best_weights_fname', type=click.Path(writable=True))
-def train_tcr(train_csv, model_params_fname, best_weights_fname):
+def train_tcr(latent_dim, train_csv, model_params_fname, best_weights_fname):
     """
     Train the model, print out a model assessment, saving the best weights
     to best_weights_fname and the input model params to model_params_fname.
@@ -345,7 +346,7 @@ def train_tcr(train_csv, model_params_fname, best_weights_fname):
     input_shape = [(MAX_LEN, len(conversion.AA_LIST)), (len(conversion.TCRB_V_GENE_LIST), ),
                    (len(conversion.TCRB_J_GENE_LIST), )]
 
-    v = TCRVAE(input_shape=input_shape, batch_size=batch_size)
+    v = TCRVAE(input_shape=input_shape, batch_size=batch_size, latent_dim=latent_dim)
     v.fit(v.get_data(train_csv, min_data_size), epochs, validation_split, best_weights_fname)
     v.serialize_params(model_params_fname)
 
