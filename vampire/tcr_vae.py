@@ -1,5 +1,6 @@
 import click
 import json
+import multiprocessing
 import numpy as np
 import os
 import pandas as pd
@@ -231,6 +232,9 @@ class TCRVAE:
         """
         return json.dump(self.params, fp)
 
+    def clone(self):
+        return TCRVAE(**self.params)
+
     def fit(self,
             df: pd.DataFrame,
             epochs: int,
@@ -304,7 +308,7 @@ class TCRVAE:
         print('# Difference of summed of losses #\ntest-train : {:.2f}'.format(
             float(testset_loss[0]) - float(trainset_loss[0])))
 
-    def log_p_of_x_importance_sample(self, x_df, out_ps):
+    def log_p_of_x_importance_sample(self, x_df):
         """
         One importance sample to calculate the probability of generating some
         observed x's by decoding from the prior on z.
@@ -326,12 +330,10 @@ class TCRVAE:
         * Perhaps there is some way to avoid looping like this?
 
         :param x_df: A onehot encoded dataframe representing input sequences.
-        :param out_ps: An np array in which to store the importance sampled ps.
+        :return: An np array with the importance sampled ps.
         """
 
-        # We're going to be getting a one-sample estimate, so we want one slot
-        # in our output array for each input sequence.
-        assert (len(x_df) == len(out_ps))
+        out_ps = np.zeros(len(x_df))
 
         # Get encoding of x in the latent space.
         z_mean, z_sd = self.encode(x_df)
@@ -362,6 +364,8 @@ class TCRVAE:
             log_imp_weight = log_p_z - log_q_z_given_x
             # p(x|z) p(z) / q(z|x)
             out_ps[i] = log_p_x_given_z + log_imp_weight
+
+        return out_ps
 
 
 # ### CLI ###
@@ -417,6 +421,10 @@ def train_tcr(train_csv, test_csv, model_params_fname, best_weights_fname):
     tcr_vae.serialize_params(model_params_fname)
 
 
+def do_ith_sample(v_copy, sub_df_x):
+    return v_copy.log_p_of_x_importance_sample(sub_df_x)
+
+
 @cli.command()
 @click.option(
     '--nsamples', default=500, help='Number of importance samples to use.')
@@ -439,13 +447,18 @@ def importance(nsamples, params_json, model_weights, test_csv, out_csv):
         pd.read_csv(test_csv, usecols=['amino_acid', 'v_gene', 'j_gene']),
         v.max_len)
 
-    log_p_x = np.zeros((nsamples, len(df_x)))
+    map_input = zip([v.clone() for i in range(10)], np.array_split(df_x, 10))
+
+    pool = multiprocessing.Pool()
+
     click.echo(
         f"Calculating p(x) for {test_csv.name} via importance sampling...")
 
     with click.progressbar(range(nsamples)) as bar:
         for i in bar:
-            v.log_p_of_x_importance_sample(df_x, log_p_x[i])
+            # NOTE this isn't right, we need to combine the samples properly.
+            # Incorrect because we can't pickle our TCRVAE.
+            log_p_x = np.hstack(pool.starmap(do_ith_sample, map_input))
 
     avg = np.sum(log_p_x, axis=0)
     avg /= nsamples
