@@ -308,7 +308,7 @@ class XCRVAE:
         expectation of p(x|z) where z is drawn from p(z). Instead, we use
         importance sampling, calculating the expectation of
 
-        p(x|z) (p(x) / q(z|x))
+        p(x|z) (p(z) / q(z|x))
 
         where the ratio in parentheses is the importance weight.
 
