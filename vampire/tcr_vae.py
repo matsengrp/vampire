@@ -189,7 +189,7 @@ def logprob_of_obs_vect(probs, obs):
     return np.sum(np.log(np.sum(probs * obs, axis=1)))
 
 
-class XCRVAE:
+class TCRVAE:
     def __init__(
             self,
             *,  # Forces everything after this to be a keyword argument.
@@ -202,11 +202,12 @@ class XCRVAE:
         kwargs.pop('self')
         (self.encoder, self.decoder, self.vae) = encoder_decoder_vae(**kwargs)
         self.params = kwargs
+        self.params['max_len'] = input_shape[0][0]
 
     @classmethod
     def of_json_file(cls, fname):
         """
-        Build a XCRVAE from a parameter dictionary dumped to JSON.
+        Build a TCRVAE from a parameter dictionary dumped to JSON.
         """
         with open(fname, 'r') as fp:
             return cls(**json.load(fp))
@@ -214,7 +215,7 @@ class XCRVAE:
     @classmethod
     def of_directory(cls, path):
         """
-        Build an XCRVAE from the information contained in a directory.
+        Build an TCRVAE from the information contained in a directory.
 
         By convention we are dumping information to a parameter file called
         `model_params.json` and a weights file called `best_weights.h5`. Here
@@ -255,11 +256,15 @@ class XCRVAE:
             validation_split=validation_split,
             callbacks=[early_stopping, save_best_weights])
 
-    def evaluate(self, df):
+    def evaluate(self, x_df):
         """
         Wrapping Model.evaluate for this setting.
+
+        :param x_df: A onehot encoded dataframe representing input sequences.
+
+        :return: loss
         """
-        data = cols_of_df(df)
+        data = cols_of_df(x_df)
         return self.vae.evaluate(
             x=data, y=data, batch_size=self.params['batch_size'])
 
@@ -324,7 +329,8 @@ class XCRVAE:
         :param out_ps: An np array in which to store the importance sampled ps.
         """
 
-        # We're going to be getting a one-sample estimate
+        # We're going to be getting a one-sample estimate, so we want one slot
+        # in our output array for each input sequence.
         assert (len(x_df) == len(out_ps))
 
         # Get encoding of x in the latent space.
@@ -369,12 +375,12 @@ def cli():
 @cli.command()
 @click.argument('train_csv', type=click.File('r'))
 @click.argument('test_csv', type=click.File('r'))
-@click.argument('best_weights_fname', type=click.Path(writable=True))
 @click.argument('model_params_fname', type=click.File('w'))
-def train_tcr(train_csv, test_csv, best_weights_fname, model_params_fname):
+@click.argument('best_weights_fname', type=click.Path(writable=True))
+def train_tcr(train_csv, test_csv, model_params_fname, best_weights_fname):
     """
     Train the model, print out a model assessment, saving the best weights
-    to BEST_WEIGHTS_FNAME and the input model params to MODEL_PARAMS_FNAME.
+    to best_weights_fname and the input model params to model_params_fname.
     """
 
     # TODO: less stupid
@@ -405,10 +411,46 @@ def train_tcr(train_csv, test_csv, best_weights_fname, model_params_fname):
     train = get_data(train_csv)
     test = get_data(test_csv)
 
-    tcr_vae = XCRVAE(input_shape=input_shape, batch_size=batch_size)
+    tcr_vae = TCRVAE(input_shape=input_shape, batch_size=batch_size)
     tcr_vae.fit(train, epochs, validation_split, best_weights_fname)
     tcr_vae.assess_losses(train, test)
     tcr_vae.serialize_params(model_params_fname)
+
+
+@cli.command()
+@click.option(
+    '--nsamples', default=500, help='Number of importance samples to use.')
+@click.argument('params_json', type=click.Path(exists=True))
+@click.argument('model_weights', type=click.Path(exists=True))
+@click.argument('test_csv', type=click.File('r'))
+@click.argument('out_csv', type=click.File('w'))
+def importance(nsamples, params_json, model_weights, test_csv, out_csv):
+    """
+    Estimate the log generation probability of the sequences in test_csv on the
+    VAE determined by params_json and model_weights.
+
+    Spit the results into out_csv, one estimate per line.
+    """
+
+    v = TCRVAE.of_json_file(params_json)
+    v.vae.load_weights(model_weights)
+
+    df_x = conversion.unpadded_tcrbs_to_onehot(
+        pd.read_csv(test_csv, usecols=['amino_acid', 'v_gene', 'j_gene']),
+        v.params['max_len'])
+
+    log_p_x = np.zeros((nsamples, len(df_x)))
+    click.echo(
+        f"Calculating p(x) for {test_csv.name} via importance sampling...")
+
+    with click.progressbar(range(nsamples)) as bar:
+        for i in bar:
+            v.log_p_of_x_importance_sample(df_x, log_p_x[i])
+
+    avg = np.sum(log_p_x, axis=0)
+    avg /= nsamples
+
+    pd.DataFrame({'log_p_x': avg}).to_csv(out_csv, index=False)
 
 
 if __name__ == '__main__':

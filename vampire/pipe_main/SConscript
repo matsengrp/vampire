@@ -92,11 +92,20 @@ def split(env, outdir, c):
     ], in_path, 'python3 util.py split $SOURCE $TARGETS')
 
 
-@nest.add_target_with_env(localenv)
+@nest.add_target_with_env(localenv, 'model')
 @ns.name_targets
 def model(env, outdir, c):
-    return 'weights', 'params', env.Command(
-        [join(outdir, 'best_weights.h5'),
-         join(outdir, 'model_params.json')],
+    return 'params', 'weights', env.Command(
+        [join(outdir, 'model_params.json'),
+         join(outdir, 'best_weights.h5')],
         [c['split']['train'], c['split']['test']],
-        'python3 xcr_vae.py train-tcr $SOURCES $TARGETS')
+        'python3 tcr_vae.py train-tcr $SOURCES $TARGETS')
+
+
+@nest.add_target_with_env(localenv)
+def importance(env, outdir, c):
+    print(c)
+    return env.Command(
+        join(outdir, 'importance.csv'),
+        [c['model']['params'], c['model']['weights'], c['split']['test']],
+        'python3 tcr_vae.py importance $SOURCES $TARGET')
