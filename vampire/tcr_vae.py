@@ -419,7 +419,10 @@ def train_tcr(train_csv, test_csv, model_params_fname, best_weights_fname):
 
 @cli.command()
 @click.option(
-    '--nsamples', default=500, help='Number of importance samples to use.')
+    '--nsamples',
+    default=500,
+    show_default=True,
+    help='Number of importance samples to use.')
 @click.argument('params_json', type=click.Path(exists=True))
 @click.argument('model_weights', type=click.Path(exists=True))
 @click.argument('test_csv', type=click.File('r'))
