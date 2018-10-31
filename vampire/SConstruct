@@ -11,21 +11,10 @@ from os.path import join
 import SCons.Script as sc
 
 # Command line options
-
-sc.AddOption(
-    '--pipe',
-    type='string',
-    help="Which pipeline to run.",
-    default='pipe_main')
-
-sc.AddOption(
-    '--data',
-    type='string',
-    help="The label of the data to be run in the specified pipeline.",
-    default='test')
+sc.AddOption('--pipe', type='string', help="Which pipeline to run.", default='pipe_main')
+sc.AddOption('--data', type='string', help="The label of the data to be run in the specified pipeline.", default='test')
 
 # Set up environment and run  \m/ ( -_- ) \m/
-
 env = sc.Environment(ENV=os.environ, data_label=sc.GetOption('data'))
 sc.Export('env')
 sc.SConscript(join(sc.GetOption('pipe'), 'SConscript'))

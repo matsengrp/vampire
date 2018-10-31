@@ -32,12 +32,8 @@ class OnehotEmbedding2D(Layer):
     def build(self, input_shape):
         # Create a trainable weight variable for this layer.
         self.kernel = self.add_weight(
-            name='kernel',
-            shape=(input_shape[2], self.Nembeddings),
-            initializer='uniform',
-            trainable=True)
-        super(OnehotEmbedding2D,
-              self).build(input_shape)  # Be sure to call this at the end
+            name='kernel', shape=(input_shape[2], self.Nembeddings), initializer='uniform', trainable=True)
+        super(OnehotEmbedding2D, self).build(input_shape)  # Be sure to call this at the end
 
     def call(self, x):
         return K.dot(x, self.kernel)
@@ -46,8 +42,7 @@ class OnehotEmbedding2D(Layer):
         return (input_shape[0], input_shape[1], self.Nembeddings)
 
 
-def encoder_decoder_vae(input_shape, batch_size, embedding_output_dim,
-                        latent_dim, dense_nodes):
+def encoder_decoder_vae(input_shape, batch_size, embedding_output_dim, latent_dim, dense_nodes):
     """
     Build us a encoder, a decoder, and a VAE!
     """
@@ -60,8 +55,7 @@ def encoder_decoder_vae(input_shape, batch_size, embedding_output_dim,
         variables.
         """
         z_mean, z_log_var = args
-        epsilon = K.random_normal(
-            shape=(batch_size, latent_dim), mean=0.0, stddev=1.0)
+        epsilon = K.random_normal(shape=(batch_size, latent_dim), mean=0.0, stddev=1.0)
         return (z_mean + K.exp(z_log_var / 2) * epsilon)
 
     def vae_loss(io_encoder, io_decoder):
@@ -72,8 +66,7 @@ def encoder_decoder_vae(input_shape, batch_size, embedding_output_dim,
         # io_decoder)" is a vector so it is averaged using "K.mean":
         xent_loss = io_decoder.shape.num_elements() * K.mean(
             objectives.categorical_crossentropy(io_encoder, io_decoder))
-        kl_loss = -0.5 * K.sum(
-            1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
+        kl_loss = -0.5 * K.sum(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
         kl_loss *= 1 / 3 * batch_size  # Because we have three input/output
         return (xent_loss + kl_loss)
 
@@ -82,83 +75,53 @@ def encoder_decoder_vae(input_shape, batch_size, embedding_output_dim,
     encoder_input_Vgene = Input(shape=input_shape[1], name='onehot_Vgene')
     encoder_input_Jgene = Input(shape=input_shape[2], name='onehot_Jgene')
 
-    embedding_CDR3 = OnehotEmbedding2D(
-        embedding_output_dim[0], name='CDR3_embedding')(encoder_input_CDR3)
+    embedding_CDR3 = OnehotEmbedding2D(embedding_output_dim[0], name='CDR3_embedding')(encoder_input_CDR3)
     # AA_embedding = Model(encoder_input_CDR3, embedding_CDR3)
-    embedding_CDR3_flat = Reshape([embedding_output_dim[0] * max_len],
-                                  name='CDR3_embedding_flat')(embedding_CDR3)
-    embedding_Vgene = Dense(
-        embedding_output_dim[1], name='Vgene_embedding')(encoder_input_Vgene)
+    embedding_CDR3_flat = Reshape([embedding_output_dim[0] * max_len], name='CDR3_embedding_flat')(embedding_CDR3)
+    embedding_Vgene = Dense(embedding_output_dim[1], name='Vgene_embedding')(encoder_input_Vgene)
     # Vgene_embedding = Model(encoder_input_Vgene, embedding_Vgene)
-    embedding_Jgene = Dense(
-        embedding_output_dim[2], name='Jgene_embedding')(encoder_input_Jgene)
+    embedding_Jgene = Dense(embedding_output_dim[2], name='Jgene_embedding')(encoder_input_Jgene)
     # Jgene_embedding = Model(encoder_input_Jgene, embedding_Jgene)
 
-    merged_input = keras.layers.concatenate(
-        [embedding_CDR3_flat, embedding_Vgene, embedding_Jgene],
-        name='flat_CDR3_Vgene_Jgene')
-    dense_encoder1 = Dense(
-        dense_nodes, activation='elu', name='encoder_dense_1')(merged_input)
-    dense_encoder2 = Dense(
-        dense_nodes, activation='elu', name='encoder_dense_2')(dense_encoder1)
+    merged_input = keras.layers.concatenate([embedding_CDR3_flat, embedding_Vgene, embedding_Jgene],
+                                            name='flat_CDR3_Vgene_Jgene')
+    dense_encoder1 = Dense(dense_nodes, activation='elu', name='encoder_dense_1')(merged_input)
+    dense_encoder2 = Dense(dense_nodes, activation='elu', name='encoder_dense_2')(dense_encoder1)
 
     # Latent layers:
     z_mean = Dense(latent_dim, name='z_mean')(dense_encoder2)
     z_log_var = Dense(latent_dim, name='z_log_var')(dense_encoder2)
 
-    encoder = Model(
-        [encoder_input_CDR3, encoder_input_Vgene, encoder_input_Jgene],
-        [z_mean, z_log_var])
+    encoder = Model([encoder_input_CDR3, encoder_input_Vgene, encoder_input_Jgene], [z_mean, z_log_var])
 
     # Decoding layers:
     z = Lambda(
-        sampling, output_shape=(latent_dim, ), name='reparameterization_trick'
-    )  # This is the reparameterization trick
-    dense_decoder1 = Dense(
-        dense_nodes, activation='elu', name='decoder_dense_1')
-    dense_decoder2 = Dense(
-        dense_nodes, activation='elu', name='decoder_dense_2')
+        sampling, output_shape=(latent_dim, ), name='reparameterization_trick')  # This is the reparameterization trick
+    dense_decoder1 = Dense(dense_nodes, activation='elu', name='decoder_dense_1')
+    dense_decoder2 = Dense(dense_nodes, activation='elu', name='decoder_dense_2')
 
-    decoder_out_CDR3 = Dense(
-        np.array(input_shape[0]).prod(),
-        activation='linear',
-        name='flat_CDR_out')
+    decoder_out_CDR3 = Dense(np.array(input_shape[0]).prod(), activation='linear', name='flat_CDR_out')
     reshape_CDR3 = Reshape(input_shape[0], name='CDR_out')
-    position_wise_softmax_CDR3 = Activation(
-        activation='softmax', name='CDR_prob_out')
-    decoder_out_Vgene = Dense(
-        input_shape[1][0], activation='softmax', name='Vgene_prob_out')
-    decoder_out_Jgene = Dense(
-        input_shape[2][0], activation='softmax', name='Jgene_prob_out')
+    position_wise_softmax_CDR3 = Activation(activation='softmax', name='CDR_prob_out')
+    decoder_out_Vgene = Dense(input_shape[1][0], activation='softmax', name='Vgene_prob_out')
+    decoder_out_Jgene = Dense(input_shape[2][0], activation='softmax', name='Jgene_prob_out')
 
     decoder_output_CDR3 = position_wise_softmax_CDR3(
-        reshape_CDR3(
-            decoder_out_CDR3(
-                dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))))
-    decoder_output_Vgene = decoder_out_Vgene(
-        dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))
-    decoder_output_Jgene = decoder_out_Jgene(
-        dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))
+        reshape_CDR3(decoder_out_CDR3(dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))))
+    decoder_output_Vgene = decoder_out_Vgene(dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))
+    decoder_output_Jgene = decoder_out_Jgene(dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))
 
     # Define the decoding part separately:
     z_mean_generator = Input(shape=(latent_dim, ))
     decoder_generator_CDR3 = position_wise_softmax_CDR3(
-        reshape_CDR3(
-            decoder_out_CDR3(dense_decoder2(
-                dense_decoder1(z_mean_generator)))))
-    decoder_generator_Vgene = decoder_out_Vgene(
-        dense_decoder2(dense_decoder1(z_mean_generator)))
-    decoder_generator_Jgene = decoder_out_Jgene(
-        dense_decoder2(dense_decoder1(z_mean_generator)))
+        reshape_CDR3(decoder_out_CDR3(dense_decoder2(dense_decoder1(z_mean_generator)))))
+    decoder_generator_Vgene = decoder_out_Vgene(dense_decoder2(dense_decoder1(z_mean_generator)))
+    decoder_generator_Jgene = decoder_out_Jgene(dense_decoder2(dense_decoder1(z_mean_generator)))
 
-    decoder = Model(z_mean_generator, [
-        decoder_generator_CDR3, decoder_generator_Vgene,
-        decoder_generator_Jgene
-    ])
+    decoder = Model(z_mean_generator, [decoder_generator_CDR3, decoder_generator_Vgene, decoder_generator_Jgene])
 
-    vae = Model(
-        [encoder_input_CDR3, encoder_input_Vgene, encoder_input_Jgene],
-        [decoder_output_CDR3, decoder_output_Vgene, decoder_output_Jgene])
+    vae = Model([encoder_input_CDR3, encoder_input_Vgene, encoder_input_Jgene],
+                [decoder_output_CDR3, decoder_output_Vgene, decoder_output_Jgene])
     vae.compile(optimizer="adam", loss=vae_loss)
 
     return (encoder, decoder, vae)
@@ -231,23 +194,14 @@ class TCRVAE:
         """
         return json.dump(self.params, fp)
 
-    def fit(self,
-            df: pd.DataFrame,
-            epochs: int,
-            validation_split: float,
-            best_weights_fname: str,
-            patience=10):
+    def fit(self, df: pd.DataFrame, epochs: int, validation_split: float, best_weights_fname: str, patience=10):
         """
         Fit the model with early stopping.
         """
         data = cols_of_df(df)
         early_stopping = EarlyStopping(monitor='val_loss', patience=patience)
         save_best_weights = ModelCheckpoint(
-            best_weights_fname,
-            monitor='val_loss',
-            verbose=1,
-            save_best_only=True,
-            mode='min')
+            best_weights_fname, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
         self.vae.fit(
             x=data,  # y=X for a VAE.
             y=data,
@@ -265,8 +219,7 @@ class TCRVAE:
         :return: loss
         """
         data = cols_of_df(x_df)
-        return self.vae.evaluate(
-            x=data, y=data, batch_size=self.params['batch_size'])
+        return self.vae.evaluate(x=data, y=data, batch_size=self.params['batch_size'])
 
     def encode(self, x_df):
         """
@@ -296,8 +249,7 @@ class TCRVAE:
 
         print("Component-wise loss Train vs. Test:")
         for i in [1, 2, 3]:
-            print('{}: {:.2f} vs. {:.2f}'.format(self.vae.metrics_names[i],
-                                                 float(trainset_loss[i]),
+            print('{}: {:.2f} vs. {:.2f}'.format(self.vae.metrics_names[i], float(trainset_loss[i]),
                                                  float(testset_loss[i])))
         print('# Sum of losses #\nTrain set: {:.2f}\nTest set: {:.2f}'.format(
             float(trainset_loss[0]), float(testset_loss[0])))
@@ -356,8 +308,7 @@ class TCRVAE:
             # individual normal distributions.
             log_p_z = np.sum(stats.norm.logpdf(z_sample[i], 0, 1))
             # q(z|x)
-            log_q_z_given_x = np.sum(
-                stats.norm.logpdf(z_sample[i], z_mean[i], z_sd[i]))
+            log_q_z_given_x = np.sum(stats.norm.logpdf(z_sample[i], z_mean[i], z_sd[i]))
             # Importance weight: p(z)/q(z|x)
             log_imp_weight = log_p_z - log_q_z_given_x
             # p(x|z) p(z) / q(z|x)
@@ -394,8 +345,7 @@ def train_tcr(train_csv, test_csv, model_params_fname, best_weights_fname):
     assert sub_chunk_size == float(int(sub_chunk_size))
     batch_size = 100
     min_data_size = validation_split_multiplier * batch_size
-    input_shape = [(MAX_LEN, len(conversion.AA_LIST)),
-                   (len(conversion.TCRB_V_GENE_LIST), ),
+    input_shape = [(MAX_LEN, len(conversion.AA_LIST)), (len(conversion.TCRB_V_GENE_LIST), ),
                    (len(conversion.TCRB_J_GENE_LIST), )]
 
     def get_data(fname):
@@ -418,11 +368,7 @@ def train_tcr(train_csv, test_csv, model_params_fname, best_weights_fname):
 
 
 @cli.command()
-@click.option(
-    '--nsamples',
-    default=500,
-    show_default=True,
-    help='Number of importance samples to use.')
+@click.option('--nsamples', default=500, show_default=True, help='Number of importance samples to use.')
 @click.argument('params_json', type=click.Path(exists=True))
 @click.argument('model_weights', type=click.Path(exists=True))
 @click.argument('test_csv', type=click.File('r'))
@@ -439,12 +385,10 @@ def importance(nsamples, params_json, model_weights, test_csv, out_csv):
     v.vae.load_weights(model_weights)
 
     df_x = conversion.unpadded_tcrbs_to_onehot(
-        pd.read_csv(test_csv, usecols=['amino_acid', 'v_gene', 'j_gene']),
-        v.max_len)
+        pd.read_csv(test_csv, usecols=['amino_acid', 'v_gene', 'j_gene']), v.max_len)
 
     log_p_x = np.zeros((nsamples, len(df_x)))
-    click.echo(
-        f"Calculating p(x) for {test_csv.name} via importance sampling...")
+    click.echo(f"Calculating p(x) for {test_csv.name} via importance sampling...")
 
     with click.progressbar(range(nsamples)) as bar:
         for i in bar:

@@ -18,10 +18,8 @@ DATA = {
         'paths': ['sample_data/02-0249_TCRB.4000.tsv.bz2']
     },
     'seshadri': {
-        'paths': [
-            join(seshadri_path, '02-0249_TCRB.tsv'),
-            join(seshadri_path, '09-0306_TCRB.tsv')
-        ]
+        'paths': [join(seshadri_path, '02-0249_TCRB.tsv'),
+                  join(seshadri_path, '09-0306_TCRB.tsv')]
     }
 }
 
@@ -53,15 +51,10 @@ nest = ns.SConsWrap(nestly.Nest(), alias_environment=localenv)
 
 # The first nest represents the data set choice, named via data name is,
 # prepended with `_output_`.
-nest.add(
-    'data_label', [localenv['data_label']],
-    label_func=lambda p: '_output_' + p)
+nest.add('data_label', [localenv['data_label']], label_func=lambda p: '_output_' + p)
 
 # The second nest represents the sample, named by sample name.
-nest.add(
-    'sample',
-    DATA[localenv['data_label']]['paths'],
-    label_func=strip_dirpath_extn)
+nest.add('sample', DATA[localenv['data_label']]['paths'], label_func=strip_dirpath_extn)
 
 
 @nest.add_target_with_env(localenv)
@@ -72,8 +65,7 @@ def preprocess(env, outdir, c):
     in_path = c['sample']
     outfile, = env.Command(
         join(outdir,
-             strip_dirpath_extn(in_path) + '.processed.csv'), in_path,
-        'python3 preprocess_adaptive.py $SOURCE $TARGET')
+             strip_dirpath_extn(in_path) + '.processed.csv'), in_path, 'python3 preprocess_adaptive.py $SOURCE $TARGET')
     return outfile
 
 
@@ -96,9 +88,7 @@ def split(env, outdir, c):
 @ns.name_targets
 def model(env, outdir, c):
     return 'params', 'weights', env.Command(
-        [join(outdir, 'model_params.json'),
-         join(outdir, 'best_weights.h5')],
-        [c['split']['train'], c['split']['test']],
+        [join(outdir, 'model_params.json'), join(outdir, 'best_weights.h5')], [c['split']['train'], c['split']['test']],
         'python3 tcr_vae.py train-tcr $SOURCES $TARGETS')
 
 
@@ -106,6 +96,5 @@ def model(env, outdir, c):
 def importance(env, outdir, c):
     print(c)
     return env.Command(
-        join(outdir, 'importance.csv'),
-        [c['model']['params'], c['model']['weights'], c['split']['test']],
+        join(outdir, 'importance.csv'), [c['model']['params'], c['model']['weights'], c['split']['test']],
         'python3 tcr_vae.py importance $SOURCES $TARGET')

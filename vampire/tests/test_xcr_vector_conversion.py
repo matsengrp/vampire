@@ -14,11 +14,9 @@ def test_pad_middle():
 
 def test_gene_conversion():
     for gene in conversion.TCRB_V_GENE_LIST:
-        assert conversion.onehot_to_vgene(
-            conversion.vgene_to_onehot(gene)) == gene
+        assert conversion.onehot_to_vgene(conversion.vgene_to_onehot(gene)) == gene
     for gene in conversion.TCRB_J_GENE_LIST:
-        assert conversion.onehot_to_jgene(
-            conversion.jgene_to_onehot(gene)) == gene
+        assert conversion.onehot_to_jgene(conversion.jgene_to_onehot(gene)) == gene
 
 
 def test_aa_conversion():
