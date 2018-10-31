@@ -64,8 +64,9 @@ def preprocess(env, outdir, c):
     """
     in_path = c['sample']
     outfile, = env.Command(
-        join(outdir,
-             strip_dirpath_extn(in_path) + '.processed.csv'), in_path, 'python3 preprocess_adaptive.py $SOURCE $TARGET')
+        join(outdir, strip_dirpath_extn(in_path) + '.processed.csv'),
+        in_path,
+        'python3 preprocess_adaptive.py $SOURCE $TARGET')
     return outfile
 
 
@@ -77,24 +78,32 @@ def split(env, outdir, c):
     """
     in_path = c['preprocess']
     return 'train', 'test', env.Command([
-        join(outdir,
-             strip_dirpath_extn(in_path) + '.train.csv'),
-        join(outdir,
-             strip_dirpath_extn(in_path) + '.test.csv')
-    ], in_path, 'python3 util.py split $SOURCE $TARGETS')
+        join(outdir, strip_dirpath_extn(in_path) + '.train.csv'),
+        join(outdir, strip_dirpath_extn(in_path) + '.test.csv')],
+        in_path,
+        'python3 util.py split $SOURCE $TARGETS')
 
 
 @nest.add_target_with_env(localenv, 'model')
 @ns.name_targets
 def model(env, outdir, c):
     return 'params', 'weights', env.Command(
-        [join(outdir, 'model_params.json'), join(outdir, 'best_weights.h5')], [c['split']['train'], c['split']['test']],
-        'python3 tcr_vae.py train-tcr $SOURCES $TARGETS')
+        [join(outdir, 'model_params.json'), join(outdir, 'best_weights.h5')],
+        c['split']['train'],
+        'python3 tcr_vae.py train-tcr $SOURCE $TARGETS')
+
+
+@nest.add_target_with_env(localenv)
+def loss(env, outdir, c):
+    return env.Command(
+        join(outdir, 'loss.csv'),
+        [c['model']['params'], c['model']['weights'], c['split']['train'], c['split']['test']],
+        'python3 tcr_vae.py loss $SOURCES $TARGET')
 
 
 @nest.add_target_with_env(localenv)
 def importance(env, outdir, c):
-    print(c)
     return env.Command(
-        join(outdir, 'importance.csv'), [c['model']['params'], c['model']['weights'], c['split']['test']],
+        join(outdir, 'importance.csv'),
+        [c['model']['params'], c['model']['weights'], c['split']['test']],
         'python3 tcr_vae.py importance $SOURCES $TARGET')

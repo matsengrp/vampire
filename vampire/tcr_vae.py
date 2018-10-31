@@ -188,6 +188,20 @@ class TCRVAE:
         v.vae.load_weights(os.path.join(path, 'best_weights.h5'))
         return v
 
+    def get_data(self, fname, data_chunk_size):
+        """
+        Get data in the correct format from fname, then trim so the data length
+        is a multiple of data_chunk_size.
+        """
+        df = pd.read_csv(fname, usecols=['amino_acid', 'v_gene', 'j_gene'])
+        assert len(df) >= data_chunk_size
+        # If we deliver chunks of data to Keras of min_data_size then it will
+        # be able to split them into its internal train and test sets for
+        # val_loss. Here we trim off the extra that won't fit into such a
+        # setup.
+        n_to_take = len(df) - len(df) % data_chunk_size
+        return conversion.unpadded_tcrbs_to_onehot(df[:n_to_take], self.max_len)
+
     def serialize_params(self, fp):
         """
         Dump model parameters to a file.
@@ -239,22 +253,6 @@ class TCRVAE:
 
         """
         return self.decoder.predict(z)
-
-    def assess_losses(self, train, test):
-        """
-        Print out the losses on the train vs. the hold out test set.
-        """
-        trainset_loss = self.evaluate(train)
-        testset_loss = self.evaluate(test)
-
-        print("Component-wise loss Train vs. Test:")
-        for i in [1, 2, 3]:
-            print('{}: {:.2f} vs. {:.2f}'.format(self.vae.metrics_names[i], float(trainset_loss[i]),
-                                                 float(testset_loss[i])))
-        print('# Sum of losses #\nTrain set: {:.2f}\nTest set: {:.2f}'.format(
-            float(trainset_loss[0]), float(testset_loss[0])))
-        print('# Difference of summed of losses #\ntest-train : {:.2f}'.format(
-            float(testset_loss[0]) - float(trainset_loss[0])))
 
     def log_p_of_x_importance_sample(self, x_df, out_ps):
         """
@@ -325,10 +323,9 @@ def cli():
 
 @cli.command()
 @click.argument('train_csv', type=click.File('r'))
-@click.argument('test_csv', type=click.File('r'))
 @click.argument('model_params_fname', type=click.File('w'))
 @click.argument('best_weights_fname', type=click.Path(writable=True))
-def train_tcr(train_csv, test_csv, model_params_fname, best_weights_fname):
+def train_tcr(train_csv, model_params_fname, best_weights_fname):
     """
     Train the model, print out a model assessment, saving the best weights
     to best_weights_fname and the input model params to model_params_fname.
@@ -348,23 +345,31 @@ def train_tcr(train_csv, test_csv, model_params_fname, best_weights_fname):
     input_shape = [(MAX_LEN, len(conversion.AA_LIST)), (len(conversion.TCRB_V_GENE_LIST), ),
                    (len(conversion.TCRB_J_GENE_LIST), )]
 
-    def get_data(fname):
-        df = pd.read_csv(fname, usecols=['amino_acid', 'v_gene', 'j_gene'])
-        assert len(df) >= min_data_size
-        # If we deliver chunks of data to Keras of min_data_size then it will
-        # be able to split them into its internal train and test sets for
-        # val_loss. Here we trim off the extra that won't fit into such a
-        # setup.
-        n_to_take = len(df) - len(df) % min_data_size
-        return conversion.unpadded_tcrbs_to_onehot(df[:n_to_take], MAX_LEN)
+    v = TCRVAE(input_shape=input_shape, batch_size=batch_size)
+    v.fit(v.get_data(train_csv, min_data_size), epochs, validation_split, best_weights_fname)
+    v.serialize_params(model_params_fname)
 
-    train = get_data(train_csv)
-    test = get_data(test_csv)
 
-    tcr_vae = TCRVAE(input_shape=input_shape, batch_size=batch_size)
-    tcr_vae.fit(train, epochs, validation_split, best_weights_fname)
-    tcr_vae.assess_losses(train, test)
-    tcr_vae.serialize_params(model_params_fname)
+@cli.command()
+@click.argument('params_json', type=click.Path(exists=True))
+@click.argument('model_weights', type=click.Path(exists=True))
+@click.argument('train_csv', type=click.File('r'))
+@click.argument('test_csv', type=click.File('r'))
+@click.argument('out_csv', type=click.File('w'))
+def loss(params_json, model_weights, train_csv, test_csv, out_csv):
+    """
+    Record the losses on the train vs. the hold out test set.
+    """
+
+    v = TCRVAE.of_json_file(params_json)
+    v.vae.load_weights(model_weights)
+
+    df = pd.DataFrame({
+        'train': v.evaluate(v.get_data(train_csv, v.params['batch_size'])),
+        'test': v.evaluate(v.get_data(test_csv, v.params['batch_size']))
+    },
+                      index=v.vae.metrics_names)
+    df.to_csv(out_csv)
 
 
 @cli.command()
