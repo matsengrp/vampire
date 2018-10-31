@@ -202,7 +202,7 @@ class TCRVAE:
         kwargs.pop('self')
         (self.encoder, self.decoder, self.vae) = encoder_decoder_vae(**kwargs)
         self.params = kwargs
-        self.params['max_len'] = input_shape[0][0]
+        self.max_len = input_shape[0][0]
 
     @classmethod
     def of_json_file(cls, fname):
@@ -437,7 +437,7 @@ def importance(nsamples, params_json, model_weights, test_csv, out_csv):
 
     df_x = conversion.unpadded_tcrbs_to_onehot(
         pd.read_csv(test_csv, usecols=['amino_acid', 'v_gene', 'j_gene']),
-        v.params['max_len'])
+        v.max_len)
 
     log_p_x = np.zeros((nsamples, len(df_x)))
     click.echo(
