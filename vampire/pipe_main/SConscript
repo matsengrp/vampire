@@ -56,10 +56,6 @@ nest.add('data_label', [localenv['data_label']], label_func=lambda p: '_output_'
 # The second nest represents the sample, named by sample name.
 nest.add('sample', DATA[localenv['data_label']]['paths'], label_func=strip_dirpath_extn)
 
-# The third nest represents the dimension of the latent space, named by la name.
-nest.add('latent_dim', [30, 40])
-
-
 @nest.add_target_with_env(localenv)
 def preprocess(env, outdir, c):
     """
@@ -86,6 +82,11 @@ def split(env, outdir, c):
         in_path,
         'python3 util.py split $SOURCE $TARGETS')
 
+# The third nest represents the dimension of the latent space.
+nest.add('latent_dim', [20, 25, 30, 35, 40])
+
+# The fourth nest represents the number of dense nodes
+nest.add('dense_nodes', [75, 100, 125, 150])
 
 @nest.add_target_with_env(localenv, 'model')
 @ns.name_targets
@@ -104,9 +105,9 @@ def loss(env, outdir, c):
         'python3 tcr_vae.py loss $SOURCES $TARGET')
 
 
-@nest.add_target_with_env(localenv)
-def importance(env, outdir, c):
-    return env.Command(
-        join(outdir, 'importance.csv'),
-        [c['model']['params'], c['model']['weights'], c['split']['test']],
-        'python3 tcr_vae.py importance $SOURCES $TARGET')
+# @nest.add_target_with_env(localenv)
+# def importance(env, outdir, c):
+#     return env.Command(
+#         join(outdir, 'importance.csv'),
+#         [c['model']['params'], c['model']['weights'], c['split']['test']],
+#         'python3 tcr_vae.py importance $SOURCES $TARGET')
