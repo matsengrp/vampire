@@ -202,11 +202,12 @@ class TCRVAE:
         n_to_take = len(df) - len(df) % data_chunk_size
         return conversion.unpadded_tcrbs_to_onehot(df[:n_to_take], self.max_len)
 
-    def serialize_params(self, fp):
+    def serialize_params(self, fname):
         """
         Dump model parameters to a file.
         """
-        return json.dump(self.params, fp)
+        with open(fname, 'w') as fp:
+            json.dump(self.params, fp)
 
     def fit(self, df: pd.DataFrame, epochs: int, validation_split: float, best_weights_fname: str, patience=10):
         """
@@ -321,19 +322,7 @@ def cli():
     pass
 
 
-@cli.command()
-@click.option('--latent-dim', default=40, show_default=True, help='Number of latent space dimensions.')
-@click.option('--dense-nodes', default=125, show_default=True, help='Number of dense nodes.')
-@click.argument('train_csv', type=click.File('r'))
-@click.argument('model_params_fname', type=click.File('w'))
-@click.argument('best_weights_fname', type=click.Path(writable=True))
-@click.argument('diagnostics_fname', type=click.File('w'))
-def train_tcr(latent_dim, dense_nodes, train_csv, model_params_fname, best_weights_fname, diagnostics_fname):
-    """
-    Train the model, print out a model assessment, saving the best weights
-    to best_weights_fname and the input model params to model_params_fname.
-    """
-
+def _train_tcr(latent_dim, dense_nodes, train_csv, model_params_fname, best_weights_fname, diagnostics_fname):
     # TODO: less stupid
     MAX_LEN = 30
     epochs = 300
@@ -355,6 +344,22 @@ def train_tcr(latent_dim, dense_nodes, train_csv, model_params_fname, best_weigh
 
     df = pd.DataFrame({'train': v.evaluate(train_data)}, index=v.vae.metrics_names)
     df.to_csv(diagnostics_fname)
+    return v
+
+
+@cli.command()
+@click.option('--latent-dim', default=40, show_default=True, help='Number of latent space dimensions.')
+@click.option('--dense-nodes', default=125, show_default=True, help='Number of dense nodes.')
+@click.argument('train_csv', type=click.File('r'))
+@click.argument('model_params_fname', type=click.Path(writable=True))
+@click.argument('best_weights_fname', type=click.Path(writable=True))
+@click.argument('diagnostics_fname', type=click.Path(writable=True))
+def train_tcr(latent_dim, dense_nodes, train_csv, model_params_fname, best_weights_fname, diagnostics_fname):
+    """
+    Train the model, print out a model assessment, saving the best weights
+    to best_weights_fname and the input model params to model_params_fname.
+    """
+    _train_tcr(latent_dim, dense_nodes, train_csv, model_params_fname, best_weights_fname, diagnostics_fname)
 
 
 @cli.command()
