@@ -1,4 +1,4 @@
-_ignore
+_ignore_*
 _output_*
 .sconsign.dblite
 
