@@ -8,7 +8,7 @@ import keras
 from keras.models import Model
 from keras.layers import Input, Dense, Lambda, Activation, Reshape
 from keras import backend as K
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.callbacks import EarlyStopping
 from keras.engine.topology import Layer
 from keras import objectives
 
@@ -209,21 +209,19 @@ class TCRVAE:
         with open(fname, 'w') as fp:
             json.dump(self.params, fp)
 
-    def fit(self, df: pd.DataFrame, epochs: int, validation_split: float, best_weights_fname: str, patience=10):
+    def fit(self, df: pd.DataFrame, epochs: int, validation_split: float, patience=10):
         """
         Fit the model with early stopping.
         """
         data = cols_of_df(df)
         early_stopping = EarlyStopping(monitor='val_loss', patience=patience)
-        save_best_weights = ModelCheckpoint(
-            best_weights_fname, monitor='val_loss', verbose=1, save_best_only=True, mode='min')
         self.vae.fit(
             x=data,  # y=X for a VAE.
             y=data,
             epochs=epochs,
             batch_size=self.params['batch_size'],
             validation_split=validation_split,
-            callbacks=[early_stopping, save_best_weights])
+            callbacks=[early_stopping])
 
     def evaluate(self, x_df):
         """
@@ -339,8 +337,9 @@ def _train_tcr(latent_dim, dense_nodes, train_csv, model_params_fname, best_weig
 
     v = TCRVAE(input_shape=input_shape, batch_size=batch_size, latent_dim=latent_dim, dense_nodes=dense_nodes)
     train_data = v.get_data(train_csv, min_data_size)
-    v.fit(train_data, epochs, validation_split, best_weights_fname)
+    v.fit(train_data, epochs, validation_split)
     v.serialize_params(model_params_fname)
+    v.vae.save_weights(best_weights_fname)
 
     df = pd.DataFrame({'train': v.evaluate(train_data)}, index=v.vae.metrics_names)
     df.to_csv(diagnostics_fname)
