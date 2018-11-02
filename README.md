@@ -5,9 +5,22 @@
 ```
 conda create -n py36 python=3.6
 source activate py36
-conda install -y biopython click flake8 keras matplotlib pandas pydot pytest scikit-learn scons yapf
+conda install -y biopython click flake8 keras matplotlib pandas pydot pytest scikit-learn scons seaborn yapf
 pip install nestly
 ```
+
+
+## Running
+
+Get a demo by running `scons` inside the `vampire` directory.
+
+
+## Contributors
+
+* Original version (immortalized in the [`original` branch](https://github.com/matsengrp/vampire/tree/original)) by Kristian Davidsen.
+* Pedantic rewrite, sconsery, and extension by Erick Matsen.
+* Contributions from Jean Feng, Eli Harkins, Branden Olson, and Will DeWitt.
+
 
 ## Code styling
 

@@ -9,4 +9,5 @@ pydot
 pytest
 scikit-learn
 scons
+seaborn
 yapf
