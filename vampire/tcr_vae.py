@@ -195,10 +195,6 @@ class TCRVAE:
         """
         df = pd.read_csv(fname, usecols=['amino_acid', 'v_gene', 'j_gene'])
         assert len(df) >= data_chunk_size
-        # If we deliver chunks of data to Keras of min_data_size then it will
-        # be able to split them into its internal train and test sets for
-        # val_loss. Here we trim off the extra that won't fit into such a
-        # setup.
         n_to_take = len(df) - len(df) % data_chunk_size
         return conversion.unpadded_tcrbs_to_onehot(df[:n_to_take], self.max_len)
 
