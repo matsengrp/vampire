@@ -335,9 +335,13 @@ def _train_tcr(latent_dim, dense_nodes, train_csv, model_params_fname, best_weig
     train_data = v.get_data(train_csv, min_data_size)
     v.fit(train_data, epochs, validation_split)
     v.serialize_params(model_params_fname)
-    v.vae.save_weights(best_weights_fname)
+    v.vae.save_weights(best_weights_fname, overwrite=True)
 
-    df = pd.DataFrame({'train': v.evaluate(train_data)}, index=v.vae.metrics_names)
+    # Test weights reloading.
+    vp = TCRVAE.of_json_file(model_params_fname)
+    vp.vae.load_weights(best_weights_fname)
+
+    df = pd.DataFrame({'train': v.evaluate(train_data), 'vp_train': vp.evaluate(train_data)}, index=v.vae.metrics_names)
     df.to_csv(diagnostics_fname)
     return v
 
