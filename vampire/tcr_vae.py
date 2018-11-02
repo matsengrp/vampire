@@ -12,6 +12,7 @@ from keras.callbacks import EarlyStopping
 from keras.engine.topology import Layer
 from keras import objectives
 
+import scipy.special as special
 import scipy.stats as stats
 
 import vampire.xcr_vector_conversion as conversion
@@ -410,9 +411,8 @@ def importance(nsamples, params_json, model_weights, test_csv, out_csv):
         for i in bar:
             v.log_p_of_x_importance_sample(df_x, log_p_x[i])
 
-    avg = np.sum(log_p_x, axis=0)
-    avg /= nsamples
-
+    # Calculate log of mean of numbers given in log space.
+    avg = special.logsumexp(log_p_x, axis=0) - np.log(nsamples)
     pd.DataFrame({'log_p_x': avg}).to_csv(out_csv, index=False)
 
 
