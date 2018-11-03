@@ -1,0 +1,72 @@
+import os
+import glob
+from os.path import join
+
+import nestly
+import nestly.scons as ns
+import SCons.Script as sc
+
+import common
+
+sc.Import('env')
+localenv = env.Clone()  # noqa
+
+
+input_pipe = 'pipe_main'
+which_model = '35/100'
+
+# ### Nests and targets ###
+
+nest = ns.SConsWrap(nestly.Nest(), alias_environment=localenv)
+
+# We assume that the input comes from input_pipe, and that there is a
+# input_pipe directory just above us in the directory hierarchy.
+parent_dir = os.path.dirname(os.getcwd())
+input_dir = join(parent_dir, input_pipe, '_output_'+localenv['data_label'])
+# Add a nest that adds a directory according to the input dir.
+nest.add('input_dir', [input_dir], label_func=common.path_split_tail)
+
+# These are the directories from which we will find models and processed data.
+dirs = glob.glob(join(input_dir, '*/'))
+print(dirs)
+
+# The second nest represents the model we will use.
+nest.add('model', dirs, label_func=common.path_split_tail)
+
+# # The third nest represents what we will run on.
+# nest.add('run_on', lambda c: [d for d in dirs(c) if d != c['model']], label_func=os.path.basename)
+nest.add('run_on', dirs, label_func=lambda p: 'run_on_'+common.path_split_tail(p))
+
+
+# @nest.add_target_with_env(localenv)
+# def echo(env, outdir, c):
+#     specific_model = cjoin(c['model'], '35/100')
+#     return env.Command(
+#         join(outdir, 'asdsf'),
+#         specific_model,
+#         'echo $SOURCE > $TARGET')
+
+
+@nest.add_target_with_env(localenv)
+def loss(env, outdir, c):
+    print(c)
+    specific_model = common.cjoin(c['model'], which_model)
+    [test_path] = glob.glob(join(c['run_on'], '*test.csv'))
+    # CONFUSING. This prints correctly.
+    print([join(specific_model, 'model_params.json'), join(specific_model, 'best_weights.h5'), test_path])
+    # But SCons seems to truncate path names.
+    return env.Command(
+        join(outdir, join(common.strip_dirpath_extn(c['run_on']), 'loss.csv')),
+        [join(specific_model, 'model_params.json'), join(specific_model, 'best_weights.h5'), test_path],
+        'python3 tcr_vae.py loss $SOURCES $TARGET')
+
+
+# @nest.add_target_with_env(localenv)
+# def importance(env, outdir, c):
+#     specific_model = cjoin(c['model'], '35/100')
+#     print(c)
+#     [test_path] = glob.glob(join(c['run_on'], '*test.csv'))
+#     return env.Command(
+#         join(outdir, 'importance.csv'),
+#         [join(specific_model, 'model_params.json'), join(specific_model, 'best_weights.h5'), test_path],
+#         'python3 tcr_vae.py importance $SOURCES $TARGET')
