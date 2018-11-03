@@ -385,12 +385,13 @@ def loss(params_json, model_weights, train_csv, test_csv, out_csv):
 
 
 @cli.command()
+@click.option('--limit-input-to', default=None, help='Only use the first <argument> input sequences.')
 @click.option('--nsamples', default=500, show_default=True, help='Number of importance samples to use.')
 @click.argument('params_json', type=click.Path(exists=True))
 @click.argument('model_weights', type=click.Path(exists=True))
 @click.argument('test_csv', type=click.File('r'))
 @click.argument('out_csv', type=click.File('w'))
-def importance(nsamples, params_json, model_weights, test_csv, out_csv):
+def importance(limit_input_to, nsamples, params_json, model_weights, test_csv, out_csv):
     """
     Estimate the log generation probability of the sequences in test_csv on the
     VAE determined by params_json and model_weights.
@@ -403,6 +404,9 @@ def importance(nsamples, params_json, model_weights, test_csv, out_csv):
 
     df_x = conversion.unpadded_tcrbs_to_onehot(
         pd.read_csv(test_csv, usecols=['amino_acid', 'v_gene', 'j_gene']), v.max_len)
+
+    if limit_input_to is not None:
+        df_x = df_x.iloc[:int(limit_input_to)]
 
     log_p_x = np.zeros((nsamples, len(df_x)))
     click.echo(f"Calculating p(x) for {test_csv.name} via importance sampling...")
