@@ -1,3 +1,7 @@
+"""
+In this SConscript we compute quantities in (model, data) combinations.
+"""
+
 import os
 import glob
 from os.path import join
@@ -7,6 +11,7 @@ import nestly.scons as ns
 import SCons.Script as sc
 
 import common
+from common import cjoin
 
 sc.Import('env')
 localenv = env.Clone()  # noqa
@@ -22,51 +27,39 @@ nest = ns.SConsWrap(nestly.Nest(), alias_environment=localenv)
 # We assume that the input comes from input_pipe, and that there is a
 # input_pipe directory just above us in the directory hierarchy.
 parent_dir = os.path.dirname(os.getcwd())
-input_dir = join(parent_dir, input_pipe, '_output_'+localenv['data_label'])
+# According to our convention, we also assume that the input_pipe
+# directory has a output directory labeled by the data label.
+inputs_dir = cjoin(parent_dir, input_pipe, '_output_'+localenv['data_label'])
+
 # Add a nest that adds a directory according to the input dir.
-nest.add('input_dir', [input_dir], label_func=common.path_split_tail)
+nest.add('inputs_dir', [inputs_dir], label_func=common.path_split_tail)
 
 # These are the directories from which we will find models and processed data.
-dirs = glob.glob(join(input_dir, '*/'))
-print(dirs)
+dirs_with_inputs = glob.glob(join(inputs_dir, '*/'))
 
-# The second nest represents the model we will use.
-nest.add('model', dirs, label_func=common.path_split_tail)
+# Add a nest representing the model we will use.
+nest.add('model', dirs_with_inputs, label_func=common.path_split_tail)
 
-# # The third nest represents what we will run on.
-# nest.add('run_on', lambda c: [d for d in dirs(c) if d != c['model']], label_func=os.path.basename)
-nest.add('run_on', dirs, label_func=lambda p: 'run_on_'+common.path_split_tail(p))
+# # Add a nest representing what we will run on.
+nest.add('run_on', dirs_with_inputs, label_func=lambda p: common.path_split_tail(p))
 
-
-# @nest.add_target_with_env(localenv)
-# def echo(env, outdir, c):
-#     specific_model = cjoin(c['model'], '35/100')
-#     return env.Command(
-#         join(outdir, 'asdsf'),
-#         specific_model,
-#         'echo $SOURCE > $TARGET')
+# If we wanted to exclude the current one we would do this:
+# nest.add('run_on', lambda c: [d for d in dirs_with_inputs(c) if d != c['model']], label_func=os.path.basename)
 
 
 @nest.add_target_with_env(localenv)
 def loss(env, outdir, c):
-    print(c)
-    specific_model = common.cjoin(c['model'], which_model)
-    [test_path] = glob.glob(join(c['run_on'], '*test.csv'))
-    # CONFUSING. This prints correctly.
-    print([join(specific_model, 'model_params.json'), join(specific_model, 'best_weights.h5'), test_path])
-    # But SCons seems to truncate path names.
+    specific_model = cjoin(c['model'], which_model)
+    data_paths = {
+            k: glob.glob(join(inputs_dir, common.path_split_tail(c['run_on']), f'*{k}.csv'))[0]
+            for k in ['train', 'test']}
+    sources = [
+            join(specific_model, 'model_params.json'),
+            join(specific_model, 'best_weights.h5'),
+            data_paths['train'],
+            data_paths['test']
+            ]
     return env.Command(
         join(outdir, join(common.strip_dirpath_extn(c['run_on']), 'loss.csv')),
-        [join(specific_model, 'model_params.json'), join(specific_model, 'best_weights.h5'), test_path],
+        sources,
         'python3 tcr_vae.py loss $SOURCES $TARGET')
-
-
-# @nest.add_target_with_env(localenv)
-# def importance(env, outdir, c):
-#     specific_model = cjoin(c['model'], '35/100')
-#     print(c)
-#     [test_path] = glob.glob(join(c['run_on'], '*test.csv'))
-#     return env.Command(
-#         join(outdir, 'importance.csv'),
-#         [join(specific_model, 'model_params.json'), join(specific_model, 'best_weights.h5'), test_path],
-#         'python3 tcr_vae.py importance $SOURCES $TARGET')
