@@ -206,19 +206,21 @@ class TCRVAE:
         with open(fname, 'w') as fp:
             json.dump(self.params, fp)
 
-    def fit(self, df: pd.DataFrame, epochs: int, validation_split: float, patience=10):
+    def fit(self, df: pd.DataFrame, epochs: int, validation_split: float, patience: int, tensorboard_log_dir: str):
         """
         Fit the model with early stopping.
         """
         data = cols_of_df(df)
-        early_stopping = EarlyStopping(monitor='val_loss', patience=patience)
+        # early_stopping = EarlyStopping(monitor='val_loss', patience=patience)
+        early_stopping = EarlyStopping(monitor='loss', patience=patience)
+        tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir)
         self.vae.fit(
             x=data,  # y=X for a VAE.
             y=data,
             epochs=epochs,
             batch_size=self.params['batch_size'],
             validation_split=validation_split,
-            callbacks=[early_stopping])
+            callbacks=[early_stopping, tensorboard])
 
     def evaluate(self, x_df):
         """
@@ -321,6 +323,7 @@ def _train_tcr(latent_dim, dense_nodes, train_csv, model_params_fname, best_weig
     # TODO: less stupid
     MAX_LEN = 30
     epochs = 300
+    patience = 10
     validation_split = 0.1
     validation_split_multiplier = 10
     sub_chunk_size = validation_split * validation_split_multiplier
@@ -334,7 +337,8 @@ def _train_tcr(latent_dim, dense_nodes, train_csv, model_params_fname, best_weig
 
     v = TCRVAE(input_shape=input_shape, batch_size=batch_size, latent_dim=latent_dim, dense_nodes=dense_nodes)
     train_data = v.get_data(train_csv, min_data_size)
-    v.fit(train_data, epochs, validation_split)
+    tensorboard_log_dir = os.path.join(os.path.dirname(best_weights_fname), 'logs')
+    v.fit(train_data, epochs, validation_split, patience, tensorboard_log_dir)
     v.serialize_params(model_params_fname)
     v.vae.save_weights(best_weights_fname, overwrite=True)
 
