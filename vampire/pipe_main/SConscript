@@ -26,6 +26,18 @@ DATA = {
 
 # ### Nests and targets ###
 
+def apply_mode(l):
+    """
+    So far, default mode runs everything, and mini mode just runs a single element from the list.
+    """
+    if localenv['mode'] not in ['mini', 'default']:
+        raise Exception(f"Unknown mode '{localenv['mode']}'")
+    if localenv['mode'] == 'mini':
+        return [l[0]]
+    else:
+        return l
+
+
 nest = ns.SConsWrap(nestly.Nest(), alias_environment=localenv)
 
 # The first nest represents the data set choice, named via data name is,
@@ -64,10 +76,12 @@ def split(env, outdir, c):
 
 
 # The third nest represents the dimension of the latent space.
-nest.add('latent_dim', [20, 25, 30, 35, 40])
+latent_dims = [20, 25, 30, 35, 40]
+nest.add('latent_dim', apply_mode(latent_dims))
 
 # The fourth nest represents the number of dense nodes
-nest.add('dense_nodes', [75, 100, 125, 150])
+dense_nodes = [75, 100, 125, 150]
+nest.add('dense_nodes', apply_mode(dense_nodes))
 
 
 @nest.add_target_with_env(localenv, 'model')
