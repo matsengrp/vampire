@@ -48,8 +48,6 @@ def encoder_decoder_vae(params):
     """
     Build us a encoder, a decoder, and a VAE!
     """
-    # TODO: kill input shape
-    input_shape = params['input_shape']
 
     def sampling(args):
         """
@@ -72,10 +70,12 @@ def encoder_decoder_vae(params):
         kl_loss *= 1 / 3 * params['batch_size']  # Because we have three input/output
         return (xent_loss + kl_loss)
 
+    cdr3_input_shape = (params['max_cdr3_len'], params['n_aas'])
+
     # Encoding layers:
-    encoder_input_CDR3 = Input(shape=input_shape[0], name='onehot_CDR3')
-    encoder_input_Vgene = Input(shape=input_shape[1], name='onehot_Vgene')
-    encoder_input_Jgene = Input(shape=input_shape[2], name='onehot_Jgene')
+    encoder_input_CDR3 = Input(shape=cdr3_input_shape, name='onehot_CDR3')
+    encoder_input_Vgene = Input(shape=(params['n_v_genes'], ), name='onehot_Vgene')
+    encoder_input_Jgene = Input(shape=(params['n_j_genes'], ), name='onehot_Jgene')
 
     embedding_CDR3 = OnehotEmbedding2D(params['aa_embedding_dim'], name='CDR3_embedding')(encoder_input_CDR3)
     # AA_embedding = Model(encoder_input_CDR3, embedding_CDR3)
@@ -104,11 +104,11 @@ def encoder_decoder_vae(params):
     dense_decoder1 = Dense(params['dense_nodes'], activation='elu', name='decoder_dense_1')
     dense_decoder2 = Dense(params['dense_nodes'], activation='elu', name='decoder_dense_2')
 
-    decoder_out_CDR3 = Dense(np.array(input_shape[0]).prod(), activation='linear', name='flat_CDR_out')
-    reshape_CDR3 = Reshape(input_shape[0], name='CDR_out')
+    decoder_out_CDR3 = Dense(np.array(cdr3_input_shape).prod(), activation='linear', name='flat_CDR_out')
+    reshape_CDR3 = Reshape(cdr3_input_shape, name='CDR_out')
     position_wise_softmax_CDR3 = Activation(activation='softmax', name='CDR_prob_out')
-    decoder_out_Vgene = Dense(input_shape[1][0], activation='softmax', name='Vgene_prob_out')
-    decoder_out_Jgene = Dense(input_shape[2][0], activation='softmax', name='Jgene_prob_out')
+    decoder_out_Vgene = Dense(params['n_v_genes'], activation='softmax', name='Vgene_prob_out')
+    decoder_out_Jgene = Dense(params['n_j_genes'], activation='softmax', name='Jgene_prob_out')
 
     decoder_output_CDR3 = position_wise_softmax_CDR3(
         reshape_CDR3(decoder_out_CDR3(dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))))

@@ -16,15 +16,16 @@ localenv = env.Clone()  # noqa
 # ### Default parameters for the TCRVAE ###
 
 default_params = dict(
-            input_shape=[(30, len(conversion.AA_LIST)), (len(conversion.TCRB_V_GENE_LIST), ),
-                         (len(conversion.TCRB_J_GENE_LIST), )],
-            max_cdr3_len=30,
-            batch_size=100,
+            latent_dim=40,
+            dense_nodes=125,
             aa_embedding_dim=21,
             v_gene_embedding_dim=30,
             j_gene_embedding_dim=13,
-            latent_dim=40,
-            dense_nodes=125,
+            max_cdr3_len=30,
+            n_aas=len(conversion.AA_LIST),
+            n_v_genes=len(conversion.TCRB_V_GENE_LIST),
+            n_j_genes=len(conversion.TCRB_J_GENE_LIST),
+            batch_size=100,
             epochs=500,
             patience=20)
 
