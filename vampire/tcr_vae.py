@@ -32,6 +32,7 @@ class OnehotEmbedding2D(Layer):
 
     def build(self, input_shape):
         # Create a trainable weight variable for this layer.
+        # The first component of input_shape is the batch size (see https://keras.io/layers/core/#dense).
         self.kernel = self.add_weight(
             name='kernel', shape=(input_shape[2], self.Nembeddings), initializer='uniform', trainable=True)
         super(OnehotEmbedding2D, self).build(input_shape)  # Be sure to call this at the end
@@ -43,20 +44,20 @@ class OnehotEmbedding2D(Layer):
         return (input_shape[0], input_shape[1], self.Nembeddings)
 
 
-def encoder_decoder_vae(input_shape, batch_size, embedding_output_dim, latent_dim, dense_nodes):
+def encoder_decoder_vae(params):
     """
     Build us a encoder, a decoder, and a VAE!
     """
-
-    max_len = input_shape[0][0]
+    # TODO: kill input shape
+    input_shape = params['input_shape']
 
     def sampling(args):
         """
-        This function draws a sample from the multinomial defined by the latent
-        variables.
+        This function draws a sample from the multivariate normal defined by
+        the latent variables.
         """
         z_mean, z_log_var = args
-        epsilon = K.random_normal(shape=(batch_size, latent_dim), mean=0.0, stddev=1.0)
+        epsilon = K.random_normal(shape=(params['batch_size'], params['latent_dim']), mean=0.0, stddev=1.0)
         return (z_mean + K.exp(z_log_var / 2) * epsilon)
 
     def vae_loss(io_encoder, io_decoder):
@@ -68,7 +69,7 @@ def encoder_decoder_vae(input_shape, batch_size, embedding_output_dim, latent_di
         xent_loss = io_decoder.shape.num_elements() * K.mean(
             objectives.categorical_crossentropy(io_encoder, io_decoder))
         kl_loss = -0.5 * K.sum(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
-        kl_loss *= 1 / 3 * batch_size  # Because we have three input/output
+        kl_loss *= 1 / 3 * params['batch_size']  # Because we have three input/output
         return (xent_loss + kl_loss)
 
     # Encoding layers:
@@ -76,30 +77,32 @@ def encoder_decoder_vae(input_shape, batch_size, embedding_output_dim, latent_di
     encoder_input_Vgene = Input(shape=input_shape[1], name='onehot_Vgene')
     encoder_input_Jgene = Input(shape=input_shape[2], name='onehot_Jgene')
 
-    embedding_CDR3 = OnehotEmbedding2D(embedding_output_dim[0], name='CDR3_embedding')(encoder_input_CDR3)
+    embedding_CDR3 = OnehotEmbedding2D(params['aa_embedding_dim'], name='CDR3_embedding')(encoder_input_CDR3)
     # AA_embedding = Model(encoder_input_CDR3, embedding_CDR3)
-    embedding_CDR3_flat = Reshape([embedding_output_dim[0] * max_len], name='CDR3_embedding_flat')(embedding_CDR3)
-    embedding_Vgene = Dense(embedding_output_dim[1], name='Vgene_embedding')(encoder_input_Vgene)
+    embedding_CDR3_flat = Reshape([params['aa_embedding_dim'] * params['max_cdr3_len']],
+                                  name='CDR3_embedding_flat')(embedding_CDR3)
+    embedding_Vgene = Dense(params['v_gene_embedding_dim'], name='Vgene_embedding')(encoder_input_Vgene)
     # Vgene_embedding = Model(encoder_input_Vgene, embedding_Vgene)
-    embedding_Jgene = Dense(embedding_output_dim[2], name='Jgene_embedding')(encoder_input_Jgene)
+    embedding_Jgene = Dense(params['j_gene_embedding_dim'], name='Jgene_embedding')(encoder_input_Jgene)
     # Jgene_embedding = Model(encoder_input_Jgene, embedding_Jgene)
 
     merged_input = keras.layers.concatenate([embedding_CDR3_flat, embedding_Vgene, embedding_Jgene],
                                             name='flat_CDR3_Vgene_Jgene')
-    dense_encoder1 = Dense(dense_nodes, activation='elu', name='encoder_dense_1')(merged_input)
-    dense_encoder2 = Dense(dense_nodes, activation='elu', name='encoder_dense_2')(dense_encoder1)
+    dense_encoder1 = Dense(params['dense_nodes'], activation='elu', name='encoder_dense_1')(merged_input)
+    dense_encoder2 = Dense(params['dense_nodes'], activation='elu', name='encoder_dense_2')(dense_encoder1)
 
     # Latent layers:
-    z_mean = Dense(latent_dim, name='z_mean')(dense_encoder2)
-    z_log_var = Dense(latent_dim, name='z_log_var')(dense_encoder2)
+    z_mean = Dense(params['latent_dim'], name='z_mean')(dense_encoder2)
+    z_log_var = Dense(params['latent_dim'], name='z_log_var')(dense_encoder2)
 
     encoder = Model([encoder_input_CDR3, encoder_input_Vgene, encoder_input_Jgene], [z_mean, z_log_var])
 
     # Decoding layers:
     z = Lambda(
-        sampling, output_shape=(latent_dim, ), name='reparameterization_trick')  # This is the reparameterization trick
-    dense_decoder1 = Dense(dense_nodes, activation='elu', name='decoder_dense_1')
-    dense_decoder2 = Dense(dense_nodes, activation='elu', name='decoder_dense_2')
+        sampling, output_shape=(params['latent_dim'], ),
+        name='reparameterization_trick')  # This is the reparameterization trick
+    dense_decoder1 = Dense(params['dense_nodes'], activation='elu', name='decoder_dense_1')
+    dense_decoder2 = Dense(params['dense_nodes'], activation='elu', name='decoder_dense_2')
 
     decoder_out_CDR3 = Dense(np.array(input_shape[0]).prod(), activation='linear', name='flat_CDR_out')
     reshape_CDR3 = Reshape(input_shape[0], name='CDR_out')
@@ -113,7 +116,7 @@ def encoder_decoder_vae(input_shape, batch_size, embedding_output_dim, latent_di
     decoder_output_Jgene = decoder_out_Jgene(dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))
 
     # Define the decoding part separately:
-    z_mean_generator = Input(shape=(latent_dim, ))
+    z_mean_generator = Input(shape=(params['latent_dim'], ))
     decoder_generator_CDR3 = position_wise_softmax_CDR3(
         reshape_CDR3(decoder_out_CDR3(dense_decoder2(dense_decoder1(z_mean_generator)))))
     decoder_generator_Vgene = decoder_out_Vgene(dense_decoder2(dense_decoder1(z_mean_generator)))
@@ -154,19 +157,9 @@ def logprob_of_obs_vect(probs, obs):
 
 
 class TCRVAE:
-    def __init__(
-            self,
-            *,  # Forces everything after this to be a keyword argument.
-            input_shape,
-            batch_size=100,
-            embedding_output_dim=[21, 30, 13],
-            latent_dim=40,
-            dense_nodes=125):
-        kwargs = dict(locals())
-        kwargs.pop('self')
-        (self.encoder, self.decoder, self.vae) = encoder_decoder_vae(**kwargs)
-        self.params = kwargs
-        self.max_len = input_shape[0][0]
+    def __init__(self, params):
+        (self.encoder, self.decoder, self.vae) = encoder_decoder_vae(params)
+        self.params = params
 
     @classmethod
     def of_json_file(cls, fname):
@@ -174,7 +167,7 @@ class TCRVAE:
         Build a TCRVAE from a parameter dictionary dumped to JSON.
         """
         with open(fname, 'r') as fp:
-            return cls(**json.load(fp))
+            return cls(json.load(fp))
 
     @classmethod
     def of_directory(cls, path):
@@ -197,7 +190,7 @@ class TCRVAE:
         df = pd.read_csv(fname, usecols=['amino_acid', 'v_gene', 'j_gene'])
         assert len(df) >= data_chunk_size
         n_to_take = len(df) - len(df) % data_chunk_size
-        return conversion.unpadded_tcrbs_to_onehot(df[:n_to_take], self.max_len)
+        return conversion.unpadded_tcrbs_to_onehot(df[:n_to_take], self.params['max_cdr3_len'])
 
     def serialize_params(self, fname):
         """
@@ -206,18 +199,18 @@ class TCRVAE:
         with open(fname, 'w') as fp:
             json.dump(self.params, fp)
 
-    def fit(self, df: pd.DataFrame, epochs: int, validation_split: float, patience: int, tensorboard_log_dir: str):
+    def fit(self, df: pd.DataFrame, validation_split: float, tensorboard_log_dir: str):
         """
         Fit the model with early stopping.
         """
         data = cols_of_df(df)
-        early_stopping = EarlyStopping(monitor='val_loss', patience=patience)
-        # early_stopping = EarlyStopping(monitor='loss', patience=patience)
+        # early_stopping = EarlyStopping(monitor='val_loss', patience=self.params['patience'])
+        early_stopping = EarlyStopping(monitor='loss', patience=self.params['patience'])
         tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir)
         self.vae.fit(
             x=data,  # y=X for a VAE.
             y=data,
-            epochs=epochs,
+            epochs=self.params['epochs'],
             batch_size=self.params['batch_size'],
             validation_split=validation_split,
             callbacks=[early_stopping, tensorboard])
@@ -319,51 +312,38 @@ def cli():
     pass
 
 
-def _train_tcr(latent_dim, dense_nodes, train_csv, model_params_fname, best_weights_fname, diagnostics_fname):
-    # TODO: less stupid
-    MAX_LEN = 30
-    epochs = 500
-    patience = 20
+@cli.command()
+@click.argument('params_json', type=click.Path(exists=True))
+@click.argument('train_csv', type=click.File('r'))
+@click.argument('best_weights_fname', type=click.Path(writable=True))
+@click.argument('diagnostics_fname', type=click.Path(writable=True))
+def train_tcr(params_json, train_csv, best_weights_fname, diagnostics_fname):
+    """
+    Train the model described in params_json, saving the best weights
+    to best_weights_fname and some diagnostics to diagnostics_fname.
+    """
+    v = TCRVAE.of_json_file(params_json)
+    # TODO: fix cruft
     validation_split = 0.1
     validation_split_multiplier = 10
     sub_chunk_size = validation_split * validation_split_multiplier
     # If this fails then we may have problems with chunks of the data being the
     # wrong length.
     assert sub_chunk_size == float(int(sub_chunk_size))
-    batch_size = 100
-    min_data_size = validation_split_multiplier * batch_size
-    input_shape = [(MAX_LEN, len(conversion.AA_LIST)), (len(conversion.TCRB_V_GENE_LIST), ),
-                   (len(conversion.TCRB_J_GENE_LIST), )]
+    min_data_size = validation_split_multiplier * v.params['batch_size']
 
-    v = TCRVAE(input_shape=input_shape, batch_size=batch_size, latent_dim=latent_dim, dense_nodes=dense_nodes)
     train_data = v.get_data(train_csv, min_data_size)
     tensorboard_log_dir = os.path.join(os.path.dirname(best_weights_fname), 'logs')
-    v.fit(train_data, epochs, validation_split, patience, tensorboard_log_dir)
-    v.serialize_params(model_params_fname)
+    v.fit(train_data, validation_split, tensorboard_log_dir)
     v.vae.save_weights(best_weights_fname, overwrite=True)
 
     # Test weights reloading.
-    vp = TCRVAE.of_json_file(model_params_fname)
+    vp = TCRVAE.of_json_file(params_json)
     vp.vae.load_weights(best_weights_fname)
 
     df = pd.DataFrame({'train': v.evaluate(train_data), 'vp_train': vp.evaluate(train_data)}, index=v.vae.metrics_names)
     df.to_csv(diagnostics_fname)
     return v
-
-
-@cli.command()
-@click.option('--latent-dim', default=40, show_default=True, help='Number of latent space dimensions.')
-@click.option('--dense-nodes', default=125, show_default=True, help='Number of dense nodes.')
-@click.argument('train_csv', type=click.File('r'))
-@click.argument('model_params_fname', type=click.Path(writable=True))
-@click.argument('best_weights_fname', type=click.Path(writable=True))
-@click.argument('diagnostics_fname', type=click.Path(writable=True))
-def train_tcr(latent_dim, dense_nodes, train_csv, model_params_fname, best_weights_fname, diagnostics_fname):
-    """
-    Train the model, print out a model assessment, saving the best weights
-    to best_weights_fname and the input model params to model_params_fname.
-    """
-    _train_tcr(latent_dim, dense_nodes, train_csv, model_params_fname, best_weights_fname, diagnostics_fname)
 
 
 @cli.command()
@@ -407,7 +387,7 @@ def importance(limit_input_to, nsamples, params_json, model_weights, test_csv, o
     v.vae.load_weights(model_weights)
 
     df_x = conversion.unpadded_tcrbs_to_onehot(
-        pd.read_csv(test_csv, usecols=['amino_acid', 'v_gene', 'j_gene']), v.max_len)
+        pd.read_csv(test_csv, usecols=['amino_acid', 'v_gene', 'j_gene']), v.params['max_cdr3_len'])
 
     if limit_input_to is not None:
         df_x = df_x.iloc[:int(limit_input_to)]

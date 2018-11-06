@@ -1,12 +1,33 @@
 from os.path import join
+import copy
+import json
+
 import nestly
 import nestly.scons as ns
 import SCons.Script as sc
 
 import common
+import xcr_vector_conversion as conversion
 
 sc.Import('env')
 localenv = env.Clone()  # noqa
+
+
+# ### Default parameters for the TCRVAE ###
+
+default_params = dict(
+            input_shape=[(30, len(conversion.AA_LIST)), (len(conversion.TCRB_V_GENE_LIST), ),
+                         (len(conversion.TCRB_J_GENE_LIST), )],
+            max_cdr3_len=30,
+            batch_size=100,
+            aa_embedding_dim=21,
+            v_gene_embedding_dim=30,
+            j_gene_embedding_dim=13,
+            latent_dim=40,
+            dense_nodes=125,
+            epochs=500,
+            patience=20)
+
 
 # ### Paths and data sets ###
 
@@ -77,27 +98,45 @@ def split(env, outdir, c):
 
 # The third nest represents the dimension of the latent space.
 latent_dims = [30, 35, 40]
-nest.add('latent_dim', apply_mode(common.zero_pad_list(latent_dims)))
+nest.add('latent_dim', apply_mode(latent_dims), label_func=common.zero_pad_list_func(latent_dims))
 
 # The fourth nest represents the number of dense nodes
 dense_nodes = [50, 100, 150, 200]
-nest.add('dense_nodes', apply_mode(common.zero_pad_list(dense_nodes)))
+nest.add('dense_nodes', apply_mode(dense_nodes), label_func=common.zero_pad_list_func(dense_nodes))
+
+
+@nest.add_target_with_env(localenv)
+def model_params(env, outdir, c):
+    """
+    Write out a file with parameters from which we can build our VAE.
+    """
+
+    # Copy over any relevant parameters from c into the params dictionary.
+    params = copy.deepcopy(default_params)
+    for k, v in c.items():
+        if k in params:
+            params[k] = v
+
+    return env.Command(
+        join(outdir, 'model_params.json'),
+        [],
+        f"echo '{json.dumps(params)}' > $TARGET")
 
 
 @nest.add_target_with_env(localenv, 'model')
 @ns.name_targets
 def model(env, outdir, c):
-    return 'params', 'weights', 'diagnostics', env.Command(
-        [join(outdir, 'model_params.json'), join(outdir, 'best_weights.h5'), join(outdir, 'diagnostics.csv')],
-        c['split']['train'],
-        f"python3 tcr_vae.py train-tcr --latent-dim {c['latent_dim']} --dense-nodes {c['dense_nodes']} $SOURCE $TARGETS")
+    return 'weights', 'diagnostics', env.Command(
+        [join(outdir, 'best_weights.h5'), join(outdir, 'diagnostics.csv')],
+        [c['model_params'], c['split']['train']],
+        f"python3 tcr_vae.py train-tcr $SOURCES $TARGETS")
 
 
 @nest.add_target_with_env(localenv)
 def loss(env, outdir, c):
     return env.Command(
         join(outdir, 'loss.csv'),
-        [c['model']['params'], c['model']['weights'], c['split']['train'], c['split']['test']],
+        [c['model_params'], c['model']['weights'], c['split']['train'], c['split']['test']],
         'python3 tcr_vae.py loss $SOURCES $TARGET')
 
 

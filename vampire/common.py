@@ -67,9 +67,10 @@ def cjoin(path, *paths):
 
 # ### Misc functions ###
 
-def zero_pad_list(l):
+def zero_pad_list_func(l):
     """
-    Pad a list of natural numbers on the left with zeros according to maximum length.
+    Make a function from a list of natural numbers to pad this list on the left
+    with zeros according to maximum length.
     """
     max_len = len(str(max(l)))
-    return [str(i).zfill(max_len) for i in l]
+    return lambda i: str(i).zfill(max_len)
