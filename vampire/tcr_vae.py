@@ -18,30 +18,33 @@ import scipy.stats as stats
 import vampire.xcr_vector_conversion as conversion
 
 
-class OnehotEmbedding2D(Layer):
+class EmbedViaMatrix(Layer):
     """
-    This is an alternative to the normal keras embedding layer which works on
-    categorical data. This provides the same functionality but on a onehot
-    encoding of the categorical data. 2D refers to the input data being two
-    dimensional.
+    This layer defines a (learned) matrix M such that given input X the output
+    is XM. The number of columns of M is embedding_dim, and the number of rows
+    is set so that X and M can be multiplied.
+
+    If the rows of the input give encodings of a series of objects, we can
+    think of this layer as giving an embedding of each of the encoded objects
+    in a embedding_dim-dimensional space.
     """
 
-    def __init__(self, Nembeddings, **kwargs):
-        self.Nembeddings = Nembeddings
-        super(OnehotEmbedding2D, self).__init__(**kwargs)
+    def __init__(self, embedding_dim, **kwargs):
+        self.embedding_dim = embedding_dim
+        super(EmbedViaMatrix, self).__init__(**kwargs)
 
     def build(self, input_shape):
         # Create a trainable weight variable for this layer.
         # The first component of input_shape is the batch size (see https://keras.io/layers/core/#dense).
         self.kernel = self.add_weight(
-            name='kernel', shape=(input_shape[2], self.Nembeddings), initializer='uniform', trainable=True)
-        super(OnehotEmbedding2D, self).build(input_shape)  # Be sure to call this at the end
+            name='kernel', shape=(input_shape[2], self.embedding_dim), initializer='uniform', trainable=True)
+        super(EmbedViaMatrix, self).build(input_shape)  # Be sure to call this at the end
 
     def call(self, x):
         return K.dot(x, self.kernel)
 
     def compute_output_shape(self, input_shape):
-        return (input_shape[0], input_shape[1], self.Nembeddings)
+        return (input_shape[0], input_shape[1], self.embedding_dim)
 
 
 def encoder_decoder_vae(params):
@@ -77,7 +80,7 @@ def encoder_decoder_vae(params):
     encoder_input_Vgene = Input(shape=(params['n_v_genes'], ), name='onehot_Vgene')
     encoder_input_Jgene = Input(shape=(params['n_j_genes'], ), name='onehot_Jgene')
 
-    embedding_CDR3 = OnehotEmbedding2D(params['aa_embedding_dim'], name='CDR3_embedding')(encoder_input_CDR3)
+    embedding_CDR3 = EmbedViaMatrix(params['aa_embedding_dim'], name='CDR3_embedding')(encoder_input_CDR3)
     # AA_embedding = Model(encoder_input_CDR3, embedding_CDR3)
     embedding_CDR3_flat = Reshape([params['aa_embedding_dim'] * params['max_cdr3_len']],
                                   name='CDR3_embedding_flat')(embedding_CDR3)
