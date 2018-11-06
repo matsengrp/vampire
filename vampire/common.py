@@ -63,3 +63,13 @@ def cjoin(path, *paths):
     joined = os.path.join(path, *paths)
     assert os.path.exists(joined)
     return joined
+
+
+# ### Misc functions ###
+
+def zero_pad_list(l):
+    """
+    Pad a list of natural numbers on the left with zeros according to maximum length.
+    """
+    max_len = len(str(max(l)))
+    return [str(i).zfill(max_len) for i in l]

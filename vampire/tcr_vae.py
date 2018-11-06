@@ -211,8 +211,8 @@ class TCRVAE:
         Fit the model with early stopping.
         """
         data = cols_of_df(df)
-        # early_stopping = EarlyStopping(monitor='val_loss', patience=patience)
-        early_stopping = EarlyStopping(monitor='loss', patience=patience)
+        early_stopping = EarlyStopping(monitor='val_loss', patience=patience)
+        # early_stopping = EarlyStopping(monitor='loss', patience=patience)
         tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir)
         self.vae.fit(
             x=data,  # y=X for a VAE.
@@ -323,7 +323,7 @@ def _train_tcr(latent_dim, dense_nodes, train_csv, model_params_fname, best_weig
     # TODO: less stupid
     MAX_LEN = 30
     epochs = 500
-    patience = 10
+    patience = 20
     validation_split = 0.1
     validation_split_multiplier = 10
     sub_chunk_size = validation_split * validation_split_multiplier
