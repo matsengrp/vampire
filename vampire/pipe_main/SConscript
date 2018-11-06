@@ -16,15 +16,18 @@ localenv = env.Clone()  # noqa
 # ### Default parameters for the TCRVAE ###
 
 default_params = dict(
-            latent_dim=40,
-            dense_nodes=125,
+            # Model parameters.
+            latent_dim=35,
+            dense_nodes=75,
             aa_embedding_dim=21,
             v_gene_embedding_dim=30,
             j_gene_embedding_dim=13,
+            # Input data parameters.
             max_cdr3_len=30,
             n_aas=len(conversion.AA_LIST),
             n_v_genes=len(conversion.TCRB_V_GENE_LIST),
             n_j_genes=len(conversion.TCRB_J_GENE_LIST),
+            # Training parameters.
             batch_size=100,
             epochs=500,
             patience=20)
@@ -62,11 +65,10 @@ def apply_mode(l):
 
 nest = ns.SConsWrap(nestly.Nest(), alias_environment=localenv)
 
-# The first nest represents the data set choice, named via data name is,
-# prepended with `_output_`.
+# Nest: the data set choice, named via data name prepended with `_output_`.
 nest.add('data_label', [localenv['data_label']], label_func=lambda p: '_output_' + p)
 
-# The second nest represents the sample, named by sample name.
+# Nest: the sample, named by sample name.
 nest.add('sample', DATA[localenv['data_label']]['paths'], label_func=common.strip_dirpath_extn)
 
 
@@ -97,11 +99,11 @@ def split(env, outdir, c):
         'python3 util.py split $SOURCE $TARGETS')
 
 
-# The third nest represents the dimension of the latent space.
+# Nest: the dimension of the latent space.
 latent_dims = [30, 35, 40]
 nest.add('latent_dim', apply_mode(latent_dims), label_func=common.zero_pad_list_func(latent_dims))
 
-# The fourth nest represents the number of dense nodes
+# Nest: the number of dense nodes.
 dense_nodes = [50, 100, 150, 200]
 nest.add('dense_nodes', apply_mode(dense_nodes), label_func=common.zero_pad_list_func(dense_nodes))
 
