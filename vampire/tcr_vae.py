@@ -323,7 +323,7 @@ def train_tcr(params_json, train_csv, best_weights_fname, diagnostics_fname):
     to best_weights_fname and some diagnostics to diagnostics_fname.
     """
     v = TCRVAE.of_json_file(params_json)
-    # TODO: fix cruft
+    # Leaving this hardcoded for now.
     validation_split = 0.1
     validation_split_multiplier = 10
     sub_chunk_size = validation_split * validation_split_multiplier
