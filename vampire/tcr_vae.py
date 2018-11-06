@@ -322,7 +322,7 @@ def cli():
 def _train_tcr(latent_dim, dense_nodes, train_csv, model_params_fname, best_weights_fname, diagnostics_fname):
     # TODO: less stupid
     MAX_LEN = 30
-    epochs = 300
+    epochs = 500
     patience = 10
     validation_split = 0.1
     validation_split_multiplier = 10

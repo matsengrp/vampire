@@ -80,7 +80,7 @@ latent_dims = [20, 25, 30, 35, 40]
 nest.add('latent_dim', apply_mode(latent_dims))
 
 # The fourth nest represents the number of dense nodes
-dense_nodes = [25, 75, 100, 125, 150]
+dense_nodes = [25, 50, 75, 100, 125, 150]
 nest.add('dense_nodes', apply_mode(dense_nodes))
 
 
