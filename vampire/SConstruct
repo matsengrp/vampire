@@ -13,8 +13,9 @@ import SCons.Script as sc
 # Command line options
 sc.AddOption('--pipe', type='string', help="Which pipeline to run.", default='pipe_main')
 sc.AddOption('--data', type='string', help="The label of the data to be run in the specified pipeline.", default='test')
+sc.AddOption('--mode', type='string', help="The mode of the run, which is up to the SConscript to define.", default='default')
 
 # Set up environment and run  \m/ ( -_- ) \m/
-env = sc.Environment(ENV=os.environ, data_label=sc.GetOption('data'))
+env = sc.Environment(ENV=os.environ, data_label=sc.GetOption('data'), mode=sc.GetOption('mode'))
 sc.Export('env')
 sc.SConscript(join(sc.GetOption('pipe'), 'SConscript'))

@@ -1,12 +1,37 @@
-import os
-
 from os.path import join
+import copy
+import json
+
 import nestly
 import nestly.scons as ns
 import SCons.Script as sc
 
+import common
+import xcr_vector_conversion as conversion
+
 sc.Import('env')
 localenv = env.Clone()  # noqa
+
+
+# ### Default parameters for the TCRVAE ###
+
+default_params = dict(
+            # Model parameters.
+            latent_dim=35,
+            dense_nodes=75,
+            aa_embedding_dim=21,
+            v_gene_embedding_dim=30,
+            j_gene_embedding_dim=13,
+            # Input data parameters.
+            max_cdr3_len=30,
+            n_aas=len(conversion.AA_LIST),
+            n_v_genes=len(conversion.TCRB_V_GENE_LIST),
+            n_j_genes=len(conversion.TCRB_J_GENE_LIST),
+            # Training parameters.
+            batch_size=100,
+            epochs=500,
+            patience=20)
+
 
 # ### Paths and data sets ###
 
@@ -23,38 +48,28 @@ DATA = {
     }
 }
 
-# ### Utility functions ###
-
-
-def strip_extn(in_path):
-    """
-    Strips the extension.
-    """
-    (path, extn) = os.path.splitext(str(in_path))
-    if extn in ['.gz', '.bz2']:
-        # Perhaps there is more to the suffix.
-        return os.path.splitext(path)[0]
-    else:
-        return path
-
-
-def strip_dirpath_extn(in_path):
-    """
-    Strips the directory path and the extension.
-    """
-    return os.path.basename(strip_extn(in_path))
-
 
 # ### Nests and targets ###
 
+def apply_mode(l):
+    """
+    So far, default mode runs everything, and mini mode just runs a single element from the list.
+    """
+    if localenv['mode'] not in ['mini', 'default']:
+        raise Exception(f"Unknown mode '{localenv['mode']}'")
+    if localenv['mode'] == 'mini':
+        return [l[0]]
+    else:
+        return l
+
+
 nest = ns.SConsWrap(nestly.Nest(), alias_environment=localenv)
 
-# The first nest represents the data set choice, named via data name is,
-# prepended with `_output_`.
+# Nest: the data set choice, named via data name prepended with `_output_`.
 nest.add('data_label', [localenv['data_label']], label_func=lambda p: '_output_' + p)
 
-# The second nest represents the sample, named by sample name.
-nest.add('sample', DATA[localenv['data_label']]['paths'], label_func=strip_dirpath_extn)
+# Nest: the sample, named by sample name.
+nest.add('sample', DATA[localenv['data_label']]['paths'], label_func=common.strip_dirpath_extn)
 
 
 @nest.add_target_with_env(localenv)
@@ -64,8 +79,9 @@ def preprocess(env, outdir, c):
     """
     in_path = c['sample']
     outfile, = env.Command(
-        join(outdir,
-             strip_dirpath_extn(in_path) + '.processed.csv'), in_path, 'python3 preprocess_adaptive.py $SOURCE $TARGET')
+        join(outdir, common.strip_dirpath_extn(in_path) + '.processed.csv'),
+        in_path,
+        'python3 preprocess_adaptive.py $SOURCE $TARGET')
     return outfile
 
 
@@ -77,24 +93,70 @@ def split(env, outdir, c):
     """
     in_path = c['preprocess']
     return 'train', 'test', env.Command([
-        join(outdir,
-             strip_dirpath_extn(in_path) + '.train.csv'),
-        join(outdir,
-             strip_dirpath_extn(in_path) + '.test.csv')
-    ], in_path, 'python3 util.py split $SOURCE $TARGETS')
+        join(outdir, common.strip_dirpath_extn(in_path) + '.train.csv'),
+        join(outdir, common.strip_dirpath_extn(in_path) + '.test.csv')],
+        in_path,
+        'python3 util.py split $SOURCE $TARGETS')
+
+
+def integer_nest_add(nest_name, int_l):
+    """
+    Add an nest for a list of integers, with nice zero-padded directory names.
+    """
+    nest.add(nest_name, apply_mode(int_l), label_func=common.zero_pad_list_func(int_l))
+
+
+# # Nest: the dimension of the latent space.
+# integer_nest_add('latent_dim', [30, 35, 40])
+
+# # Nest: the number of dense nodes.
+# integer_nest_add('dense_nodes', [50, 100, 150, 200])
+
+# Nest: the amino acid embedding dimension.
+integer_nest_add('aa_embedding_dim', [10, 15, 20, 21])
+
+# Nest: the V gene embedding dimension.
+integer_nest_add('v_gene_embedding_dim', [20, 30, 40])
+
+
+@nest.add_target_with_env(localenv)
+def model_params(env, outdir, c):
+    """
+    Write out a file with parameters from which we can build our VAE.
+    """
+
+    # Copy over any relevant parameters from c into the params dictionary.
+    params = copy.deepcopy(default_params)
+    for k, v in c.items():
+        if k in params:
+            params[k] = v
+
+    return env.Command(
+        join(outdir, 'model_params.json'),
+        [],
+        f"echo '{json.dumps(params)}' > $TARGET")
 
 
 @nest.add_target_with_env(localenv, 'model')
 @ns.name_targets
 def model(env, outdir, c):
-    return 'params', 'weights', env.Command(
-        [join(outdir, 'model_params.json'), join(outdir, 'best_weights.h5')], [c['split']['train'], c['split']['test']],
-        'python3 tcr_vae.py train-tcr $SOURCES $TARGETS')
+    return 'weights', 'diagnostics', env.Command(
+        [join(outdir, 'best_weights.h5'), join(outdir, 'diagnostics.csv')],
+        [c['model_params'], c['split']['train']],
+        f"python3 tcr_vae.py train-tcr $SOURCES $TARGETS")
 
 
 @nest.add_target_with_env(localenv)
-def importance(env, outdir, c):
-    print(c)
+def loss(env, outdir, c):
     return env.Command(
-        join(outdir, 'importance.csv'), [c['model']['params'], c['model']['weights'], c['split']['test']],
-        'python3 tcr_vae.py importance $SOURCES $TARGET')
+        join(outdir, 'loss.csv'),
+        [c['model_params'], c['model']['weights'], c['split']['train'], c['split']['test']],
+        'python3 tcr_vae.py loss $SOURCES $TARGET')
+
+
+# @nest.add_target_with_env(localenv)
+# def importance(env, outdir, c):
+#     return env.Command(
+#         join(outdir, 'importance.csv'),
+#         [c['model_params'], c['model']['weights'], c['split']['test']],
+#         'python3 tcr_vae.py importance $SOURCES $TARGET')
