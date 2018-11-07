@@ -1,5 +1,4 @@
 from os.path import join
-import copy
 import json
 
 import nestly
@@ -7,31 +6,10 @@ import nestly.scons as ns
 import SCons.Script as sc
 
 import common
-import xcr_vector_conversion as conversion
+import tcr_vae
 
 sc.Import('env')
 localenv = env.Clone()  # noqa
-
-
-# ### Default parameters for the TCRVAE ###
-
-default_params = dict(
-            # Model parameters.
-            latent_dim=35,
-            dense_nodes=75,
-            aa_embedding_dim=21,
-            v_gene_embedding_dim=30,
-            j_gene_embedding_dim=13,
-            # Input data parameters.
-            max_cdr3_len=30,
-            n_aas=len(conversion.AA_LIST),
-            n_v_genes=len(conversion.TCRB_V_GENE_LIST),
-            n_j_genes=len(conversion.TCRB_J_GENE_LIST),
-            # Training parameters.
-            batch_size=100,
-            epochs=500,
-            patience=20)
-
 
 # ### Paths and data sets ###
 
@@ -49,19 +27,37 @@ DATA = {
 }
 
 
-# ### Nests and targets ###
+# ### Mode-related ###
+
+def check_mode():
+    if localenv['mode'] not in ['mini', 'default']:
+        raise Exception(f"Unknown mode '{localenv['mode']}'")
+
 
 def apply_mode(l):
     """
-    So far, default mode runs everything, and mini mode just runs a single element from the list.
+    Default mode runs everything, and mini mode just runs a single element from the list.
     """
-    if localenv['mode'] not in ['mini', 'default']:
-        raise Exception(f"Unknown mode '{localenv['mode']}'")
+    check_mode()
     if localenv['mode'] == 'mini':
         return [l[0]]
     else:
         return l
 
+
+def default_params_by_mode():
+    """
+    Mini mode doesn't train for long.
+    """
+    params = tcr_vae.TCRVAE.default_params()
+
+    if localenv['mode'] == 'mini':
+        params['epochs'] = 5
+
+    return params
+
+
+# ### Nests and targets ###
 
 nest = ns.SConsWrap(nestly.Nest(), alias_environment=localenv)
 

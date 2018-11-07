@@ -164,6 +164,35 @@ class TCRVAE:
         self.params = params
 
     @classmethod
+    def default_params(cls):
+        """
+        Return a dictionary with default parameters.
+        """
+        return dict(
+            # Model parameters.
+            latent_dim=35,
+            dense_nodes=75,
+            aa_embedding_dim=21,
+            v_gene_embedding_dim=30,
+            j_gene_embedding_dim=13,
+            # Input data parameters.
+            max_cdr3_len=30,
+            n_aas=len(conversion.AA_LIST),
+            n_v_genes=len(conversion.TCRB_V_GENE_LIST),
+            n_j_genes=len(conversion.TCRB_J_GENE_LIST),
+            # Training parameters.
+            batch_size=100,
+            epochs=500,
+            patience=20)
+
+    @classmethod
+    def default(cls):
+        """
+        Return a VAE with default parameters.
+        """
+        return cls(cls.default_params())
+
+    @classmethod
     def of_json_file(cls, fname):
         """
         Build a TCRVAE from a parameter dictionary dumped to JSON.
