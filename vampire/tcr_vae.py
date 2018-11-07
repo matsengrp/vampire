@@ -20,13 +20,13 @@ import vampire.xcr_vector_conversion as conversion
 
 class EmbedViaMatrix(Layer):
     """
-    This layer defines a (learned) matrix M such that given input X the output
-    is XM. The number of columns of M is embedding_dim, and the number of rows
-    is set so that X and M can be multiplied.
+    This layer defines a (learned) matrix M such that given matrix input X the
+    output is XM. The number of columns of M is embedding_dim, and the number
+    of rows is set so that X and M can be multiplied.
 
-    If the rows of the input give encodings of a series of objects, we can
-    think of this layer as giving an embedding of each of the encoded objects
-    in a embedding_dim-dimensional space.
+    If the rows of the input give the coordinates of a series of objects, we
+    can think of this layer as giving an embedding of each of the encoded
+    objects in a embedding_dim-dimensional space.
     """
 
     def __init__(self, embedding_dim, **kwargs):
@@ -101,9 +101,7 @@ def encoder_decoder_vae(params):
     encoder = Model([encoder_input_CDR3, encoder_input_Vgene, encoder_input_Jgene], [z_mean, z_log_var])
 
     # Decoding layers:
-    z = Lambda(
-        sampling, output_shape=(params['latent_dim'], ),
-        name='reparameterization_trick')  # This is the reparameterization trick
+    z = Lambda(sampling, output_shape=(params['latent_dim'], ), name='reparameterization_trick')
     dense_decoder1 = Dense(params['dense_nodes'], activation='elu', name='decoder_dense_1')
     dense_decoder2 = Dense(params['dense_nodes'], activation='elu', name='decoder_dense_2')
 
@@ -185,22 +183,26 @@ class TCRVAE:
         v.vae.load_weights(os.path.join(path, 'best_weights.h5'))
         return v
 
-    def get_data(self, fname, data_chunk_size):
-        """
-        Get data in the correct format from fname, then trim so the data length
-        is a multiple of data_chunk_size.
-        """
-        df = pd.read_csv(fname, usecols=['amino_acid', 'v_gene', 'j_gene'])
-        assert len(df) >= data_chunk_size
-        n_to_take = len(df) - len(df) % data_chunk_size
-        return conversion.unpadded_tcrbs_to_onehot(df[:n_to_take], self.params['max_cdr3_len'])
-
     def serialize_params(self, fname):
         """
         Dump model parameters to a file.
         """
         with open(fname, 'w') as fp:
             json.dump(self.params, fp)
+
+    def get_data(self, fname, data_chunk_size=0):
+        """
+        Get data in the correct format from fname. If data_chunk_size is
+        nonzero, trim so the data length is a multiple of data_chunk_size.
+        """
+        df = pd.read_csv(fname, usecols=['amino_acid', 'v_gene', 'j_gene'])
+        if data_chunk_size == 0:
+            sub_df = df
+        else:
+            assert len(df) >= data_chunk_size
+            n_to_take = len(df) - len(df) % data_chunk_size
+            sub_df = df[:n_to_take]
+        return conversion.unpadded_tcrbs_to_onehot(sub_df, self.params['max_cdr3_len'])
 
     def fit(self, df: pd.DataFrame, validation_split: float, tensorboard_log_dir: str):
         """
@@ -253,9 +255,10 @@ class TCRVAE:
         One importance sample to calculate the probability of generating some
         observed x's by decoding from the prior on z.
 
-        Say we just have one x. We want p(x), which we can calculate as the
-        expectation of p(x|z) where z is drawn from p(z). Instead, we use
-        importance sampling, calculating the expectation of
+        Say we just have one x. We want p(x), which in principle we could
+        calculate as the expectation of p(x|z) where z is drawn from p(z). That
+        would be very inefficient given the size of the latent space. Instead,
+        we use importance sampling, calculating the expectation of
 
         p(x|z) (p(z) / q(z|x))
 
@@ -277,7 +280,7 @@ class TCRVAE:
         # in our output array for each input sequence.
         assert (len(x_df) == len(out_ps))
 
-        # Get encoding of x in the latent space.
+        # Get encoding of x's in the latent space.
         z_mean, z_sd = self.encode(x_df)
         # Get samples from q(z|x) in the latent space, one for each input x.
         z_sample = stats.norm.rvs(z_mean, z_sd)
@@ -322,8 +325,9 @@ def cli():
 @click.argument('diagnostics_fname', type=click.Path(writable=True))
 def train_tcr(params_json, train_csv, best_weights_fname, diagnostics_fname):
     """
-    Train the model described in params_json, saving the best weights
-    to best_weights_fname and some diagnostics to diagnostics_fname.
+    Train the model described in params_json using data in train_csv, saving
+    the best weights to best_weights_fname and some diagnostics to
+    diagnostics_fname.
     """
     v = TCRVAE.of_json_file(params_json)
     # Leaving this hardcoded for now.
@@ -389,8 +393,7 @@ def importance(limit_input_to, nsamples, params_json, model_weights, test_csv, o
     v = TCRVAE.of_json_file(params_json)
     v.vae.load_weights(model_weights)
 
-    df_x = conversion.unpadded_tcrbs_to_onehot(
-        pd.read_csv(test_csv, usecols=['amino_acid', 'v_gene', 'j_gene']), v.params['max_cdr3_len'])
+    df_x = v.get_data(test_csv)
 
     if limit_input_to is not None:
         df_x = df_x.iloc[:int(limit_input_to)]
