@@ -29,6 +29,7 @@ def onehot_to_seq(onehot):
 
 
 # ### TCRB ###
+
 # V genes:
 TCRB_V_GENE_LIST = [
     'TCRBV01-01', 'TCRBV02-01', 'TCRBV03-01', 'TCRBV03-02', 'TCRBV04-01', 'TCRBV04-02', 'TCRBV04-03', 'TCRBV05-01',
@@ -87,6 +88,20 @@ def pad_middle(seq, desired_length):
     return seq[:pad_start] + '-' * pad_len + seq[pad_start:]
 
 
+def unpad(seq):
+    """
+    Remove gap padding.
+    """
+    return seq.translate(seq.maketrans('', '', '-'))
+
+
+def avj_triple_to_tcr_df(amino_acid, v_gene, j_gene):
+    """
+    Put our TCR triple into an appropriate DataFrame.
+    """
+    return pd.DataFrame({'amino_acid': amino_acid, 'v_gene': v_gene, 'j_gene': j_gene})
+
+
 def unpadded_tcrbs_to_onehot(df, desired_length):
     """
     Translate a data frame of TCR betas written as (CDR3 sequence, V gene name,
@@ -95,20 +110,35 @@ def unpadded_tcrbs_to_onehot(df, desired_length):
     If a CDR3 sequence exceeds `desired_length` this will fail an assertion.
     """
 
-    return pd.DataFrame({
-        'amino_acid': df['amino_acid'].apply(lambda s: seq_to_onehot(pad_middle(s, desired_length))),
-        'v_gene': df['v_gene'].apply(vgene_to_onehot),
-        'j_gene': df['j_gene'].apply(jgene_to_onehot)
-    })
+    return avj_triple_to_tcr_df(
+        df['amino_acid'].apply(lambda s: seq_to_onehot(pad_middle(s, desired_length))),
+        df['v_gene'].apply(vgene_to_onehot),
+        df['j_gene'].apply(jgene_to_onehot)
+        )  # yapf: disable
 
 
-def onehot_to_padded_tcrbs(df):
+def onehot_to_padded_tcrbs(amino_acid_arr, v_gene_arr, j_gene_arr):
+    """
+    Convert back from onehot encoding arrays to padded TCR betas.
+
+    Say there are n sequences.
+
+    :param amino_acid_arr: onehot array of shape (n, max_cdr3_len, 21).
+    :param v_gene_arr: onehot array of shape (n, n_v_genes).
+    :param j_gene_arr: onehot array of shape (n, n_j_genes).
+    """
+
+    return avj_triple_to_tcr_df(
+        np.array([onehot_to_seq(amino_acid_arr[i]) for i in range(amino_acid_arr.shape[0])]),
+        np.apply_along_axis(onehot_to_vgene, 1, v_gene_arr),
+        np.apply_along_axis(onehot_to_jgene, 1, j_gene_arr)
+        )  # yapf: disable
+
+
+def onehot_to_tcrbs(amino_acid_arr, v_gene_arr, j_gene_arr):
     """
     Convert back from onehot encodings to TCR betas.
     """
 
-    return pd.DataFrame({
-        'amino_acid': df['amino_acid'].apply(onehot_to_seq),
-        'v_gene': df['v_gene'].apply(onehot_to_vgene),
-        'j_gene': df['j_gene'].apply(onehot_to_jgene)
-    })
+    df = onehot_to_padded_tcrbs(amino_acid_arr, v_gene_arr, j_gene_arr)
+    return avj_triple_to_tcr_df(df['amino_acid'].apply(unpad), df['v_gene'], df['j_gene'])

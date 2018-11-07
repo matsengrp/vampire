@@ -1,5 +1,6 @@
 import click
 import json
+import math
 import numpy as np
 import os
 import pandas as pd
@@ -246,9 +247,21 @@ class TCRVAE:
     def decode(self, z):
         """
         Get the decoding of z in the latent space.
-
         """
         return self.decoder.predict(z)
+
+    def generate(self, n_seqs):
+        """
+        Generate a data frame of n_seqs sequences.
+        """
+        batch_size = self.params['batch_size']
+        # Increase the number of desired sequences as needed so it's divisible by batch_size.
+        n_actual = batch_size * math.ceil(n_seqs / batch_size)
+        # Sample from the latent space to generate sequences:
+        z_sample = np.random.normal(0, 1, size=(n_actual, self.params['latent_dim']))
+        amino_acid_arr, v_gene_arr, j_gene_arr = self.decode(z_sample)
+        # Convert back, restricting to the desired number of sequences.
+        return conversion.onehot_to_tcrbs(amino_acid_arr[:n_seqs], v_gene_arr[:n_seqs], j_gene_arr[:n_seqs])
 
     def log_p_of_x_importance_sample(self, x_df, out_ps):
         """
