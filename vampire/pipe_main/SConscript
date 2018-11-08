@@ -122,7 +122,7 @@ def model_params(env, outdir, c):
     """
 
     # Copy over any relevant parameters from c into the params dictionary.
-    params = copy.deepcopy(default_params)
+    params = default_params_by_mode()
     for k, v in c.items():
         if k in params:
             params[k] = v
