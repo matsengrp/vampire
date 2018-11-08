@@ -429,7 +429,7 @@ def importance(limit_input_to, nsamples, params_json, model_weights, test_csv, o
     Estimate the log generation probability of the sequences in test_csv on the
     VAE determined by params_json and model_weights.
 
-    Spit the results into out_csv, one estimate per line.
+    Output the results into out_csv, one estimate per line.
     """
 
     v = TCRVAE.of_json_file(params_json)
@@ -450,6 +450,20 @@ def importance(limit_input_to, nsamples, params_json, model_weights, test_csv, o
     # Calculate log of mean of numbers given in log space.
     avg = special.logsumexp(log_p_x, axis=0) - np.log(nsamples)
     pd.DataFrame({'log_p_x': avg}).to_csv(out_csv, index=False)
+
+
+@cli.command()
+@click.option('-n', '--nseqs', default=100, show_default=True, help='Number of sequences to generate.')
+@click.argument('params_json', type=click.Path(exists=True))
+@click.argument('model_weights', type=click.Path(exists=True))
+@click.argument('out_csv', type=click.File('w'))
+def generate(nseqs, params_json, model_weights, out_csv):
+    """
+    Generate some sequences and write them to a file.
+    """
+    v = TCRVAE.of_json_file(params_json)
+    v.vae.load_weights(model_weights)
+    v.generate(nseqs).to_csv(out_csv, index=False)
 
 
 if __name__ == '__main__':
