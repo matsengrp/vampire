@@ -1,5 +1,6 @@
 import click
 import json
+import math
 import numpy as np
 import os
 import pandas as pd
@@ -163,6 +164,35 @@ class TCRVAE:
         self.params = params
 
     @classmethod
+    def default_params(cls):
+        """
+        Return a dictionary with default parameters.
+        """
+        return dict(
+            # Model parameters.
+            latent_dim=35,
+            dense_nodes=75,
+            aa_embedding_dim=21,
+            v_gene_embedding_dim=30,
+            j_gene_embedding_dim=13,
+            # Input data parameters.
+            max_cdr3_len=30,
+            n_aas=len(conversion.AA_LIST),
+            n_v_genes=len(conversion.TCRB_V_GENE_LIST),
+            n_j_genes=len(conversion.TCRB_J_GENE_LIST),
+            # Training parameters.
+            batch_size=100,
+            epochs=500,
+            patience=20)
+
+    @classmethod
+    def default(cls):
+        """
+        Return a VAE with default parameters.
+        """
+        return cls(cls.default_params())
+
+    @classmethod
     def of_json_file(cls, fname):
         """
         Build a TCRVAE from a parameter dictionary dumped to JSON.
@@ -246,9 +276,21 @@ class TCRVAE:
     def decode(self, z):
         """
         Get the decoding of z in the latent space.
-
         """
         return self.decoder.predict(z)
+
+    def generate(self, n_seqs):
+        """
+        Generate a data frame of n_seqs sequences.
+        """
+        batch_size = self.params['batch_size']
+        # Increase the number of desired sequences as needed so it's divisible by batch_size.
+        n_actual = batch_size * math.ceil(n_seqs / batch_size)
+        # Sample from the latent space to generate sequences:
+        z_sample = np.random.normal(0, 1, size=(n_actual, self.params['latent_dim']))
+        amino_acid_arr, v_gene_arr, j_gene_arr = self.decode(z_sample)
+        # Convert back, restricting to the desired number of sequences.
+        return conversion.onehot_to_tcrbs(amino_acid_arr[:n_seqs], v_gene_arr[:n_seqs], j_gene_arr[:n_seqs])
 
     def log_p_of_x_importance_sample(self, x_df, out_ps):
         """
@@ -376,7 +418,7 @@ def loss(params_json, model_weights, train_csv, test_csv, out_csv):
 
 
 @cli.command()
-@click.option('--limit-input-to', default=None, help='Only use the first <argument> input sequences.')
+@click.option('--limit-input-to', default=None, type=int, help='Only use the first <argument> input sequences.')
 @click.option('--nsamples', default=500, show_default=True, help='Number of importance samples to use.')
 @click.argument('params_json', type=click.Path(exists=True))
 @click.argument('model_weights', type=click.Path(exists=True))
@@ -387,7 +429,7 @@ def importance(limit_input_to, nsamples, params_json, model_weights, test_csv, o
     Estimate the log generation probability of the sequences in test_csv on the
     VAE determined by params_json and model_weights.
 
-    Spit the results into out_csv, one estimate per line.
+    Output the results into out_csv, one estimate per line.
     """
 
     v = TCRVAE.of_json_file(params_json)
@@ -408,6 +450,20 @@ def importance(limit_input_to, nsamples, params_json, model_weights, test_csv, o
     # Calculate log of mean of numbers given in log space.
     avg = special.logsumexp(log_p_x, axis=0) - np.log(nsamples)
     pd.DataFrame({'log_p_x': avg}).to_csv(out_csv, index=False)
+
+
+@cli.command()
+@click.option('-n', '--nseqs', default=100, show_default=True, help='Number of sequences to generate.')
+@click.argument('params_json', type=click.Path(exists=True))
+@click.argument('model_weights', type=click.Path(exists=True))
+@click.argument('out_csv', type=click.File('w'))
+def generate(nseqs, params_json, model_weights, out_csv):
+    """
+    Generate some sequences and write them to a file.
+    """
+    v = TCRVAE.of_json_file(params_json)
+    v.vae.load_weights(model_weights)
+    v.generate(nseqs).to_csv(out_csv, index=False)
 
 
 if __name__ == '__main__':
