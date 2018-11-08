@@ -418,7 +418,7 @@ def loss(params_json, model_weights, train_csv, test_csv, out_csv):
 
 
 @cli.command()
-@click.option('--limit-input-to', default=None, help='Only use the first <argument> input sequences.')
+@click.option('--limit-input-to', default=None, type=int, help='Only use the first <argument> input sequences.')
 @click.option('--nsamples', default=500, show_default=True, help='Number of importance samples to use.')
 @click.argument('params_json', type=click.Path(exists=True))
 @click.argument('model_weights', type=click.Path(exists=True))
