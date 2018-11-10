@@ -7,17 +7,22 @@ import pandas as pd
 
 import keras
 from keras.models import Model
-from keras.layers import Input, Dense, Lambda, Activation, Reshape
+from keras.layers import Activation, Add, Dense, Lambda, Input, Reshape
 from keras import backend as K
 from keras.callbacks import EarlyStopping
 from keras.engine.topology import Layer
 from keras import objectives
+import tensorflow as tf
 
 import scipy.special as special
 import scipy.stats as stats
 
+from vampire.germline_cdr3_aa_tensor import make_aa_encoding_tensors
+
 import vampire.xcr_vector_conversion as conversion
 
+
+# ### Layer definitions ###
 
 class EmbedViaMatrix(Layer):
     """
@@ -47,6 +52,26 @@ class EmbedViaMatrix(Layer):
     def compute_output_shape(self, input_shape):
         return (input_shape[0], input_shape[1], self.embedding_dim)
 
+
+def tensordot_wrapper(tensors):
+    """
+    Tensordotting with axes=1 sums over the last index of the first argument
+    and the first index of the second argument.
+    """
+    return tf.tensordot(tensors[0], tensors[1], axes=1)
+
+
+def tensordot_output_shape(input_shapes):
+    shape1 = list(input_shapes[0])
+    shape2 = list(input_shapes[1])
+    assert shape1[-1] == shape2[0]
+    return tuple(shape1[:-1] + shape2[1:])
+
+
+tensordot = Lambda(tensordot_wrapper, tensordot_output_shape, name='tensordot')
+
+
+# ### Our model ###
 
 def encoder_decoder_vae(params):
     """
@@ -112,10 +137,27 @@ def encoder_decoder_vae(params):
     decoder_out_Vgene = Dense(params['n_v_genes'], activation='softmax', name='Vgene_prob_out')
     decoder_out_Jgene = Dense(params['n_j_genes'], activation='softmax', name='Jgene_prob_out')
 
-    decoder_output_CDR3 = position_wise_softmax_CDR3(
-        reshape_CDR3(decoder_out_CDR3(dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))))
     decoder_output_Vgene = decoder_out_Vgene(dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))
     decoder_output_Jgene = decoder_out_Jgene(dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))
+
+    # Here's where we incorporate germline amino acid sequences into the output.
+    germline_cdr3_csv = '/home/matsen/Downloads/repos/vampire/vampire/data/germline-cdr3-aas.csv'
+    aa_encodings = make_aa_encoding_tensors(germline_cdr3_csv, conversion.AA_ORDER, conversion.TCRB_V_GENE_LIST,
+                                            conversion.TCRB_J_GENE_LIST, params['max_cdr3_len'])
+    (v_germline_aas, j_germline_aas) = [tf.convert_to_tensor(t, dtype=tf.float32) for t in aa_encodings]
+    # This untrimmed_CDR gives a probability-marginalized one-hot encoding of
+    # what the CDR would look like if there was zero trimming.
+    # untrimmed_CDR = Add()([
+    #     tensordot([decoder_output_Vgene, v_germline_aas]),
+    #     tensordot([decoder_output_Jgene, j_germline_aas])])
+
+    decoder_output_CDR3 = position_wise_softmax_CDR3(
+        Add()([
+            reshape_CDR3(decoder_out_CDR3(dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))),
+            Add()([
+                tensordot([decoder_output_Vgene, v_germline_aas]),
+                tensordot([decoder_output_Jgene, j_germline_aas])])
+            ]))
 
     # Define the decoding part separately:
     z_mean_generator = Input(shape=(params['latent_dim'], ))

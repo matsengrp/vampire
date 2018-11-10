@@ -1,12 +1,6 @@
 import pandas as pd
 import numpy as np
 
-AA_ORDER = 'ABC'
-TCRB_V_GENE_LIST = ['TCRBV01-01', 'TCRBV02-01']
-TCRB_J_GENE_LIST = ['TCRBJ01-01', 'TCRBJ01-02', 'TCRBJ01-03']
-
-x = 'data/germline-cdr3-aas.test.csv'
-
 
 def make_aa_encoding_tensors(germline_cdr3_csv, aa_order, v_gene_list, j_gene_list, max_cdr3_len):
     """
@@ -18,24 +12,29 @@ def make_aa_encoding_tensors(germline_cdr3_csv, aa_order, v_gene_list, j_gene_li
     v_gene_dict = {c: i for i, c in enumerate(v_gene_list)}
     j_gene_dict = {c: i for i, c in enumerate(j_gene_list)}
 
-    cdr3_aas = pd.read_csv(germline_cdr3_csv)
+    # keep_default_na=False means empty cells are read as empty strings.
+    cdr3_aas = pd.read_csv(germline_cdr3_csv, keep_default_na=False)
 
     d = {
         locus: {gene: seq['sequence'].iloc[0]
                 for gene, seq in df.groupby('gene')}
         for locus, df in cdr3_aas.groupby(['locus'])
     }
-    assert set(v_gene_list) == set(d['TRBV'].keys())
-    assert set(j_gene_list) == set(d['TRBJ'].keys())
+
+    # Make sure that we have all of the desired genes in our dictionary.
+    assert set(v_gene_list).issubset(d['TRBV'].keys())
+    assert set(j_gene_list).issubset(d['TRBJ'].keys())
 
     v_gene_encoding = np.zeros((len(v_gene_list), max_cdr3_len, len(aa_list)))
-    for gene, seq in d['TRBV'].items():
+    for gene in v_gene_list:
+        seq = d['TRBV'][gene]
         gene_index = v_gene_dict[gene]
         for i, c in enumerate(seq):
             v_gene_encoding[gene_index, i, aa_dict[c]] = 1
 
     j_gene_encoding = np.zeros((len(j_gene_list), max_cdr3_len, len(aa_list)))
-    for gene, seq in d['TRBJ'].items():
+    for gene in j_gene_list:
+        seq = d['TRBJ'][gene]
         gene_index = j_gene_dict[gene]
         # Here's how the right-aligned indexing works:
         start = max_cdr3_len - len(seq)
