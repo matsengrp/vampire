@@ -365,7 +365,7 @@ def cli():
 @click.argument('train_csv', type=click.File('r'))
 @click.argument('best_weights_fname', type=click.Path(writable=True))
 @click.argument('diagnostics_fname', type=click.Path(writable=True))
-def train_tcr(params_json, train_csv, best_weights_fname, diagnostics_fname):
+def train(params_json, train_csv, best_weights_fname, diagnostics_fname):
     """
     Train the model described in params_json using data in train_csv, saving
     the best weights to best_weights_fname and some diagnostics to
