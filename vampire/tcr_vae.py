@@ -1,179 +1,19 @@
-import click
+import importlib
 import json
 import math
-import numpy as np
 import os
+
+import click
+import numpy as np
 import pandas as pd
 
 import keras
-from keras.models import Model
-from keras.layers import Activation, Add, Dense, Lambda, Input, Reshape
-from keras import backend as K
 from keras.callbacks import EarlyStopping
-from keras.engine.topology import Layer
-from keras import objectives
-import tensorflow as tf
 
 import scipy.special as special
 import scipy.stats as stats
 
 import xcr_vector_conversion as conversion
-
-# ### Layer definitions ###
-
-
-class EmbedViaMatrix(Layer):
-    """
-    This layer defines a (learned) matrix M such that given matrix input X the
-    output is XM. The number of columns of M is embedding_dim, and the number
-    of rows is set so that X and M can be multiplied.
-
-    If the rows of the input give the coordinates of a series of objects, we
-    can think of this layer as giving an embedding of each of the encoded
-    objects in a embedding_dim-dimensional space.
-    """
-
-    def __init__(self, embedding_dim, **kwargs):
-        self.embedding_dim = embedding_dim
-        super(EmbedViaMatrix, self).__init__(**kwargs)
-
-    def build(self, input_shape):
-        # Create a trainable weight variable for this layer.
-        # The first component of input_shape is the batch size (see https://keras.io/layers/core/#dense).
-        self.kernel = self.add_weight(
-            name='kernel', shape=(input_shape[2], self.embedding_dim), initializer='uniform', trainable=True)
-        super(EmbedViaMatrix, self).build(input_shape)  # Be sure to call this at the end
-
-    def call(self, x):
-        return K.dot(x, self.kernel)
-
-    def compute_output_shape(self, input_shape):
-        return (input_shape[0], input_shape[1], self.embedding_dim)
-
-
-class RightTensordot1(Layer):
-    """
-    Given a numpy tensor Y, this layer tensordots input on the right with Y
-    over a single coordinate.
-
-    That is, if the input is X, this performs sum_i X_{...,i} Y_{i,...}.
-    """
-
-    def __init__(self, right_np_tensor, **kwargs):
-        self.right_tf_tensor = tf.convert_to_tensor(right_np_tensor, dtype=tf.float32)
-        super(RightTensordot1, self).__init__(**kwargs)
-
-    def build(self, input_shape):
-        super(RightTensordot1, self).build(input_shape)  # Be sure to call this at the end
-
-    def call(self, x):
-        # Tensordotting with axes=1 sums over the last index of the first argument
-        # and the first index of the second argument.
-        return tf.tensordot(x, self.right_tf_tensor, axes=1)
-
-    def compute_output_shape(self, input_shape):
-        # Make sure that the last dimension of the first argument matches the
-        # first dimension of the second argument.
-        assert input_shape[-1] == self.right_tf_tensor.shape[0]
-        return tuple(input_shape[:-1] + tuple(self.right_tf_tensor.shape[1:]))
-
-
-# ### Our model ###
-
-def encoder_decoder_vae(params):
-    """
-    Build us a encoder, a decoder, and a VAE!
-    """
-
-    def sampling(args):
-        """
-        This function draws a sample from the multivariate normal defined by
-        the latent variables.
-        """
-        z_mean, z_log_var = args
-        epsilon = K.random_normal(shape=(params['batch_size'], params['latent_dim']), mean=0.0, stddev=1.0)
-        return (z_mean + K.exp(z_log_var / 2) * epsilon)
-
-    def vae_loss(io_encoder, io_decoder):
-        """
-        The loss function is the sum of the cross-entropy and KL divergence.
-        """
-        # Notice that "objectives.categorical_crossentropy(io_encoder,
-        # io_decoder)" is a vector so it is averaged using "K.mean":
-        xent_loss = io_decoder.shape.num_elements() * K.mean(
-            objectives.categorical_crossentropy(io_encoder, io_decoder))
-        kl_loss = -0.5 * K.sum(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
-        kl_loss *= 1 / 3 * params['batch_size']  # Because we have three input/output
-        return (xent_loss + kl_loss)
-
-    cdr3_input_shape = (params['max_cdr3_len'], params['n_aas'])
-
-    # Encoding layers:
-    encoder_input_CDR3 = Input(shape=cdr3_input_shape, name='onehot_CDR3')
-    encoder_input_Vgene = Input(shape=(params['n_v_genes'], ), name='onehot_Vgene')
-    encoder_input_Jgene = Input(shape=(params['n_j_genes'], ), name='onehot_Jgene')
-
-    embedding_CDR3 = EmbedViaMatrix(params['aa_embedding_dim'], name='CDR3_embedding')(encoder_input_CDR3)
-    # AA_embedding = Model(encoder_input_CDR3, embedding_CDR3)
-    embedding_CDR3_flat = Reshape([params['aa_embedding_dim'] * params['max_cdr3_len']],
-                                  name='CDR3_embedding_flat')(embedding_CDR3)
-    embedding_Vgene = Dense(params['v_gene_embedding_dim'], name='Vgene_embedding')(encoder_input_Vgene)
-    # Vgene_embedding = Model(encoder_input_Vgene, embedding_Vgene)
-    embedding_Jgene = Dense(params['j_gene_embedding_dim'], name='Jgene_embedding')(encoder_input_Jgene)
-    # Jgene_embedding = Model(encoder_input_Jgene, embedding_Jgene)
-
-    merged_input = keras.layers.concatenate([embedding_CDR3_flat, embedding_Vgene, embedding_Jgene],
-                                            name='flat_CDR3_Vgene_Jgene')
-    dense_encoder1 = Dense(params['dense_nodes'], activation='elu', name='encoder_dense_1')(merged_input)
-    dense_encoder2 = Dense(params['dense_nodes'], activation='elu', name='encoder_dense_2')(dense_encoder1)
-
-    # Latent layers:
-    z_mean = Dense(params['latent_dim'], name='z_mean')(dense_encoder2)
-    z_log_var = Dense(params['latent_dim'], name='z_log_var')(dense_encoder2)
-
-    encoder = Model([encoder_input_CDR3, encoder_input_Vgene, encoder_input_Jgene], [z_mean, z_log_var])
-
-    # Decoding layers:
-    z = Lambda(sampling, output_shape=(params['latent_dim'], ), name='reparameterization_trick')
-    dense_decoder1 = Dense(params['dense_nodes'], activation='elu', name='decoder_dense_1')
-    dense_decoder2 = Dense(params['dense_nodes'], activation='elu', name='decoder_dense_2')
-
-    decoder_out_CDR3 = Dense(np.array(cdr3_input_shape).prod(), activation='linear', name='flat_pre_CDR_out')
-    reshape_CDR3 = Reshape(cdr3_input_shape, name='pre_CDR_out')
-    position_wise_softmax_CDR3 = Activation(activation='softmax', name='CDR_prob_out')
-    decoder_out_Vgene = Dense(params['n_v_genes'], activation='softmax', name='Vgene_prob_out')
-    decoder_out_Jgene = Dense(params['n_j_genes'], activation='softmax', name='Jgene_prob_out')
-    decoder_output_Vgene = decoder_out_Vgene(dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))
-    decoder_output_Jgene = decoder_out_Jgene(dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))
-
-    # Here's where we incorporate germline amino acid sequences into the output.
-    (v_germline_aas, j_germline_aas) = conversion.adaptive_aa_encoding_tensors(params['max_cdr3_len'])
-    v_germline_CDR3 = RightTensordot1(v_germline_aas, name='v_germline_CDR3')
-    j_germline_CDR3 = RightTensordot1(j_germline_aas, name='j_germline_CDR3')
-    # This untrimmed_CDR3 gives a probability-marginalized one-hot encoding of
-    # what the CDR3 would look like if there was zero trimming and zero
-    # insertion. The gaps in the middle don't get any hotness.
-    decoder_output_CDR3 = position_wise_softmax_CDR3(Add(name='CDR3_out')([
-        reshape_CDR3(decoder_out_CDR3(dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))),
-        Add(name='untrimmed_CDR3')([v_germline_CDR3(decoder_output_Vgene), j_germline_CDR3(decoder_output_Jgene)])
-    ]))
-
-    # Define the decoding part separately:
-    z_mean_generator = Input(shape=(params['latent_dim'], ))
-    decoder_generator_Vgene = decoder_out_Vgene(dense_decoder2(dense_decoder1(z_mean_generator)))
-    decoder_generator_Jgene = decoder_out_Jgene(dense_decoder2(dense_decoder1(z_mean_generator)))
-    decoder_generator_CDR3 = position_wise_softmax_CDR3(Add(name='CDR3_out')([
-        reshape_CDR3(decoder_out_CDR3(dense_decoder2(dense_decoder1(z_mean_generator)))),
-        Add(name='untrimmed_CDR3')([v_germline_CDR3(decoder_generator_Vgene), j_germline_CDR3(decoder_generator_Jgene)])
-    ]))
-
-    decoder = Model(z_mean_generator, [decoder_generator_CDR3, decoder_generator_Vgene, decoder_generator_Jgene])
-
-    vae = Model([encoder_input_CDR3, encoder_input_Vgene, encoder_input_Jgene],
-                [decoder_output_CDR3, decoder_output_Vgene, decoder_output_Jgene])
-    vae.compile(optimizer="adam", loss=vae_loss)
-
-    return (encoder, decoder, vae)
 
 
 def cols_of_df(df):
@@ -203,8 +43,9 @@ def logprob_of_obs_vect(probs, obs):
 
 class TCRVAE:
     def __init__(self, params):
-        (self.encoder, self.decoder, self.vae) = encoder_decoder_vae(params)
         self.params = params
+        model = importlib.import_module('models.'+params['model'])
+        (self.encoder, self.decoder, self.vae) = model.encoder_decoder_vae(params)
 
     @classmethod
     def default_params(cls):
@@ -213,6 +54,7 @@ class TCRVAE:
         """
         return dict(
             # Model parameters.
+            model='germline_decoder',
             latent_dim=35,
             dense_nodes=75,
             aa_embedding_dim=21,
