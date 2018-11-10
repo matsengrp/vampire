@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 import keras
-from keras.callbacks import EarlyStopping
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 import scipy.special as special
 import scipy.stats as stats
@@ -44,7 +44,7 @@ def logprob_of_obs_vect(probs, obs):
 class TCRVAE:
     def __init__(self, params):
         self.params = params
-        model = importlib.import_module('models.'+params['model'])
+        model = importlib.import_module('models.' + params['model'])
         (self.encoder, self.decoder, self.vae) = model.encoder_decoder_vae(params)
 
     @classmethod
@@ -119,12 +119,12 @@ class TCRVAE:
             sub_df = df[:n_to_take]
         return conversion.unpadded_tcrbs_to_onehot(sub_df, self.params['max_cdr3_len'])
 
-    def fit(self, df: pd.DataFrame, validation_split: float, tensorboard_log_dir: str):
+    def fit(self, df: pd.DataFrame, validation_split: float, best_weights_fname: str, tensorboard_log_dir: str):
         """
         Fit the model with early stopping.
         """
         data = cols_of_df(df)
-        # early_stopping = EarlyStopping(monitor='val_loss', patience=self.params['patience'])
+        checkpoint = ModelCheckpoint(best_weights_fname, monitor='loss', verbose=1, save_best_only=True, mode='min')
         early_stopping = EarlyStopping(monitor='loss', patience=self.params['patience'])
         tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir)
         self.vae.fit(
@@ -133,7 +133,7 @@ class TCRVAE:
             epochs=self.params['epochs'],
             batch_size=self.params['batch_size'],
             validation_split=validation_split,
-            callbacks=[early_stopping, tensorboard])
+            callbacks=[checkpoint, early_stopping, tensorboard])
 
     def evaluate(self, x_df):
         """
@@ -268,7 +268,7 @@ def train(params_json, train_csv, best_weights_fname, diagnostics_fname):
 
     train_data = v.get_data(train_csv, min_data_size)
     tensorboard_log_dir = os.path.join(os.path.dirname(best_weights_fname), 'logs')
-    v.fit(train_data, validation_split, tensorboard_log_dir)
+    v.fit(train_data, validation_split, best_weights_fname, tensorboard_log_dir)
     v.vae.save_weights(best_weights_fname, overwrite=True)
 
     # Test weights reloading.
