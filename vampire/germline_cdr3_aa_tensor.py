@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 
-def make_aa_encoding_tensors(germline_cdr3_csv, aa_order, v_gene_list, j_gene_list, max_cdr3_len):
+def aa_encoding_tensors(germline_cdr3_csv, aa_order, v_gene_list, j_gene_list, max_cdr3_len):
     """
     Build tensors that one-hot-encode the germline sequences that extend into the CDR3.
     V genes are left-aligned, while J genes are right-aligned.

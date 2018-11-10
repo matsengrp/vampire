@@ -7,4 +7,6 @@ setup(
     url='https://github.com/matsengrp/vampire',
     author='Matsen group',
     author_email='ematsen@gmail.com',
-    packages=['vampire'])
+    packages=['vampire'],
+    package_data={'vampire': ['data/*']}
+    )

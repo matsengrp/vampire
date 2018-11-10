@@ -1,3 +1,5 @@
+import pkg_resources
+
 import numpy as np
 
 from vampire.germline_cdr3_aa_tensor import make_aa_encoding_tensors
@@ -7,7 +9,7 @@ def test_make_aa_encoding_tensors():
     aa_order = 'ABC'
     v_gene_list = ['TCRBV01-01', 'TCRBV02-01']
     j_gene_list = ['TCRBJ01-01', 'TCRBJ01-02', 'TCRBJ01-03']
-    germline_cdr3_csv = 'vampire/data/germline-cdr3-aas.test.csv'
+    germline_cdr3_csv = pkg_resources.resource_filename('vampire', 'vampire/data/germline-cdr3-aas.test.csv')
     max_cdr3_len = 4
     #                                    B         A
     #                                        C

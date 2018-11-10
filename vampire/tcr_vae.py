@@ -17,9 +17,7 @@ import tensorflow as tf
 import scipy.special as special
 import scipy.stats as stats
 
-from vampire.germline_cdr3_aa_tensor import make_aa_encoding_tensors
-
-import vampire.xcr_vector_conversion as conversion
+import xcr_vector_conversion as conversion
 
 # ### Layer definitions ###
 
@@ -149,10 +147,7 @@ def encoder_decoder_vae(params):
     decoder_output_Jgene = decoder_out_Jgene(dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))
 
     # Here's where we incorporate germline amino acid sequences into the output.
-    germline_cdr3_csv = '/home/matsen/Downloads/repos/vampire/vampire/data/germline-cdr3-aas.csv'
-    (v_germline_aas,
-     j_germline_aas) = make_aa_encoding_tensors(germline_cdr3_csv, conversion.AA_ORDER, conversion.TCRB_V_GENE_LIST,
-                                                conversion.TCRB_J_GENE_LIST, params['max_cdr3_len'])
+    (v_germline_aas, j_germline_aas) = conversion.adaptive_aa_encoding_tensors(params['max_cdr3_len'])
     v_germline_CDR3 = RightTensordot1(v_germline_aas, name='v_germline_CDR3')
     j_germline_CDR3 = RightTensordot1(j_germline_aas, name='j_germline_CDR3')
     # This untrimmed_CDR3 gives a probability-marginalized one-hot encoding of
