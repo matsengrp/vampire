@@ -5,6 +5,8 @@ If they do, they belong in utils.py.
 """
 
 import numpy as np
+import pandas as pd
+import pkg_resources
 import os
 
 
@@ -63,6 +65,13 @@ def cjoin(path, *paths):
     joined = os.path.join(path, *paths)
     assert os.path.exists(joined)
     return joined
+
+
+def read_data_csv(fname):
+    """
+    Read a CSV from our data path.
+    """
+    return pd.read_csv(pkg_resources.resource_filename('vampire', os.path.join('data', fname)))
 
 
 # ### Misc functions ###

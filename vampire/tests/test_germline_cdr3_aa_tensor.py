@@ -1,15 +1,14 @@
+import numpy as np
 import pkg_resources
 
-import numpy as np
-
-from vampire.germline_cdr3_aa_tensor import make_aa_encoding_tensors
+from vampire.germline_cdr3_aa_tensor import aa_encoding_tensors
 
 
-def test_make_aa_encoding_tensors():
+def test_aa_encoding_tensors():
     aa_order = 'ABC'
     v_gene_list = ['TCRBV01-01', 'TCRBV02-01']
     j_gene_list = ['TCRBJ01-01', 'TCRBJ01-02', 'TCRBJ01-03']
-    germline_cdr3_csv = pkg_resources.resource_filename('vampire', 'vampire/data/germline-cdr3-aas.test.csv')
+    germline_cdr3_csv = pkg_resources.resource_filename('vampire', 'data/germline-cdr3-aas.test.csv')
     max_cdr3_len = 4
     #                                    B         A
     #                                        C
@@ -23,6 +22,6 @@ def test_make_aa_encoding_tensors():
                                    [[0., 0., 0.], [0., 0., 0.], [0., 0., 0.], [1., 0., 0.]],
                                    [[0., 0., 0.], [0., 0., 0.], [0., 0., 1.], [0., 1., 0.]]])
 
-    (v_enc, j_enc) = make_aa_encoding_tensors(germline_cdr3_csv, aa_order, v_gene_list, j_gene_list, max_cdr3_len)
+    (v_enc, j_enc) = aa_encoding_tensors(germline_cdr3_csv, aa_order, v_gene_list, j_gene_list, max_cdr3_len)
     assert np.array_equal(v_enc, v_encoding_correct)
     assert np.array_equal(j_enc, j_encoding_correct)
