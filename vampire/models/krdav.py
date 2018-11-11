@@ -6,6 +6,7 @@ from keras.layers import Activation, Dense, Lambda, Input, Reshape
 from keras import backend as K
 from keras import objectives
 
+import common
 from layers import EmbedViaMatrix
 
 
@@ -91,4 +92,8 @@ def build(params):
                 [decoder_output_CDR3, decoder_output_Vgene, decoder_output_Jgene])
     vae.compile(optimizer="adam", loss=vae_loss)
 
-    return {'encoder': encoder, 'decoder': decoder, 'vae': vae}
+    return {'encoder': encoder, 'decoder': decoder, 'vae': vae, 'train_model': vae}
+
+
+def prepare_data(x_df):
+    return common.cols_of_df(x_df)

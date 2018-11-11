@@ -1,3 +1,21 @@
+"""
+This file contains the object and CLI for training our VAEs.
+
+The models themselves are in the `models/` directory. Each of these Python
+files should have a `build` function that returns a dictionary with
+correspondingly entries for: encoder, decoder, vae, train_model. These should
+be self-explanatory except for train_model, which gives us the oppportunity to
+provide a larger model for training, which may have additional outputs that are
+used for loss function calculation.
+
+I emphasize that train_model must contain all of the components of the VAE, and
+perhaps more. If not, parts of the VAE will not be trained (or weights loaded.)
+
+We also require each model to define a corresponding `prepare_data` function
+that prepares data for input.
+"""
+
+
 import importlib
 import json
 import math
@@ -14,14 +32,6 @@ import scipy.special as special
 import scipy.stats as stats
 
 import vampire.xcr_vector_conversion as conversion
-
-
-def cols_of_df(df):
-    """
-    Extract the data columns of a dataframe into a list of appropriately-sized
-    numpy arrays.
-    """
-    return [np.stack(col.values) for _, col in df.items()]
 
 
 def logprob_of_obs_vect(probs, obs):
@@ -45,8 +55,9 @@ class TCRVAE:
     def __init__(self, params):
         self.params = params
         model = importlib.import_module('vampire.models.' + params['model'])
-        for k, v in model.build(params).items():
-            setattr(self, k, v)
+        for submodel_name, submodel in model.build(params).items():
+            setattr(self, submodel_name, submodel)
+        self.prepare_data = model.prepare_data
 
     @classmethod
     def default_params(cls):
@@ -120,15 +131,15 @@ class TCRVAE:
             sub_df = df[:n_to_take]
         return conversion.unpadded_tcrbs_to_onehot(sub_df, self.params['max_cdr3_len'])
 
-    def fit(self, df: pd.DataFrame, validation_split: float, best_weights_fname: str, tensorboard_log_dir: str):
+    def fit(self, x_df: pd.DataFrame, validation_split: float, best_weights_fname: str, tensorboard_log_dir: str):
         """
         Fit the model with early stopping.
         """
-        data = cols_of_df(df)
+        data = self.prepare_data(x_df)
         checkpoint = ModelCheckpoint(best_weights_fname, monitor='loss', verbose=1, save_best_only=True, mode='min')
         early_stopping = EarlyStopping(monitor='loss', patience=self.params['patience'])
         tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir)
-        self.vae.fit(
+        self.train_model.fit(
             x=data,  # y=X for a VAE.
             y=data,
             epochs=self.params['epochs'],
@@ -144,8 +155,8 @@ class TCRVAE:
 
         :return: loss
         """
-        data = cols_of_df(x_df)
-        return self.vae.evaluate(x=data, y=data, batch_size=self.params['batch_size'])
+        data = self.prepare_data(x_df)
+        return self.train_model.evaluate(x=data, y=data, batch_size=self.params['batch_size'])
 
     def encode(self, x_df):
         """
@@ -155,7 +166,7 @@ class TCRVAE:
 
         :return: z_mean and z_sd, the embedding mean and standard deviation.
         """
-        z_mean, z_log_var = self.encoder.predict(cols_of_df(x_df))
+        z_mean, z_log_var = self.encoder.predict(self.prepare_data(x_df))
         z_sd = np.sqrt(np.exp(z_log_var))
         return z_mean, z_sd
 
@@ -217,7 +228,7 @@ class TCRVAE:
         aa_probs, v_gene_probs, j_gene_probs = self.decode(z_sample)
 
         # Onehot-encoded observations.
-        aa_obs, v_gene_obs, j_gene_obs = cols_of_df(x_df)
+        aa_obs, v_gene_obs, j_gene_obs = self.prepare_data(x_df)
 
         # Loop over observations.
         for i in range(len(x_df)):
