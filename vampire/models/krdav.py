@@ -9,9 +9,9 @@ from keras import objectives
 from layers import EmbedViaMatrix
 
 
-def encoder_decoder_vae(params):
+def build(params):
     """
-    Build us a encoder, a decoder, and a VAE!
+    Kristian's original 2-layer VAE.
     """
 
     def sampling(args):
@@ -91,4 +91,4 @@ def encoder_decoder_vae(params):
                 [decoder_output_CDR3, decoder_output_Vgene, decoder_output_Jgene])
     vae.compile(optimizer="adam", loss=vae_loss)
 
-    return (encoder, decoder, vae)
+    return {'encoder': encoder, 'decoder': decoder, 'vae': vae}

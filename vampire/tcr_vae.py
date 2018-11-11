@@ -45,7 +45,8 @@ class TCRVAE:
     def __init__(self, params):
         self.params = params
         model = importlib.import_module('vampire.models.' + params['model'])
-        (self.encoder, self.decoder, self.vae) = model.encoder_decoder_vae(params)
+        for k, v in model.build(params).items():
+            setattr(self, k, v)
 
     @classmethod
     def default_params(cls):

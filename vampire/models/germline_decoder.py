@@ -10,9 +10,14 @@ import vampire.xcr_vector_conversion as conversion
 from vampire.layers import EmbedViaMatrix, RightTensordot1
 
 
-def encoder_decoder_vae(params):
+def build(params):
     """
-    Build us a encoder, a decoder, and a VAE!
+    This provides an estimate of the germline-encoded CDR3 amino acid sequence
+    to the final step of the CDR3 decoder. This estimate is marginalized over
+    the probablistic weight assigned to the various V and J genes.
+
+    Image:
+    https://user-images.githubusercontent.com/112708/48313210-d276d800-e56d-11e8-8013-2ee3c950ea13.png
     """
 
     def sampling(args):
@@ -103,4 +108,4 @@ def encoder_decoder_vae(params):
                 [decoder_output_CDR3, decoder_output_Vgene, decoder_output_Jgene])
     vae.compile(optimizer="adam", loss=vae_loss)
 
-    return (encoder, decoder, vae)
+    return {'encoder': encoder, 'decoder': decoder, 'vae': vae}
