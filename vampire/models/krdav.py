@@ -1,3 +1,7 @@
+"""
+Kristian's original 2-layer VAE.
+"""
+
 import numpy as np
 
 import keras
@@ -11,10 +15,6 @@ from layers import EmbedViaMatrix
 
 
 def build(params):
-    """
-    Kristian's original 2-layer VAE.
-    """
-
     def sampling(args):
         """
         This function draws a sample from the multivariate normal defined by

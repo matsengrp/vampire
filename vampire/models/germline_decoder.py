@@ -1,3 +1,12 @@
+"""
+This model provides an estimate of the germline-encoded CDR3 amino acid
+sequence to the final step of the CDR3 decoder. This estimate is marginalized
+over the probablistic weight assigned to the various V and J genes.
+
+Image:
+https://user-images.githubusercontent.com/112708/48313210-d276d800-e56d-11e8-8013-2ee3c950ea13.png
+"""
+
 import numpy as np
 
 import keras
@@ -12,15 +21,6 @@ from vampire.layers import EmbedViaMatrix, RightTensordot1
 
 
 def build(params):
-    """
-    This provides an estimate of the germline-encoded CDR3 amino acid sequence
-    to the final step of the CDR3 decoder. This estimate is marginalized over
-    the probablistic weight assigned to the various V and J genes.
-
-    Image:
-    https://user-images.githubusercontent.com/112708/48313210-d276d800-e56d-11e8-8013-2ee3c950ea13.png
-    """
-
     def sampling(args):
         """
         This function draws a sample from the multivariate normal defined by
@@ -89,19 +89,24 @@ def build(params):
     # This untrimmed_CDR3 gives a probability-marginalized one-hot encoding of
     # what the CDR3 would look like if there was zero trimming and zero
     # insertion. The gaps in the middle don't get any hotness.
-    decoder_output_CDR3 = position_wise_softmax_CDR3(Add(name='CDR3_out')([
-        reshape_CDR3(decoder_out_CDR3(dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))),
-        Add(name='untrimmed_CDR3')([v_germline_CDR3(decoder_output_Vgene), j_germline_CDR3(decoder_output_Jgene)])
-    ]))
+    decoder_output_CDR3 = position_wise_softmax_CDR3(
+        Add(name='CDR3_out')([
+            reshape_CDR3(decoder_out_CDR3(dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))),
+            Add(name='untrimmed_CDR3')([v_germline_CDR3(decoder_output_Vgene),
+                                        j_germline_CDR3(decoder_output_Jgene)])
+        ]))
 
     # Define the decoding part separately:
     z_mean_generator = Input(shape=(params['latent_dim'], ))
     decoder_generator_Vgene = decoder_out_Vgene(dense_decoder2(dense_decoder1(z_mean_generator)))
     decoder_generator_Jgene = decoder_out_Jgene(dense_decoder2(dense_decoder1(z_mean_generator)))
-    decoder_generator_CDR3 = position_wise_softmax_CDR3(Add(name='CDR3_out')([
-        reshape_CDR3(decoder_out_CDR3(dense_decoder2(dense_decoder1(z_mean_generator)))),
-        Add(name='untrimmed_CDR3')([v_germline_CDR3(decoder_generator_Vgene), j_germline_CDR3(decoder_generator_Jgene)])
-    ]))
+    decoder_generator_CDR3 = position_wise_softmax_CDR3(
+        Add(name='CDR3_out')([
+            reshape_CDR3(decoder_out_CDR3(dense_decoder2(dense_decoder1(z_mean_generator)))),
+            Add(name='untrimmed_CDR3')(
+                [v_germline_CDR3(decoder_generator_Vgene),
+                 j_germline_CDR3(decoder_generator_Jgene)])
+        ]))
 
     decoder = Model(z_mean_generator, [decoder_generator_CDR3, decoder_generator_Vgene, decoder_generator_Jgene])
 
