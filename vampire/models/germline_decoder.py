@@ -17,7 +17,7 @@ from keras import objectives
 
 import vampire.common as common
 import vampire.xcr_vector_conversion as conversion
-from vampire.layers import EmbedViaMatrix, RightTensordot1
+from vampire.layers import EmbedViaMatrix, RightTensordot
 
 
 def build(params):
@@ -84,8 +84,8 @@ def build(params):
 
     # Here's where we incorporate germline amino acid sequences into the output.
     (v_germline_aas, j_germline_aas) = conversion.adaptive_aa_encoding_tensors(params['max_cdr3_len'])
-    v_germline_CDR3 = RightTensordot1(v_germline_aas, name='v_germline_CDR3')
-    j_germline_CDR3 = RightTensordot1(j_germline_aas, name='j_germline_CDR3')
+    v_germline_CDR3 = RightTensordot(v_germline_aas, axes=1, name='v_germline_CDR3')
+    j_germline_CDR3 = RightTensordot(j_germline_aas, axes=1, name='j_germline_CDR3')
     # This untrimmed_CDR3 gives a probability-marginalized one-hot encoding of
     # what the CDR3 would look like if there was zero trimming and zero
     # insertion. The gaps in the middle don't get any hotness.

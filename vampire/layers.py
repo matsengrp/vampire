@@ -32,28 +32,32 @@ class EmbedViaMatrix(Layer):
         return (input_shape[0], input_shape[1], self.embedding_dim)
 
 
-class RightTensordot1(Layer):
+class RightTensordot(Layer):
     """
     Given a numpy tensor Y, this layer tensordots input on the right with Y
-    over a single coordinate.
+    over `axes` numbers of coordinates.
 
-    That is, if the input is X, this performs sum_i X_{...,i} Y_{i,...}.
+    That is, if the input is X and axes=1, this performs
+    sum_i X_{...,i} Y_{i,...}.
     """
 
-    def __init__(self, right_np_tensor, **kwargs):
+    def __init__(self, right_np_tensor, axes, **kwargs):
         self.right_tf_tensor = tf.convert_to_tensor(right_np_tensor, dtype=tf.float32)
-        super(RightTensordot1, self).__init__(**kwargs)
+        assert type(axes) == int
+        self.axes = axes
+        super(RightTensordot, self).__init__(**kwargs)
 
     def build(self, input_shape):
-        super(RightTensordot1, self).build(input_shape)  # Be sure to call this at the end
+        super(RightTensordot, self).build(input_shape)  # Be sure to call this at the end
 
     def call(self, x):
-        # Tensordotting with axes=1 sums over the last index of the first argument
-        # and the first index of the second argument.
-        return tf.tensordot(x, self.right_tf_tensor, axes=1)
+        # Tensordotting with sums over the last `axes` indices of the first argument
+        # and the first `axes` indices of the second argument.
+        return tf.tensordot(x, self.right_tf_tensor, axes=self.axes)
 
     def compute_output_shape(self, input_shape):
         # Make sure that the last dimension of the first argument matches the
         # first dimension of the second argument.
-        assert input_shape[-1] == self.right_tf_tensor.shape[0]
-        return tuple(input_shape[:-1] + tuple(self.right_tf_tensor.shape[1:]))
+        axes = self.axes
+        assert input_shape[-axes] == self.right_tf_tensor.shape[0:axes]
+        return tuple(input_shape[:-axes] + tuple(self.right_tf_tensor.shape[axes:]))
