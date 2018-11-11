@@ -10,7 +10,7 @@ from keras.layers import Activation, Dense, Lambda, Input, Reshape
 from keras import backend as K
 from keras import objectives
 
-import common
+import vampire.common as common
 from layers import EmbedViaMatrix
 
 

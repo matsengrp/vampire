@@ -12,7 +12,7 @@ I emphasize that train_model must contain all of the components of the VAE, and
 perhaps more. If not, parts of the VAE will not be trained (or weights loaded.)
 
 We also require each model to define a corresponding `prepare_data` function
-that prepares data for input.
+that prepares data for input into vae and train_model.
 """
 
 

@@ -15,7 +15,7 @@ from keras.layers import Activation, Add, Dense, Lambda, Input, Reshape
 from keras import backend as K
 from keras import objectives
 
-import common
+import vampire.common as common
 import vampire.xcr_vector_conversion as conversion
 from vampire.layers import EmbedViaMatrix, RightTensordot1
 
