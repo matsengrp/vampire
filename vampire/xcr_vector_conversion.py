@@ -3,10 +3,17 @@ Encoding TCRs as one-hot vectors and back again.
 Someday this may do the same for BCRs.
 
 The current gene names are for Adaptive data.
+
+Erick: try to keep everything that assumes this gene set in here so
+generalization is easier.
 """
+
+import pkg_resources
 
 import numpy as np
 import pandas as pd
+
+import vampire.germline_cdr3_aa_tensor as cdr3_tensor
 
 # ### Amino Acids ###
 
@@ -142,3 +149,10 @@ def onehot_to_tcrbs(amino_acid_arr, v_gene_arr, j_gene_arr):
 
     df = onehot_to_padded_tcrbs(amino_acid_arr, v_gene_arr, j_gene_arr)
     return avj_triple_to_tcr_df(df['amino_acid'].apply(unpad), df['v_gene'], df['j_gene'])
+
+
+def adaptive_aa_encoding_tensors(max_cdr3_len):
+    germline_cdr3_csv = pkg_resources.resource_filename('vampire', 'data/germline-cdr3-aas.csv')
+
+    return cdr3_tensor.aa_encoding_tensors(germline_cdr3_csv, AA_ORDER, TCRB_V_GENE_LIST, TCRB_J_GENE_LIST,
+                                           max_cdr3_len)

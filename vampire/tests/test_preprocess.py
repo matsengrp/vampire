@@ -3,6 +3,7 @@ import random
 
 import vampire.preprocess_adaptive as pre
 
+# TODO: use pkg_resources
 
 def test_filters():
     unfiltered = pd.read_csv("vampire/data/adaptive-filter-test.csv")
