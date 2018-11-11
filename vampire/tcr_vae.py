@@ -13,7 +13,7 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint
 import scipy.special as special
 import scipy.stats as stats
 
-import xcr_vector_conversion as conversion
+import vampire.xcr_vector_conversion as conversion
 
 
 def cols_of_df(df):
@@ -44,7 +44,7 @@ def logprob_of_obs_vect(probs, obs):
 class TCRVAE:
     def __init__(self, params):
         self.params = params
-        model = importlib.import_module('models.' + params['model'])
+        model = importlib.import_module('vampire.models.' + params['model'])
         (self.encoder, self.decoder, self.vae) = model.encoder_decoder_vae(params)
 
     @classmethod

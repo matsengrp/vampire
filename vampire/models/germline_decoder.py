@@ -6,8 +6,8 @@ from keras.layers import Activation, Add, Dense, Lambda, Input, Reshape
 from keras import backend as K
 from keras import objectives
 
-import xcr_vector_conversion as conversion
-from layers import EmbedViaMatrix, RightTensordot1
+import vampire.xcr_vector_conversion as conversion
+from vampire.layers import EmbedViaMatrix, RightTensordot1
 
 
 def encoder_decoder_vae(params):

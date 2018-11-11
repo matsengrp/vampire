@@ -13,7 +13,7 @@ import pkg_resources
 import numpy as np
 import pandas as pd
 
-import germline_cdr3_aa_tensor as cdr3_tensor
+import vampire.germline_cdr3_aa_tensor as cdr3_tensor
 
 # ### Amino Acids ###
 
