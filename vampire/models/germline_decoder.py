@@ -28,6 +28,7 @@ def build(params):
         """
         z_mean, z_log_var = args
         epsilon = K.random_normal(shape=(params['batch_size'], params['latent_dim']), mean=0.0, stddev=1.0)
+        # Reparameterization trick!
         return (z_mean + K.exp(z_log_var / 2) * epsilon)
 
     def vae_loss(io_encoder, io_decoder):
@@ -42,76 +43,69 @@ def build(params):
         kl_loss *= 1 / 3 * params['batch_size']  # Because we have three input/output
         return (xent_loss + kl_loss)
 
+    # Input:
     cdr3_input_shape = (params['max_cdr3_len'], params['n_aas'])
+    cdr3_input = Input(shape=cdr3_input_shape, name='cdr3_input')
+    v_gene_input = Input(shape=(params['n_v_genes'], ), name='v_gene_input')
+    j_gene_input = Input(shape=(params['n_j_genes'], ), name='j_gene_input')
 
     # Encoding layers:
-    encoder_input_CDR3 = Input(shape=cdr3_input_shape, name='onehot_CDR3')
-    encoder_input_Vgene = Input(shape=(params['n_v_genes'], ), name='onehot_Vgene')
-    encoder_input_Jgene = Input(shape=(params['n_j_genes'], ), name='onehot_Jgene')
-
-    embedding_CDR3 = EmbedViaMatrix(params['aa_embedding_dim'], name='CDR3_embedding')(encoder_input_CDR3)
-    # AA_embedding = Model(encoder_input_CDR3, embedding_CDR3)
-    embedding_CDR3_flat = Reshape([params['aa_embedding_dim'] * params['max_cdr3_len']],
-                                  name='CDR3_embedding_flat')(embedding_CDR3)
-    embedding_Vgene = Dense(params['v_gene_embedding_dim'], name='Vgene_embedding')(encoder_input_Vgene)
-    # Vgene_embedding = Model(encoder_input_Vgene, embedding_Vgene)
-    embedding_Jgene = Dense(params['j_gene_embedding_dim'], name='Jgene_embedding')(encoder_input_Jgene)
-    # Jgene_embedding = Model(encoder_input_Jgene, embedding_Jgene)
-
-    merged_input = keras.layers.concatenate([embedding_CDR3_flat, embedding_Vgene, embedding_Jgene],
-                                            name='flat_CDR3_Vgene_Jgene')
-    dense_encoder1 = Dense(params['dense_nodes'], activation='elu', name='encoder_dense_1')(merged_input)
-    dense_encoder2 = Dense(params['dense_nodes'], activation='elu', name='encoder_dense_2')(dense_encoder1)
+    cdr3_embedding = EmbedViaMatrix(params['aa_embedding_dim'], name='cdr3_embedding')(cdr3_input)
+    cdr3_embedding_flat = Reshape([params['aa_embedding_dim'] * params['max_cdr3_len']],
+                                  name='cdr3_embedding_flat')(cdr3_embedding)
+    v_gene_embedding = Dense(params['v_gene_embedding_dim'], name='v_gene_embedding')(v_gene_input)
+    j_gene_embedding = Dense(params['j_gene_embedding_dim'], name='j_gene_embedding')(j_gene_input)
+    merged_embedding = keras.layers.concatenate([cdr3_embedding_flat, v_gene_embedding, j_gene_embedding],
+                                                name='merged_embedding')
+    encoder_dense_1 = Dense(params['dense_nodes'], activation='elu', name='encoder_dense_1')(merged_embedding)
+    encoder_dense_2 = Dense(params['dense_nodes'], activation='elu', name='encoder_dense_2')(encoder_dense_1)
 
     # Latent layers:
-    z_mean = Dense(params['latent_dim'], name='z_mean')(dense_encoder2)
-    z_log_var = Dense(params['latent_dim'], name='z_log_var')(dense_encoder2)
-
-    encoder = Model([encoder_input_CDR3, encoder_input_Vgene, encoder_input_Jgene], [z_mean, z_log_var])
+    z_mean = Dense(params['latent_dim'], name='z_mean')(encoder_dense_2)
+    z_log_var = Dense(params['latent_dim'], name='z_log_var')(encoder_dense_2)
 
     # Decoding layers:
-    z = Lambda(sampling, output_shape=(params['latent_dim'], ), name='reparameterization_trick')
-    dense_decoder1 = Dense(params['dense_nodes'], activation='elu', name='decoder_dense_1')
-    dense_decoder2 = Dense(params['dense_nodes'], activation='elu', name='decoder_dense_2')
+    z_l = Lambda(sampling, output_shape=(params['latent_dim'], ), name='z')
+    decoder_dense_1_l = Dense(params['dense_nodes'], activation='elu', name='decoder_dense_1')
+    decoder_dense_2_l = Dense(params['dense_nodes'], activation='elu', name='decoder_dense_2')
+    cdr3_post_dense_flat_l = Dense(np.array(cdr3_input_shape).prod(), activation='linear', name='cdr3_post_dense_flat')
+    cdr3_post_dense_l = Reshape(cdr3_input_shape, name='cdr3_post_dense')
+    cdr3_output_l = Activation(activation='softmax', name='cdr3_output')
+    v_gene_output_l = Dense(params['n_v_genes'], activation='softmax', name='v_gene_output')
+    j_gene_output_l = Dense(params['n_j_genes'], activation='softmax', name='j_gene_output')
 
-    decoder_out_CDR3 = Dense(np.array(cdr3_input_shape).prod(), activation='linear', name='flat_pre_CDR_out')
-    reshape_CDR3 = Reshape(cdr3_input_shape, name='pre_CDR_out')
-    position_wise_softmax_CDR3 = Activation(activation='softmax', name='CDR_prob_out')
-    decoder_out_Vgene = Dense(params['n_v_genes'], activation='softmax', name='Vgene_prob_out')
-    decoder_out_Jgene = Dense(params['n_j_genes'], activation='softmax', name='Jgene_prob_out')
-    decoder_output_Vgene = decoder_out_Vgene(dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))
-    decoder_output_Jgene = decoder_out_Jgene(dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))
+    v_gene_output = v_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_l([z_mean, z_log_var]))))
+    j_gene_output = j_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_l([z_mean, z_log_var]))))
 
     # Here's where we incorporate germline amino acid sequences into the output.
-    (v_germline_aas, j_germline_aas) = conversion.adaptive_aa_encoding_tensors(params['max_cdr3_len'])
-    v_germline_CDR3 = RightTensordot(v_germline_aas, axes=1, name='v_germline_CDR3')
-    j_germline_CDR3 = RightTensordot(j_germline_aas, axes=1, name='j_germline_CDR3')
-    # This untrimmed_CDR3 gives a probability-marginalized one-hot encoding of
-    # what the CDR3 would look like if there was zero trimming and zero
+    (v_germline_cdr3_tensor, j_germline_cdr3_tensor) = conversion.adaptive_aa_encoding_tensors(params['max_cdr3_len'])
+    v_germline_cdr3_l = RightTensordot(v_germline_cdr3_tensor, axes=1, name='v_germline_cdr3')
+    j_germline_cdr3_l = RightTensordot(j_germline_cdr3_tensor, axes=1, name='j_germline_cdr3')
+    # This untrimmed_cdr3 gives a probability-marginalized one-hot encoding of
+    # what the cdr3 would look like if there was zero trimming and zero
     # insertion. The gaps in the middle don't get any hotness.
-    decoder_output_CDR3 = position_wise_softmax_CDR3(
-        Add(name='CDR3_out')([
-            reshape_CDR3(decoder_out_CDR3(dense_decoder2(dense_decoder1(z([z_mean, z_log_var]))))),
-            Add(name='untrimmed_CDR3')([v_germline_CDR3(decoder_output_Vgene),
-                                        j_germline_CDR3(decoder_output_Jgene)])
+    cdr3_output = cdr3_output_l(
+        Add(name='cdr3_pre_activation')([
+            cdr3_post_dense_l(cdr3_post_dense_flat_l(decoder_dense_2_l(decoder_dense_1_l(z_l([z_mean, z_log_var]))))),
+            Add(name='germline_cdr3')([v_germline_cdr3_l(v_gene_output),
+                                        j_germline_cdr3_l(j_gene_output)])
         ]))
 
-    # Define the decoding part separately:
-    z_mean_generator = Input(shape=(params['latent_dim'], ))
-    decoder_generator_Vgene = decoder_out_Vgene(dense_decoder2(dense_decoder1(z_mean_generator)))
-    decoder_generator_Jgene = decoder_out_Jgene(dense_decoder2(dense_decoder1(z_mean_generator)))
-    decoder_generator_CDR3 = position_wise_softmax_CDR3(
-        Add(name='CDR3_out')([
-            reshape_CDR3(decoder_out_CDR3(dense_decoder2(dense_decoder1(z_mean_generator)))),
-            Add(name='untrimmed_CDR3')(
-                [v_germline_CDR3(decoder_generator_Vgene),
-                 j_germline_CDR3(decoder_generator_Jgene)])
+    # Define the decoder components separately so we can have it as its own model.
+    z_mean_input = Input(shape=(params['latent_dim'], ))
+    decoder_v_gene_output = v_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))
+    decoder_j_gene_output = j_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))
+    decoder_cdr3_output = cdr3_output_l(
+        Add(name='cdr3_pre_activation')([
+            cdr3_post_dense_l(cdr3_post_dense_flat_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))),
+            Add(name='germline_cdr3')(
+                [v_germline_cdr3_l(decoder_v_gene_output),
+                 j_germline_cdr3_l(decoder_j_gene_output)])
         ]))
 
-    decoder = Model(z_mean_generator, [decoder_generator_CDR3, decoder_generator_Vgene, decoder_generator_Jgene])
-
-    vae = Model([encoder_input_CDR3, encoder_input_Vgene, encoder_input_Jgene],
-                [decoder_output_CDR3, decoder_output_Vgene, decoder_output_Jgene])
+    encoder = Model([cdr3_input, v_gene_input, j_gene_input], [z_mean, z_log_var])
+    decoder = Model(z_mean_input, [decoder_cdr3_output, decoder_v_gene_output, decoder_j_gene_output])
+    vae = Model([cdr3_input, v_gene_input, j_gene_input], [cdr3_output, v_gene_output, j_gene_output])
     vae.compile(optimizer="adam", loss=vae_loss)
 
     return {'encoder': encoder, 'decoder': decoder, 'vae': vae, 'train_model': vae}
