@@ -15,7 +15,6 @@ We also require each model to define a corresponding `prepare_data` function
 that prepares data for input into vae and train_model.
 """
 
-
 import importlib
 import json
 import math
@@ -58,6 +57,7 @@ class TCRVAE:
         for submodel_name, submodel in model.build(params).items():
             setattr(self, submodel_name, submodel)
         self.prepare_data = model.prepare_data
+        self.interpret_output = model.interpret_output
 
     @classmethod
     def default_params(cls):
@@ -66,7 +66,7 @@ class TCRVAE:
         """
         return dict(
             # Model parameters.
-            model='germline_decoder',
+            model='germline_decoder_length',
             latent_dim=35,
             dense_nodes=75,
             aa_embedding_dim=21,
@@ -107,7 +107,7 @@ class TCRVAE:
         we load that information in.
         """
         v = cls.of_json_file(os.path.join(path, 'model_params.json'))
-        v.vae.load_weights(os.path.join(path, 'best_weights.h5'))
+        v.train_model.load_weights(os.path.join(path, 'best_weights.h5'))
         return v
 
     def serialize_params(self, fname):
@@ -133,7 +133,7 @@ class TCRVAE:
 
     def fit(self, x_df: pd.DataFrame, validation_split: float, best_weights_fname: str, tensorboard_log_dir: str):
         """
-        Fit the model with early stopping.
+        Fit the train_model with early stopping.
         """
         data = self.prepare_data(x_df)
         checkpoint = ModelCheckpoint(best_weights_fname, monitor='loss', verbose=1, save_best_only=True, mode='min')
@@ -172,9 +172,9 @@ class TCRVAE:
 
     def decode(self, z):
         """
-        Get the decoding of z in the latent space.
+        Get the decoding of z.
         """
-        return self.decoder.predict(z)
+        return self.interpret_output(self.decoder.predict(z))
 
     def generate(self, n_seqs):
         """
@@ -281,13 +281,17 @@ def train(params_json, train_csv, best_weights_fname, diagnostics_fname):
     train_data = v.get_data(train_csv, min_data_size)
     tensorboard_log_dir = os.path.join(os.path.dirname(best_weights_fname), 'logs')
     v.fit(train_data, validation_split, best_weights_fname, tensorboard_log_dir)
-    v.vae.save_weights(best_weights_fname, overwrite=True)
+    v.train_model.save_weights(best_weights_fname, overwrite=True)
 
     # Test weights reloading.
     vp = TCRVAE.of_json_file(params_json)
-    vp.vae.load_weights(best_weights_fname)
+    vp.train_model.load_weights(best_weights_fname)
 
-    df = pd.DataFrame({'train': v.evaluate(train_data), 'vp_train': vp.evaluate(train_data)}, index=v.vae.metrics_names)
+    df = pd.DataFrame({
+        'train': v.evaluate(train_data),
+        'vp_train': vp.evaluate(train_data)
+    },
+                      index=v.train_model.metrics_names)
     df.to_csv(diagnostics_fname)
     return v
 
@@ -304,13 +308,13 @@ def loss(params_json, model_weights, train_csv, test_csv, out_csv):
     """
 
     v = TCRVAE.of_json_file(params_json)
-    v.vae.load_weights(model_weights)
+    v.train_model.load_weights(model_weights)
 
     df = pd.DataFrame({
         'train': v.evaluate(v.get_data(train_csv, v.params['batch_size'])),
         'test': v.evaluate(v.get_data(test_csv, v.params['batch_size']))
     },
-                      index=v.vae.metrics_names)
+                      index=v.train_model.metrics_names)
     df.to_csv(out_csv)
 
 
@@ -330,7 +334,7 @@ def importance(limit_input_to, nsamples, params_json, model_weights, test_csv, o
     """
 
     v = TCRVAE.of_json_file(params_json)
-    v.vae.load_weights(model_weights)
+    v.train_model.load_weights(model_weights)
 
     df_x = v.get_data(test_csv)
 
@@ -359,7 +363,7 @@ def generate(nseqs, params_json, model_weights, out_csv):
     Generate some sequences and write them to a file.
     """
     v = TCRVAE.of_json_file(params_json)
-    v.vae.load_weights(model_weights)
+    v.train_model.load_weights(model_weights)
     v.generate(nseqs).to_csv(out_csv, index=False)
 
 

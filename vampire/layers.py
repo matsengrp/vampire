@@ -56,8 +56,15 @@ class RightTensordot(Layer):
         return tf.tensordot(x, self.right_tf_tensor, axes=self.axes)
 
     def compute_output_shape(self, input_shape):
-        # Make sure that the last dimension of the first argument matches the
-        # first dimension of the second argument.
+        # Make sure that the last `axes` dimensions of the first argument match
+        # the first `axes` dimensions of the second argument.
         axes = self.axes
-        assert input_shape[-axes] == self.right_tf_tensor.shape[0:axes]
-        return tuple(input_shape[:-axes] + tuple(self.right_tf_tensor.shape[axes:]))
+        assert input_shape[-axes:] == self.right_tf_tensor.shape[0:axes]
+        right_remaining_shape = tuple(self.right_tf_tensor.shape[axes:])
+        # If the whole right tensor gets consumed by the calculation, then the
+        # resulting dimension for that component is 1, a scalar. In principle
+        # we might have to do something equivalent on the left, but we always
+        # have the batch_size that won't get contracted.
+        if right_remaining_shape == ():
+            right_remaining_shape = tuple([1])
+        return tuple(input_shape[:-axes] + right_remaining_shape)
