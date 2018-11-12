@@ -1,5 +1,8 @@
 """
 Kristian's original 2-layer VAE.
+
+Model diagram with 35 latent dimensions and 100 dense nodes:
+https://user-images.githubusercontent.com/112708/48358766-4f7a7e00-e650-11e8-9bab-d7a294548100.png
 """
 
 import numpy as np
@@ -11,7 +14,7 @@ from keras import backend as K
 from keras import objectives
 
 import vampire.common as common
-from layers import EmbedViaMatrix
+from vampire.layers import EmbedViaMatrix
 
 
 def build(params):
