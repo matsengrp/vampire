@@ -82,9 +82,8 @@ def build(params):
     (v_germline_cdr3_tensor, j_germline_cdr3_tensor) = conversion.adaptive_aa_encoding_tensors(params['max_cdr3_len'])
     v_germline_cdr3_l = RightTensordot(v_germline_cdr3_tensor, axes=1, name='v_germline_cdr3')
     j_germline_cdr3_l = RightTensordot(j_germline_cdr3_tensor, axes=1, name='j_germline_cdr3')
-    # TODO flag 20
     cdr3_length_output_l = RightTensordot(
-        np.array([[1.] * 20 + [0.]] * params['max_cdr3_len']), axes=2, name='cdr3_length_output')
+        np.array([conversion.AA_NONGAP] * params['max_cdr3_len']), axes=2, name='cdr3_length_output')
     # This untrimmed_cdr3 gives a probability-marginalized one-hot encoding of
     # what the cdr3 would look like if there was zero trimming and zero
     # insertion. The gaps in the middle don't get any hotness.

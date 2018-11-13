@@ -23,7 +23,7 @@ AA_LIST = list(AA_ORDER)
 AA_DICT = {c: i for i, c in enumerate(AA_LIST)}
 AA_DICT_REV = {i: c for i, c in enumerate(AA_LIST)}
 AA_SET = set(AA_LIST)
-
+AA_NONGAP = [float(c != '-') for c in AA_LIST]
 
 def seq_to_onehot(seq):
     v = np.zeros((len(seq), len(AA_SET)))
@@ -168,5 +168,5 @@ def cdr3_length_of_onehots(onehot_cdr3s: pd.Series):
     :return: a float array of CDR3 lengths.
     """
     # We assume that gap is the 21st amino acid.
-    all_but_gap_mask = np.array([[1.]*20 + [0.]]).transpose()
+    all_but_gap_mask = np.array([AA_NONGAP]).transpose()
     return onehot_cdr3s.apply(lambda row: np.sum(row.dot(all_but_gap_mask)))
