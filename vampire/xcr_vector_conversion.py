@@ -17,12 +17,13 @@ import vampire.germline_cdr3_aa_tensor as cdr3_tensor
 
 # ### Amino Acids ###
 
+# cdr3_length_of_onehots depends on this order.
 AA_ORDER = 'ACDEFGHIKLMNPQRSTVWY-'
 AA_LIST = list(AA_ORDER)
 AA_DICT = {c: i for i, c in enumerate(AA_LIST)}
 AA_DICT_REV = {i: c for i, c in enumerate(AA_LIST)}
 AA_SET = set(AA_LIST)
-
+AA_NONGAP = [float(c != '-') for c in AA_LIST]
 
 def seq_to_onehot(seq):
     v = np.zeros((len(seq), len(AA_SET)))
@@ -156,3 +157,16 @@ def adaptive_aa_encoding_tensors(max_cdr3_len):
 
     return cdr3_tensor.aa_encoding_tensors(germline_cdr3_csv, AA_ORDER, TCRB_V_GENE_LIST, TCRB_J_GENE_LIST,
                                            max_cdr3_len)
+
+
+def cdr3_length_of_onehots(onehot_cdr3s: pd.Series):
+    """
+    Compute the CDR3 length of one-hot-encoded CDR3s.
+
+    :param onehot_cdr3s: A Series of numpy one-hot-encoded arrays.
+
+    :return: a float array of CDR3 lengths.
+    """
+    # We assume that gap is the 21st amino acid.
+    all_but_gap_mask = np.array([AA_NONGAP]).transpose()
+    return onehot_cdr3s.apply(lambda row: np.sum(row.dot(all_but_gap_mask)))

@@ -5,6 +5,8 @@ If they do, they belong in utils.py.
 """
 
 import numpy as np
+import pandas as pd
+import pkg_resources
 import os
 
 
@@ -65,6 +67,13 @@ def cjoin(path, *paths):
     return joined
 
 
+def read_data_csv(fname):
+    """
+    Read a CSV from our data path.
+    """
+    return pd.read_csv(pkg_resources.resource_filename('vampire', os.path.join('data', fname)))
+
+
 # ### Misc functions ###
 
 def zero_pad_list_func(l):
@@ -74,3 +83,11 @@ def zero_pad_list_func(l):
     """
     max_len = len(str(max(l)))
     return lambda i: str(i).zfill(max_len)
+
+
+def cols_of_df(df):
+    """
+    Extract the data columns of a dataframe into a list of appropriately-sized
+    numpy arrays.
+    """
+    return [np.stack(col.values) for _, col in df.items()]

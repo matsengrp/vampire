@@ -1,3 +1,16 @@
+"""
+This file contains the object and CLI for training our VAEs.
+
+The models themselves are in the `models/` directory. Each of these Python
+files should have a `build` function that returns a dictionary with
+entries for: encoder, decoder, and vae.
+
+We also require each model to define a corresponding `prepare_data` function
+that prepares data for input into the vae, and a `interpret_output` function
+that can convert whatever the VAE spits out back to our familiar triple of
+amino_acid, v_gene, and j_gene.
+"""
+
 import importlib
 import json
 import math
@@ -14,14 +27,6 @@ import scipy.special as special
 import scipy.stats as stats
 
 import vampire.xcr_vector_conversion as conversion
-
-
-def cols_of_df(df):
-    """
-    Extract the data columns of a dataframe into a list of appropriately-sized
-    numpy arrays.
-    """
-    return [np.stack(col.values) for _, col in df.items()]
 
 
 def logprob_of_obs_vect(probs, obs):
@@ -45,7 +50,11 @@ class TCRVAE:
     def __init__(self, params):
         self.params = params
         model = importlib.import_module('vampire.models.' + params['model'])
-        (self.encoder, self.decoder, self.vae) = model.encoder_decoder_vae(params)
+        # Digest the dictionary returned by model.build into self attributes.
+        for submodel_name, submodel in model.build(params).items():
+            setattr(self, submodel_name, submodel)
+        self.prepare_data = model.prepare_data
+        self.interpret_output = model.interpret_output
 
     @classmethod
     def default_params(cls):
@@ -53,10 +62,14 @@ class TCRVAE:
         Return a dictionary with default parameters.
         """
         return dict(
+            # Models:
+            # - krdav
+            # - germline_decoder
+            # - germline_decoder_length
+            model='germline_decoder_length',
             # Model parameters.
-            model='germline_decoder',
             latent_dim=35,
-            dense_nodes=75,
+            dense_nodes=100,
             aa_embedding_dim=21,
             v_gene_embedding_dim=30,
             j_gene_embedding_dim=13,
@@ -119,11 +132,11 @@ class TCRVAE:
             sub_df = df[:n_to_take]
         return conversion.unpadded_tcrbs_to_onehot(sub_df, self.params['max_cdr3_len'])
 
-    def fit(self, df: pd.DataFrame, validation_split: float, best_weights_fname: str, tensorboard_log_dir: str):
+    def fit(self, x_df: pd.DataFrame, validation_split: float, best_weights_fname: str, tensorboard_log_dir: str):
         """
-        Fit the model with early stopping.
+        Fit the vae with early stopping.
         """
-        data = cols_of_df(df)
+        data = self.prepare_data(x_df)
         checkpoint = ModelCheckpoint(best_weights_fname, monitor='loss', verbose=1, save_best_only=True, mode='min')
         early_stopping = EarlyStopping(monitor='loss', patience=self.params['patience'])
         tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir)
@@ -143,7 +156,7 @@ class TCRVAE:
 
         :return: loss
         """
-        data = cols_of_df(x_df)
+        data = self.prepare_data(x_df)
         return self.vae.evaluate(x=data, y=data, batch_size=self.params['batch_size'])
 
     def encode(self, x_df):
@@ -154,15 +167,15 @@ class TCRVAE:
 
         :return: z_mean and z_sd, the embedding mean and standard deviation.
         """
-        z_mean, z_log_var = self.encoder.predict(cols_of_df(x_df))
+        z_mean, z_log_var = self.encoder.predict(self.prepare_data(x_df))
         z_sd = np.sqrt(np.exp(z_log_var))
         return z_mean, z_sd
 
     def decode(self, z):
         """
-        Get the decoding of z in the latent space.
+        Get the decoding of z.
         """
-        return self.decoder.predict(z)
+        return self.interpret_output(self.decoder.predict(z))
 
     def generate(self, n_seqs):
         """
@@ -216,7 +229,7 @@ class TCRVAE:
         aa_probs, v_gene_probs, j_gene_probs = self.decode(z_sample)
 
         # Onehot-encoded observations.
-        aa_obs, v_gene_obs, j_gene_obs = cols_of_df(x_df)
+        aa_obs, v_gene_obs, j_gene_obs = self.prepare_data(x_df)
 
         # Loop over observations.
         for i in range(len(x_df)):

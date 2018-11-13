@@ -4,7 +4,7 @@ sequence to the final step of the CDR3 decoder. This estimate is marginalized
 over the probablistic weight assigned to the various V and J genes.
 
 Model diagram with 35 latent dimensions and 100 dense nodes:
-https://user-images.githubusercontent.com/112708/48358943-b7c95f80-e650-11e8-97e4-ed483ec7846a.png
+https://user-images.githubusercontent.com/112708/48387933-78306100-e6ac-11e8-9de5-b29eca7f3474.png
 """
 
 import numpy as np
@@ -40,12 +40,13 @@ def build(params):
         xent_loss = io_decoder.shape.num_elements() * K.mean(
             objectives.categorical_crossentropy(io_encoder, io_decoder))
         kl_loss = -0.5 * K.sum(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
-        kl_loss *= 1 / 3 * params['batch_size']  # Because we have three input/output
+        kl_loss *= 1 / 4 * params['batch_size']  # Because we have four input/output pairs.
         return (xent_loss + kl_loss)
 
     # Input:
     cdr3_input_shape = (params['max_cdr3_len'], params['n_aas'])
     cdr3_input = Input(shape=cdr3_input_shape, name='cdr3_input')
+    cdr3_length_input = Input(shape=(1, ), name='cdr3_length_input')
     v_gene_input = Input(shape=(params['n_v_genes'], ), name='v_gene_input')
     j_gene_input = Input(shape=(params['n_j_genes'], ), name='j_gene_input')
 
@@ -55,8 +56,8 @@ def build(params):
                                   name='cdr3_embedding_flat')(cdr3_embedding)
     v_gene_embedding = Dense(params['v_gene_embedding_dim'], name='v_gene_embedding')(v_gene_input)
     j_gene_embedding = Dense(params['j_gene_embedding_dim'], name='j_gene_embedding')(j_gene_input)
-    merged_embedding = keras.layers.concatenate([cdr3_embedding_flat, v_gene_embedding, j_gene_embedding],
-                                                name='merged_embedding')
+    merged_embedding = keras.layers.concatenate(
+        [cdr3_embedding_flat, cdr3_length_input, v_gene_embedding, j_gene_embedding], name='merged_embedding')
     encoder_dense_1 = Dense(params['dense_nodes'], activation='elu', name='encoder_dense_1')(merged_embedding)
     encoder_dense_2 = Dense(params['dense_nodes'], activation='elu', name='encoder_dense_2')(encoder_dense_1)
 
@@ -81,7 +82,9 @@ def build(params):
     (v_germline_cdr3_tensor, j_germline_cdr3_tensor) = conversion.adaptive_aa_encoding_tensors(params['max_cdr3_len'])
     v_germline_cdr3_l = RightTensordot(v_germline_cdr3_tensor, axes=1, name='v_germline_cdr3')
     j_germline_cdr3_l = RightTensordot(j_germline_cdr3_tensor, axes=1, name='j_germline_cdr3')
-    # This germline_cdr3 gives a probability-marginalized one-hot encoding of
+    cdr3_length_output_l = RightTensordot(
+        np.array([conversion.AA_NONGAP] * params['max_cdr3_len']), axes=2, name='cdr3_length_output')
+    # This untrimmed_cdr3 gives a probability-marginalized one-hot encoding of
     # what the cdr3 would look like if there was zero trimming and zero
     # insertion. The gaps in the middle don't get any hotness.
     cdr3_output = cdr3_output_l(
@@ -90,6 +93,7 @@ def build(params):
             Add(name='germline_cdr3')([v_germline_cdr3_l(v_gene_output),
                                        j_germline_cdr3_l(j_gene_output)])
         ]))
+    cdr3_length_output = cdr3_length_output_l(cdr3_output)
 
     # Define the decoder components separately so we can have it as its own model.
     z_mean_input = Input(shape=(params['latent_dim'], ))
@@ -102,18 +106,40 @@ def build(params):
                 [v_germline_cdr3_l(decoder_v_gene_output),
                  j_germline_cdr3_l(decoder_j_gene_output)])
         ]))
+    decoder_cdr3_length_output = cdr3_length_output_l(decoder_cdr3_output)
 
-    encoder = Model([cdr3_input, v_gene_input, j_gene_input], [z_mean, z_log_var])
-    decoder = Model(z_mean_input, [decoder_cdr3_output, decoder_v_gene_output, decoder_j_gene_output])
-    vae = Model([cdr3_input, v_gene_input, j_gene_input], [cdr3_output, v_gene_output, j_gene_output])
-    vae.compile(optimizer="adam", loss=vae_loss)
+    encoder = Model([cdr3_input, cdr3_length_input, v_gene_input, j_gene_input], [z_mean, z_log_var])
+    decoder = Model(z_mean_input,
+                    [decoder_cdr3_output, decoder_cdr3_length_output, decoder_v_gene_output, decoder_j_gene_output])
+    vae = Model([cdr3_input, cdr3_length_input, v_gene_input, j_gene_input],
+                [cdr3_output, cdr3_length_output, v_gene_output, j_gene_output])
+    vae.compile(
+        optimizer="adam",
+        loss={
+            'cdr3_output': vae_loss,
+            'cdr3_length_output': keras.losses.poisson,
+            'v_gene_output': vae_loss,
+            'j_gene_output': vae_loss
+        },
+        # Sample run:
+        # cdr3_output_loss: 7372.5024 - cdr3_length_output_loss: -24.2948
+        # v_gene_output_loss: 1695.5104 - j_gene_output_loss: 1538.0263
+        loss_weights={
+            'cdr3_output': 1.,
+            'cdr3_length_output': 10.,
+            'v_gene_output': 5.,
+            'j_gene_output': 5.
+        })
 
     return {'encoder': encoder, 'decoder': decoder, 'vae': vae}
 
 
 def prepare_data(x_df):
-    return common.cols_of_df(x_df)
+    cdr3_data, v_gene_data, j_gene_data = common.cols_of_df(x_df)
+    cdr3_length_data = conversion.cdr3_length_of_onehots(x_df['amino_acid'])
+    return [cdr3_data, cdr3_length_data, v_gene_data, j_gene_data]
 
 
 def interpret_output(output):
-    return output
+    (cdr3_output, cdr3_length_output, v_gene_output, j_gene_output) = output
+    return (cdr3_output, v_gene_output, j_gene_output)
