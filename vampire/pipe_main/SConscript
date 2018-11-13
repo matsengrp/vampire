@@ -21,7 +21,10 @@ DATA = {
     'test': {
         'paths': ['sample_data/02-0249_TCRB.4000.tsv.bz2']
     },
-    'seshadri': {
+    'one-seshadri': {
+        'paths': [join(seshadri_path, '02-0249_TCRB.tsv')]
+    },
+     'seshadri': {
         'paths': [join(seshadri_path, '02-0249_TCRB.tsv'),
                   join(seshadri_path, '09-0306_TCRB.tsv')]
     },
