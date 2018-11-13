@@ -108,7 +108,7 @@ def build(params):
     vae = Model([cdr3_input, v_gene_input, j_gene_input], [cdr3_output, v_gene_output, j_gene_output])
     vae.compile(optimizer="adam", loss=vae_loss)
 
-    return {'encoder': encoder, 'decoder': decoder, 'vae': vae, 'train_model': vae}
+    return {'encoder': encoder, 'decoder': decoder, 'vae': vae}
 
 
 def prepare_data(x_df):

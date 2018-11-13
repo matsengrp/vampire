@@ -114,9 +114,7 @@ def build(params):
                     [decoder_cdr3_output, decoder_cdr3_length_output, decoder_v_gene_output, decoder_j_gene_output])
     vae = Model([cdr3_input, cdr3_length_input, v_gene_input, j_gene_input],
                 [cdr3_output, cdr3_length_output, v_gene_output, j_gene_output])
-    train_model = Model([cdr3_input, cdr3_length_input, v_gene_input, j_gene_input],
-                        [cdr3_output, cdr3_length_output, v_gene_output, j_gene_output])
-    train_model.compile(
+    vae.compile(
         optimizer="adam",
         loss={
             'cdr3_output': vae_loss,
@@ -125,7 +123,7 @@ def build(params):
             'j_gene_output': vae_loss
         })
 
-    return {'encoder': encoder, 'decoder': decoder, 'vae': vae, 'train_model': train_model}
+    return {'encoder': encoder, 'decoder': decoder, 'vae': vae}
 
 
 def prepare_data(x_df):

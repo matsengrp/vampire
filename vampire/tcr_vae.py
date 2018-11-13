@@ -3,16 +3,12 @@ This file contains the object and CLI for training our VAEs.
 
 The models themselves are in the `models/` directory. Each of these Python
 files should have a `build` function that returns a dictionary with
-correspondingly entries for: encoder, decoder, vae, train_model. These should
-be self-explanatory except for train_model, which gives us the oppportunity to
-provide a larger model for training, which may have additional outputs that are
-used for loss function calculation.
-
-I emphasize that train_model must contain all of the components of the VAE, and
-perhaps more. If not, parts of the VAE will not be trained (or weights loaded.)
+entries for: encoder, decoder, and vae.
 
 We also require each model to define a corresponding `prepare_data` function
-that prepares data for input into vae and train_model.
+that prepares data for input into the vae, and a `interpret_output` function
+that can convert whatever the VAE spits out back to our familiar triple of
+amino_acid, v_gene, and j_gene.
 """
 
 import importlib
@@ -54,6 +50,7 @@ class TCRVAE:
     def __init__(self, params):
         self.params = params
         model = importlib.import_module('vampire.models.' + params['model'])
+        # Digest the dictionary returned by model.build into self attributes.
         for submodel_name, submodel in model.build(params).items():
             setattr(self, submodel_name, submodel)
         self.prepare_data = model.prepare_data
@@ -107,7 +104,7 @@ class TCRVAE:
         we load that information in.
         """
         v = cls.of_json_file(os.path.join(path, 'model_params.json'))
-        v.train_model.load_weights(os.path.join(path, 'best_weights.h5'))
+        v.vae.load_weights(os.path.join(path, 'best_weights.h5'))
         return v
 
     def serialize_params(self, fname):
@@ -133,13 +130,13 @@ class TCRVAE:
 
     def fit(self, x_df: pd.DataFrame, validation_split: float, best_weights_fname: str, tensorboard_log_dir: str):
         """
-        Fit the train_model with early stopping.
+        Fit the vae with early stopping.
         """
         data = self.prepare_data(x_df)
         checkpoint = ModelCheckpoint(best_weights_fname, monitor='loss', verbose=1, save_best_only=True, mode='min')
         early_stopping = EarlyStopping(monitor='loss', patience=self.params['patience'])
         tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir)
-        self.train_model.fit(
+        self.vae.fit(
             x=data,  # y=X for a VAE.
             y=data,
             epochs=self.params['epochs'],
@@ -156,7 +153,7 @@ class TCRVAE:
         :return: loss
         """
         data = self.prepare_data(x_df)
-        return self.train_model.evaluate(x=data, y=data, batch_size=self.params['batch_size'])
+        return self.vae.evaluate(x=data, y=data, batch_size=self.params['batch_size'])
 
     def encode(self, x_df):
         """
@@ -281,17 +278,13 @@ def train(params_json, train_csv, best_weights_fname, diagnostics_fname):
     train_data = v.get_data(train_csv, min_data_size)
     tensorboard_log_dir = os.path.join(os.path.dirname(best_weights_fname), 'logs')
     v.fit(train_data, validation_split, best_weights_fname, tensorboard_log_dir)
-    v.train_model.save_weights(best_weights_fname, overwrite=True)
+    v.vae.save_weights(best_weights_fname, overwrite=True)
 
     # Test weights reloading.
     vp = TCRVAE.of_json_file(params_json)
-    vp.train_model.load_weights(best_weights_fname)
+    vp.vae.load_weights(best_weights_fname)
 
-    df = pd.DataFrame({
-        'train': v.evaluate(train_data),
-        'vp_train': vp.evaluate(train_data)
-    },
-                      index=v.train_model.metrics_names)
+    df = pd.DataFrame({'train': v.evaluate(train_data), 'vp_train': vp.evaluate(train_data)}, index=v.vae.metrics_names)
     df.to_csv(diagnostics_fname)
     return v
 
@@ -308,13 +301,13 @@ def loss(params_json, model_weights, train_csv, test_csv, out_csv):
     """
 
     v = TCRVAE.of_json_file(params_json)
-    v.train_model.load_weights(model_weights)
+    v.vae.load_weights(model_weights)
 
     df = pd.DataFrame({
         'train': v.evaluate(v.get_data(train_csv, v.params['batch_size'])),
         'test': v.evaluate(v.get_data(test_csv, v.params['batch_size']))
     },
-                      index=v.train_model.metrics_names)
+                      index=v.vae.metrics_names)
     df.to_csv(out_csv)
 
 
@@ -334,7 +327,7 @@ def importance(limit_input_to, nsamples, params_json, model_weights, test_csv, o
     """
 
     v = TCRVAE.of_json_file(params_json)
-    v.train_model.load_weights(model_weights)
+    v.vae.load_weights(model_weights)
 
     df_x = v.get_data(test_csv)
 
@@ -363,7 +356,7 @@ def generate(nseqs, params_json, model_weights, out_csv):
     Generate some sequences and write them to a file.
     """
     v = TCRVAE.of_json_file(params_json)
-    v.train_model.load_weights(model_weights)
+    v.vae.load_weights(model_weights)
     v.generate(nseqs).to_csv(out_csv, index=False)
 
 
