@@ -75,3 +75,28 @@ def test_contiguous_match_indicator():
             1., 0.5, 0.5, 0.5, 0.25, 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 1.,
             1., 1., 1., 1.
         ]))
+
+
+def test_contiguous_match_indicator_df():
+    test = conversion.unpadded_tcrbs_to_onehot(common.read_data_csv('adaptive-filter-test.correct.csv'), 30)
+    v, j = conversion.adaptive_aa_encoding_tensors(30)
+    result = conversion.contiguous_match_indicator_df(test, v, j)
+
+    assert np.array_equal(
+        result[0],
+        np.array([
+            1., 1., 1., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 1., 1.,
+            1., 1., 1.
+        ]))
+    assert np.array_equal(
+        result[1],
+        np.array([
+            1., 1., 1., 1., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1., 1.,
+            1., 1., 1.
+        ]))
+    assert np.array_equal(
+        result[6],
+        np.array([
+            1., 1., 1., 1., 1., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+            0., 0., 0.
+        ]))

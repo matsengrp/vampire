@@ -17,13 +17,13 @@ import vampire.germline_cdr3_aa_tensor as cdr3_tensor
 
 # ### Amino Acids ###
 
-# cdr3_length_of_onehots depends on this order.
 AA_ORDER = 'ACDEFGHIKLMNPQRSTVWY-'
 AA_LIST = list(AA_ORDER)
 AA_DICT = {c: i for i, c in enumerate(AA_LIST)}
 AA_DICT_REV = {i: c for i, c in enumerate(AA_LIST)}
 AA_SET = set(AA_LIST)
 AA_NONGAP = [float(c != '-') for c in AA_LIST]
+
 
 def seq_to_onehot(seq):
     v = np.zeros((len(seq), len(AA_SET)))
@@ -172,10 +172,19 @@ def cdr3_length_of_onehots(onehot_cdr3s: pd.Series):
     return onehot_cdr3s.apply(lambda row: np.sum(row.dot(all_but_gap_mask)))
 
 
-def contiguous_match_indicator(padded_onehot, v_germline, j_germline):
+def contiguous_match_indicator(padded_onehot, v_germline_aa_onehot, j_germline_aa_onehot):
     """
-    Return an indicator vector about the contigious states that match the
-    supplied v and j germline tensors.
+    :param padded_onehot: padded onehot-encoded matrix for the CDR3 amino
+    acids
+    :param v_germline_aas: onehot-encoded matrix for the V germline-encoded
+    amino acids
+    :param j_germline_aas: onehot-encoded matrix for the J germline-encoded
+    amino acids
+    :return: an indicator vector about the contigious states that match the
+    supplied v and j germlines
+
+    If the max_cdr3_len is 30, then all of the inputs are (30, 21) and the
+    output is length 30.
 
     Here contiguous means without interruption from the left of the v and
     without interruption from the right of the j.
@@ -183,5 +192,23 @@ def contiguous_match_indicator(padded_onehot, v_germline, j_germline):
     See tests for examples.
     """
     return np.add(
-        np.cumprod(np.sum(np.multiply(padded_onehot, v_germline), axis=1)),
-        np.flip(np.cumprod(np.flip(np.sum(np.multiply(padded_onehot, j_germline), axis=1)))))
+        np.cumprod(np.sum(np.multiply(padded_onehot, v_germline_aa_onehot), axis=1)),
+        np.flip(np.cumprod(np.flip(np.sum(np.multiply(padded_onehot, j_germline_aa_onehot), axis=1)))))
+
+
+def contiguous_match_indicator_df(onehot_df, v_germline_aa_tensor, j_germline_aa_tensor):
+    """
+    :param onehot_df: a dataframe like one gets from unpadded_tcrbs_to_onehot
+    :param v_germline_aa_tensor: a tensor like from adaptive_aa_encoding_tensors
+    :param j_germline_aa_tensor: a tensor like from adaptive_aa_encoding_tensors
+
+    Apply contiguous_match_indicator appropriately to every row of a
+    onehot-encoded data frame.
+    """
+    return onehot_df.apply(
+        lambda row: contiguous_match_indicator(
+            row['amino_acid'],
+            # The following two lines obtain the germline aas for that
+            np.tensordot(row['v_gene'], v_germline_aa_tensor, axes=1),
+            np.tensordot(row['j_gene'], j_germline_aa_tensor, axes=1)),
+        axis=1)
