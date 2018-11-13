@@ -62,8 +62,12 @@ class TCRVAE:
         Return a dictionary with default parameters.
         """
         return dict(
-            # Model parameters.
+            # Models:
+            # - krdav
+            # - germline_decoder
+            # - germline_decoder_length
             model='germline_decoder_length',
+            # Model parameters.
             latent_dim=35,
             dense_nodes=75,
             aa_embedding_dim=21,

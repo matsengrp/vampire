@@ -93,3 +93,7 @@ def build(params):
 
 def prepare_data(x_df):
     return common.cols_of_df(x_df)
+
+
+def interpret_output(output):
+    return output
