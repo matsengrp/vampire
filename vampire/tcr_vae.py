@@ -69,7 +69,7 @@ class TCRVAE:
             model='germline_decoder_length',
             # Model parameters.
             latent_dim=35,
-            dense_nodes=75,
+            dense_nodes=100,
             aa_embedding_dim=21,
             v_gene_embedding_dim=30,
             j_gene_embedding_dim=13,
