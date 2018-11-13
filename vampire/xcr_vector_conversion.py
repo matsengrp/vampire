@@ -170,3 +170,18 @@ def cdr3_length_of_onehots(onehot_cdr3s: pd.Series):
     # We assume that gap is the 21st amino acid.
     all_but_gap_mask = np.array([AA_NONGAP]).transpose()
     return onehot_cdr3s.apply(lambda row: np.sum(row.dot(all_but_gap_mask)))
+
+
+def contiguous_match_indicator(padded_onehot, v_germline, j_germline):
+    """
+    Return an indicator vector about the contigious states that match the
+    supplied v and j germline tensors.
+
+    Here contiguous means without interruption from the left of the v and
+    without interruption from the right of the j.
+
+    See tests for examples.
+    """
+    return np.add(
+        np.cumprod(np.sum(np.multiply(padded_onehot, v_germline), axis=1)),
+        np.flip(np.cumprod(np.flip(np.sum(np.multiply(padded_onehot, j_germline), axis=1)))))
