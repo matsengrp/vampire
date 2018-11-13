@@ -4,7 +4,7 @@ sequence to the final step of the CDR3 decoder. This estimate is marginalized
 over the probablistic weight assigned to the various V and J genes.
 
 Model diagram with 35 latent dimensions and 100 dense nodes:
-https://user-images.githubusercontent.com/112708/48358943-b7c95f80-e650-11e8-97e4-ed483ec7846a.png
+https://user-images.githubusercontent.com/112708/48387933-78306100-e6ac-11e8-9de5-b29eca7f3474.png
 """
 
 import numpy as np
