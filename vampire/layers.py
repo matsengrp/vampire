@@ -98,3 +98,47 @@ class CDR3Length(Layer):
         assert input_shape[-1] == 21
         # We are contracting two dimensions (positions and amino acids) and replacing with a scalar.
         return tuple(input_shape[:-2] + tuple([1]))
+
+
+class ContiguousMatchCount(Layer):
+    """
+    Given a numpy tensor Y, this layer tensordots input on the right with Y
+    over `axes` numbers of coordinates.
+
+    That is, if the input is X and axes=1, this performs
+    sum_i X_{...,i} Y_{i,...}.
+    """
+
+    def __init__(self, v_germline_aa_tensor, j_germline_aa_tensor, **kwargs):
+        self.v_germline_aa_tensor = tf.convert_to_tensor(v_germline_aa_tensor, dtype=tf.float32)
+        self.j_germline_aa_tensor = tf.convert_to_tensor(j_germline_aa_tensor, dtype=tf.float32)
+        super(ContiguousMatchCount, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        super(ContiguousMatchCount, self).build(input_shape)  # Be sure to call this at the end
+
+    def call(self, x):
+        out = tf.zeros([2])
+        out[0] =
+
+
+        np.sum(np.cumprod(np.sum(np.multiply(padded_onehot, v_germline_aa_onehot), axis=1))),
+        np.sum(np.flip(np.cumprod(np.flip(np.sum(np.multiply(padded_onehot, j_germline_aa_onehot), axis=1)))))])
+
+        # Tensordotting with sums over the last `axes` indices of the first argument
+        # and the first `axes` indices of the second argument.
+        return tf.tensordot(x, self.right_tf_tensor, axes=self.axes)
+
+    def compute_output_shape(self, input_shape):
+        # Make sure that the last `axes` dimensions of the first argument match
+        # the first `axes` dimensions of the second argument.
+        axes = self.axes
+        assert input_shape[-axes:] == self.right_tf_tensor.shape[0:axes]
+        right_remaining_shape = tuple(self.right_tf_tensor.shape[axes:])
+        # If the whole right tensor gets consumed by the calculation, then the
+        # resulting dimension for that component is 1, a scalar. In principle
+        # we might have to do something equivalent on the left, but we always
+        # have the batch_size that won't get contracted.
+        if right_remaining_shape == ():
+            right_remaining_shape = tuple([1])
+        return tuple(input_shape[:-axes] + right_remaining_shape)
