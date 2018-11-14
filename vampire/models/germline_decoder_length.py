@@ -117,7 +117,7 @@ def build(params):
         optimizer="adam",
         loss={
             'cdr3_output': vae_loss,
-            'cdr3_length_output': keras.losses.poisson,
+            'cdr3_length_output': keras.losses.mean_squared_error,
             'v_gene_output': vae_loss,
             'j_gene_output': vae_loss
         },
@@ -126,7 +126,7 @@ def build(params):
         # v_gene_output_loss: 1695.5104 - j_gene_output_loss: 1538.0263
         loss_weights={
             'cdr3_output': 1.,
-            'cdr3_length_output': 10.,
+            'cdr3_length_output': 1000.,
             'v_gene_output': 5.,
             'j_gene_output': 5.
         })
