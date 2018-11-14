@@ -17,6 +17,7 @@ import vampire.germline_cdr3_aa_tensor as cdr3_tensor
 
 # ### Amino Acids ###
 
+# CDR3Length layer depends on this set and ordering of states.
 AA_ORDER = 'ACDEFGHIKLMNPQRSTVWY-'
 AA_LIST = list(AA_ORDER)
 AA_DICT = {c: i for i, c in enumerate(AA_LIST)}
