@@ -120,9 +120,6 @@ def build(params):
             'v_gene_output': vae_loss,
             'j_gene_output': vae_loss
         },
-        # Sample run:
-        # cdr3_output_loss: 7372.5024 - cdr3_length_output_loss: -24.2948
-        # v_gene_output_loss: 1695.5104 - j_gene_output_loss: 1538.0263
         loss_weights={
             'cdr3_output': 1.,
             'cdr3_length_output': 1000.,
