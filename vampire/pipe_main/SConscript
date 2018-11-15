@@ -170,4 +170,4 @@ def generated(env, outdir, c):
     return env.Command(
         join(outdir, 'generated.csv'),
         [c['model_params'], c['model']['weights']],
-        'python3 tcr_vae.py generate $SOURCES $TARGET')
+        'python3 tcr_vae.py generate --nseqs 500 $SOURCES $TARGET')

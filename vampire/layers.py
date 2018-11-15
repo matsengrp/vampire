@@ -68,3 +68,33 @@ class RightTensordot(Layer):
         if right_remaining_shape == ():
             right_remaining_shape = tuple([1])
         return tuple(input_shape[:-axes] + right_remaining_shape)
+
+
+class CDR3Length(Layer):
+    """
+    Given a onehot-encoded CDR3 sequence, return the number of non-gap sites.
+
+    Note that this layer requires that we have 20 amino acids, and that gap is
+    the last state.
+    """
+
+    def __init__(self, **kwargs):
+        super(CDR3Length, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        super(CDR3Length, self).build(input_shape)  # Be sure to call this at the end
+
+    def call(self, x):
+        # We want to count the sites for which gap is not the most likely state.
+        return K.sum(  # Sum across sites
+            # 20 - argmax will be >= 1 for any site that doesn't have gap in it.
+            # Then we clip so it's = 1 for any site that doesn't have gap in it.
+            # Note argmax with axis-=1 means over the last (amino acid) axis.
+            tf.clip_by_value(20. - tf.to_float(tf.argmax(x, axis=-1)), 0., 1.),
+            axis=1)
+
+    def compute_output_shape(self, input_shape):
+        # Make sure we have 21 states for our amino acid space.
+        assert input_shape[-1] == 21
+        # We are contracting two dimensions (positions and amino acids) and replacing with a scalar.
+        return tuple(input_shape[:-2] + tuple([1]))
