@@ -112,11 +112,14 @@ class ContiguousMatch(Layer):
 
     def call(self, inputs):
         (x, v_germline_aa_onehot, j_germline_aa_onehot) = inputs
-        return tf.convert_to_tensor([
-            # The inner sum is across alternative germline genes.
-            K.sum(tf.cumprod(K.sum(tf.multiply(x, v_germline_aa_onehot), axis=1))),
-            K.sum(tf.cumprod(K.sum(tf.multiply(x, j_germline_aa_onehot), axis=1), reverse=True))
-        ])
+
+        def single_contiguous_match(single_x):
+            return tf.convert_to_tensor([
+                # The inner sum is across alternative germline genes.
+                K.sum(tf.cumprod(K.sum(tf.multiply(single_x, v_germline_aa_onehot), axis=1))),
+                K.sum(tf.cumprod(K.sum(tf.multiply(single_x, j_germline_aa_onehot), axis=1), reverse=True))
+            ])
+        return tf.map_fn(single_contiguous_match, x)
 
     def compute_output_shape(self, input_shape):
         # All input should be of shape (batch_size, max_cdr3_len, len(AA_LIST)).
