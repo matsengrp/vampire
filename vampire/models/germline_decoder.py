@@ -84,23 +84,24 @@ def build(params):
     # This germline_cdr3 gives a probability-marginalized one-hot encoding of
     # what the cdr3 would look like if there was zero trimming and zero
     # insertion. The gaps in the middle don't get any hotness.
+    v_germline_cdr3 = v_germline_cdr3_l(v_gene_output)
+    j_germline_cdr3 = j_germline_cdr3_l(j_gene_output)
     cdr3_output = cdr3_output_l(
         Add(name='cdr3_pre_activation')([
             cdr3_post_dense_l(cdr3_post_dense_flat_l(decoder_dense_2_l(decoder_dense_1_l(z_l([z_mean, z_log_var]))))),
-            Add(name='germline_cdr3')([v_germline_cdr3_l(v_gene_output),
-                                       j_germline_cdr3_l(j_gene_output)])
+            Add(name='germline_cdr3')([v_germline_cdr3, j_germline_cdr3])
         ]))
 
     # Define the decoder components separately so we can have it as its own model.
     z_mean_input = Input(shape=(params['latent_dim'], ))
     decoder_v_gene_output = v_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))
     decoder_j_gene_output = j_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))
+    decoder_v_germline_cdr3 = v_germline_cdr3_l(decoder_v_gene_output)
+    decoder_j_germline_cdr3 = j_germline_cdr3_l(decoder_j_gene_output)
     decoder_cdr3_output = cdr3_output_l(
         Add(name='cdr3_pre_activation')([
             cdr3_post_dense_l(cdr3_post_dense_flat_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))),
-            Add(name='germline_cdr3')(
-                [v_germline_cdr3_l(decoder_v_gene_output),
-                 j_germline_cdr3_l(decoder_j_gene_output)])
+            Add(name='germline_cdr3')([decoder_v_germline_cdr3, decoder_j_germline_cdr3])
         ]))
 
     encoder = Model([cdr3_input, v_gene_input, j_gene_input], [z_mean, z_log_var])

@@ -83,11 +83,12 @@ def build(params):
     v_germline_cdr3_l = RightTensordot(v_germline_cdr3_tensor, axes=1, name='v_germline_cdr3')
     j_germline_cdr3_l = RightTensordot(j_germline_cdr3_tensor, axes=1, name='j_germline_cdr3')
     cdr3_length_output_l = CDR3Length(name='cdr3_length_output')
+    v_germline_cdr3 = v_germline_cdr3_l(v_gene_output)
+    j_germline_cdr3 = j_germline_cdr3_l(j_gene_output)
     cdr3_output = cdr3_output_l(
         Add(name='cdr3_pre_activation')([
             cdr3_post_dense_l(cdr3_post_dense_flat_l(decoder_dense_2_l(decoder_dense_1_l(z_l([z_mean, z_log_var]))))),
-            Add(name='germline_cdr3')([v_germline_cdr3_l(v_gene_output),
-                                       j_germline_cdr3_l(j_gene_output)])
+            Add(name='germline_cdr3')([v_germline_cdr3, j_germline_cdr3])
         ]))
     cdr3_length_output = cdr3_length_output_l(cdr3_output)
 
@@ -95,12 +96,12 @@ def build(params):
     z_mean_input = Input(shape=(params['latent_dim'], ))
     decoder_v_gene_output = v_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))
     decoder_j_gene_output = j_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))
+    decoder_v_germline_cdr3 = v_germline_cdr3_l(decoder_v_gene_output)
+    decoder_j_germline_cdr3 = j_germline_cdr3_l(decoder_j_gene_output)
     decoder_cdr3_output = cdr3_output_l(
         Add(name='cdr3_pre_activation')([
             cdr3_post_dense_l(cdr3_post_dense_flat_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))),
-            Add(name='germline_cdr3')(
-                [v_germline_cdr3_l(decoder_v_gene_output),
-                 j_germline_cdr3_l(decoder_j_gene_output)])
+            Add(name='germline_cdr3')([decoder_v_germline_cdr3, decoder_j_germline_cdr3])
         ]))
     decoder_cdr3_length_output = cdr3_length_output_l(decoder_cdr3_output)
 
