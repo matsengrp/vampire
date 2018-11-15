@@ -83,9 +83,6 @@ def build(params):
     v_germline_cdr3_l = RightTensordot(v_germline_cdr3_tensor, axes=1, name='v_germline_cdr3')
     j_germline_cdr3_l = RightTensordot(j_germline_cdr3_tensor, axes=1, name='j_germline_cdr3')
     cdr3_length_output_l = CDR3Length(name='cdr3_length_output')
-    # This untrimmed_cdr3 gives a probability-marginalized one-hot encoding of
-    # what the cdr3 would look like if there was zero trimming and zero
-    # insertion. The gaps in the middle don't get any hotness.
     cdr3_output = cdr3_output_l(
         Add(name='cdr3_pre_activation')([
             cdr3_post_dense_l(cdr3_post_dense_flat_l(decoder_dense_2_l(decoder_dense_1_l(z_l([z_mean, z_log_var]))))),

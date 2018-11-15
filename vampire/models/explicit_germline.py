@@ -1,9 +1,8 @@
 """
 Analogous to CDR3 length, we can deterministically find the contiguous string
 of amino acids that match the corresponding V and J gene. Here we reconstruct
-the one-hot vector that encodes this information, use it for CDR3
-reconstruction, and add a loss concerning how well we are doing in matching
-germline-encoded AA states.
+the one-hot vector that encodes this information and add a loss concerning how
+well we are doing in matching it.
 
 Model diagram with 35 latent dimensions and 100 dense nodes:
 """
@@ -18,7 +17,7 @@ from keras import objectives
 
 import vampire.common as common
 import vampire.xcr_vector_conversion as conversion
-from vampire.layers import EmbedViaMatrix, RightTensordot
+from vampire.layers import CDR3Length, ContiguousMatch, EmbedViaMatrix, RightTensordot
 
 
 def build(params):
@@ -50,6 +49,7 @@ def build(params):
     cdr3_length_input = Input(shape=(1, ), name='cdr3_length_input')
     v_gene_input = Input(shape=(params['n_v_genes'], ), name='v_gene_input')
     j_gene_input = Input(shape=(params['n_j_genes'], ), name='j_gene_input')
+    contiguous_match_input = Input(shape=(2, ), name='contiguous_match_input')
 
     # Encoding layers:
     cdr3_embedding = EmbedViaMatrix(params['aa_embedding_dim'], name='cdr3_embedding')(cdr3_input)
@@ -83,53 +83,56 @@ def build(params):
     (v_germline_cdr3_tensor, j_germline_cdr3_tensor) = conversion.adaptive_aa_encoding_tensors(params['max_cdr3_len'])
     v_germline_cdr3_l = RightTensordot(v_germline_cdr3_tensor, axes=1, name='v_germline_cdr3')
     j_germline_cdr3_l = RightTensordot(j_germline_cdr3_tensor, axes=1, name='j_germline_cdr3')
-    cdr3_length_output_l = RightTensordot(
-        np.array([conversion.AA_NONGAP] * params['max_cdr3_len']), axes=2, name='cdr3_length_output')
-    # This untrimmed_cdr3 gives a probability-marginalized one-hot encoding of
-    # what the cdr3 would look like if there was zero trimming and zero
-    # insertion. The gaps in the middle don't get any hotness.
+    cdr3_length_output_l = CDR3Length(name='cdr3_length_output')
+    contiguous_match_output_l = ContiguousMatch(name='contiguous_match_output')
+    v_germline_cdr3 = v_germline_cdr3_l(v_gene_output)
+    j_germline_cdr3 = j_germline_cdr3_l(j_gene_output)
     cdr3_output = cdr3_output_l(
         Add(name='cdr3_pre_activation')([
             cdr3_post_dense_l(cdr3_post_dense_flat_l(decoder_dense_2_l(decoder_dense_1_l(z_l([z_mean, z_log_var]))))),
-            Add(name='germline_cdr3')([v_germline_cdr3_l(v_gene_output),
-                                       j_germline_cdr3_l(j_gene_output)])
+            Add(name='germline_cdr3')([v_germline_cdr3, j_germline_cdr3])
         ]))
     cdr3_length_output = cdr3_length_output_l(cdr3_output)
+    contiguous_match_output = contiguous_match_output_l([cdr3_output, v_germline_cdr3, j_germline_cdr3])
 
     # Define the decoder components separately so we can have it as its own model.
     z_mean_input = Input(shape=(params['latent_dim'], ))
     decoder_v_gene_output = v_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))
     decoder_j_gene_output = j_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))
+    decoder_v_germline_cdr3 = v_germline_cdr3_l(decoder_v_gene_output)
+    decoder_j_germline_cdr3 = j_germline_cdr3_l(decoder_j_gene_output)
     decoder_cdr3_output = cdr3_output_l(
         Add(name='cdr3_pre_activation')([
             cdr3_post_dense_l(cdr3_post_dense_flat_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))),
-            Add(name='germline_cdr3')(
-                [v_germline_cdr3_l(decoder_v_gene_output),
-                 j_germline_cdr3_l(decoder_j_gene_output)])
+            Add(name='germline_cdr3')([decoder_v_germline_cdr3, decoder_j_germline_cdr3])
         ]))
     decoder_cdr3_length_output = cdr3_length_output_l(decoder_cdr3_output)
+    decoder_contiguous_match_output = contiguous_match_output_l(
+        [decoder_cdr3_output, decoder_v_germline_cdr3, decoder_j_germline_cdr3])
 
-    encoder = Model([cdr3_input, cdr3_length_input, v_gene_input, j_gene_input], [z_mean, z_log_var])
-    decoder = Model(z_mean_input,
-                    [decoder_cdr3_output, decoder_cdr3_length_output, decoder_v_gene_output, decoder_j_gene_output])
-    vae = Model([cdr3_input, cdr3_length_input, v_gene_input, j_gene_input],
-                [cdr3_output, cdr3_length_output, v_gene_output, j_gene_output])
+    encoder = Model([cdr3_input, cdr3_length_input, v_gene_input, j_gene_input, contiguous_match_input],
+                    [z_mean, z_log_var])
+    decoder = Model(z_mean_input, [
+        decoder_cdr3_output, decoder_cdr3_length_output, decoder_v_gene_output, decoder_j_gene_output,
+        decoder_contiguous_match_output
+    ])
+    vae = Model([cdr3_input, cdr3_length_input, v_gene_input, j_gene_input, contiguous_match_input],
+                [cdr3_output, cdr3_length_output, v_gene_output, j_gene_output, contiguous_match_output])
     vae.compile(
         optimizer="adam",
         loss={
             'cdr3_output': vae_loss,
-            'cdr3_length_output': keras.losses.poisson,
+            'cdr3_length_output': keras.losses.mean_squared_error,
             'v_gene_output': vae_loss,
-            'j_gene_output': vae_loss
+            'j_gene_output': vae_loss,
+            'contiguous_match_output': keras.losses.mean_squared_error
         },
-        # Sample run:
-        # cdr3_output_loss: 7372.5024 - cdr3_length_output_loss: -24.2948
-        # v_gene_output_loss: 1695.5104 - j_gene_output_loss: 1538.0263
         loss_weights={
             'cdr3_output': 1.,
-            'cdr3_length_output': 10.,
+            'cdr3_length_output': 1000.,
             'v_gene_output': 5.,
-            'j_gene_output': 5.
+            'j_gene_output': 5.,
+            'contiguous_match_output': 5.
         })
 
     return {'encoder': encoder, 'decoder': decoder, 'vae': vae}

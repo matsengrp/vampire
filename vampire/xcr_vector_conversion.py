@@ -207,12 +207,14 @@ def contiguous_match_counts_df(onehot_df, v_germline_aa_tensor, j_germline_aa_te
     :param onehot_df: a dataframe like one gets from unpadded_tcrbs_to_onehot
     :param v_germline_aa_tensor: a tensor like from adaptive_aa_encoding_tensors
     :param j_germline_aa_tensor: a tensor like from adaptive_aa_encoding_tensors
+    :return: a numpy array of shape (2, len(onehot_df)) giving the v and j
+    contiguous match count for every input.
     """
-    return onehot_df.apply(
+    return np.vstack(onehot_df.apply(
         lambda row: contiguous_match_counts(
             row['amino_acid'],
             # The following two lines obtain the germline aas for the germline
             # calls of the row.
             np.tensordot(row['v_gene'], v_germline_aa_tensor, axes=1),
             np.tensordot(row['j_gene'], j_germline_aa_tensor, axes=1)),
-        axis=1)
+        axis=1))
