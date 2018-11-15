@@ -185,8 +185,8 @@ def contiguous_match_counts(padded_onehot, v_germline_aa_onehot, j_germline_aa_o
     amino acids
     :param j_germline_aas: onehot-encoded matrix for the J germline-encoded
     amino acids
-    :return: an indicator vector about the contigious states that match the
-    supplied v and j germlines
+    :return: a 2-vector describing the number of contigious states that match
+    the supplied v and j germlines
 
     If the max_cdr3_len is 30, then all of the inputs are (30, 21) and the
     output is length 30.
