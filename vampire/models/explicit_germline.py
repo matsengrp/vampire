@@ -14,11 +14,12 @@ from keras.models import Model
 from keras.layers import Activation, Add, Dense, Lambda, Input, Reshape
 from keras import backend as K
 from keras import objectives
-import tensorflow as tf
 
 import vampire.common as common
 import vampire.xcr_vector_conversion as conversion
 from vampire.layers import CDR3Length, ContiguousMatch, EmbedViaMatrix, RightTensordot
+
+from germline_cdr3_aa_tensor import max_germline_aas
 
 
 def build(params):
@@ -45,17 +46,10 @@ def build(params):
         return (xent_loss + kl_loss)
 
     def mean_squared_error_2d(io_encoder, io_decoder):
-        # def mse(i):
-        #     return keras.losses.mean_squared_error(io_encoder[:,i], io_decoder[:,i])
+        def mse(i):
+            return keras.losses.mean_squared_error(io_encoder[:, i], io_decoder[:, i])
 
-        #return mse(0) + mse(1)
-        # out = K.square(io_encoder[:,0] - io_decoder[:,0])
-        #out = io_encoder[:,0]
-        out = io_decoder[:,0]
-        # out = keras.losses.mean_squared_error(io_encoder[:,0], io_decoder[:,0])
-        works = tf.ones([io_decoder.shape[0]])
-        #import pdb; pdb.set_trace()  # noqa
-        return out
+        return mse(0) + mse(1)
 
     # Input:
     cdr3_input_shape = (params['max_cdr3_len'], params['n_aas'])
@@ -94,11 +88,13 @@ def build(params):
     j_gene_output = j_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_l([z_mean, z_log_var]))))
 
     # Here's where we incorporate germline amino acid sequences into the output.
-    (v_germline_cdr3_tensor, j_germline_cdr3_tensor) = conversion.adaptive_aa_encoding_tensors(params['max_cdr3_len'])
+    germline_cdr3_tensors = conversion.adaptive_aa_encoding_tensors(params['max_cdr3_len'])
+    (v_germline_cdr3_tensor, j_germline_cdr3_tensor) = germline_cdr3_tensors
+    (v_max_germline_aas, j_max_germline_aas) = [max_germline_aas(g) for g in germline_cdr3_tensors]
     v_germline_cdr3_l = RightTensordot(v_germline_cdr3_tensor, axes=1, name='v_germline_cdr3')
     j_germline_cdr3_l = RightTensordot(j_germline_cdr3_tensor, axes=1, name='j_germline_cdr3')
     cdr3_length_output_l = CDR3Length(name='cdr3_length_output')
-    contiguous_match_output_l = ContiguousMatch(name='contiguous_match_output')
+    contiguous_match_output_l = ContiguousMatch(v_max_germline_aas, j_max_germline_aas, name='contiguous_match_output')
     v_germline_cdr3 = v_germline_cdr3_l(v_gene_output)
     j_germline_cdr3 = j_germline_cdr3_l(j_gene_output)
     cdr3_output = cdr3_output_l(

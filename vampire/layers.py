@@ -130,7 +130,7 @@ def cumprod(tensor, axis=0):
 
 def cumprod_sum(a, length, reverse=False):
     """
-    Given a matrix a, take sum_j prod_{i=0}^j a_{,,i} in TensorFlow.
+    Given a matrix a, take sum_j prod_{i=0}^j a_{,i} in TensorFlow.
 
     If reverse is True, flip the input across the last axis before the operations.
 
@@ -144,19 +144,22 @@ def cumprod_sum(a, length, reverse=False):
     else:
         start = 0
         it = range(1, length)
-    cum = tf.identity(a[:, :, start])
-    result = tf.identity(a[:, :, start])
+    cum = tf.identity(a[:, start])
+    result = tf.identity(a[:, start])
     for i in it:
-        cum *= a[:, :, i]
+        cum *= a[:, i]
         result += cum
     return result
 
 
 class ContiguousMatch(Layer):
     """
+    TODO
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, v_max_germline_aas, j_max_germline_aas, **kwargs):
+        self.v_max_germline_aas = v_max_germline_aas
+        self.j_max_germline_aas = j_max_germline_aas
         super(ContiguousMatch, self).__init__(**kwargs)
 
     def build(self, input_shape):
@@ -165,18 +168,14 @@ class ContiguousMatch(Layer):
     def call(self, inputs):
         (x, v_germline_aa_onehot, j_germline_aa_onehot) = inputs
 
-        def single_contiguous_match(single_x):
-            return tf.convert_to_tensor([
-                # The inner sum is across alternative germline genes.
-                # K.prod(K.sum(tf.multiply(single_x, v_germline_aa_onehot), axis=1)),
-                K.sum(cumprod(K.sum(tf.multiply(single_x, v_germline_aa_onehot), axis=1))),
-                K.sum(tf.multiply(single_x, j_germline_aa_onehot))
-                # The inner sum is across alternative germline genes.
-                # K.sum(tf.cumprod(K.sum(tf.multiply(single_x, v_germline_aa_onehot), axis=1))),
-                # K.sum(tf.cumprod(K.sum(tf.multiply(single_x, j_germline_aa_onehot), axis=1), reverse=True))
-            ])
-
-        return tf.map_fn(single_contiguous_match, x)
+        # The inner sum is across amino acids, so the result of this multiply
+        # then sum is to get an indicator of the germline matches of x across
+        # the germline genes. The cumprod_sum then returns the number of
+        # contiguous matches for the V and J gene sides.
+        return tf.stack([
+                cumprod_sum(K.sum(tf.multiply(x, v_germline_aa_onehot), axis=2), self.v_max_germline_aas),
+                cumprod_sum(K.sum(tf.multiply(x, j_germline_aa_onehot), axis=2), self.j_max_germline_aas, reverse=True)
+            ], axis=1)
 
     def compute_output_shape(self, input_shape):
         # All input should be of shape (batch_size, max_cdr3_len, len(AA_LIST)).

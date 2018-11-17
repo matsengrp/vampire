@@ -42,3 +42,11 @@ def aa_encoding_tensors(germline_cdr3_csv, aa_order, v_gene_list, j_gene_list, m
             j_gene_encoding[gene_index, i + start, aa_dict[c]] = 1
 
     return (v_gene_encoding, j_gene_encoding)
+
+
+def max_germline_aas(encoding):
+    """
+    Given an encoding vector like that made by aa_encoding_tensors, get the
+    maximum number of germline-encoded amino acids.
+    """
+    return int(np.max(np.sum(encoding, axis=(1, 2))))
