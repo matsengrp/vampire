@@ -1,5 +1,6 @@
 from keras import backend as K
 from keras.engine.topology import Layer
+import numpy as np
 import tensorflow as tf
 
 
@@ -127,6 +128,29 @@ def cumprod(tensor, axis=0):
     return tensor
 
 
+def cumprod_sum(a, length, reverse=False):
+    """
+    Given a matrix a, take sum_j prod_{i=0}^j a_{,,i} in TensorFlow.
+
+    If reverse is True, flip the input across the last axis before the operations.
+
+    See test for numpy equivalent.
+    """
+    last_dim = a.shape[-1]
+    assert length <= last_dim
+    if reverse:
+        start = last_dim - 1
+        it = range(start - 1, start - length, -1)
+    else:
+        start = 0
+        it = range(1, length)
+    cum = tf.identity(a[:, :, start])
+    result = tf.identity(a[:, :, start])
+    for i in it:
+        cum *= a[:, :, i]
+        result += cum
+    return result
+
 
 class ContiguousMatch(Layer):
     """
@@ -151,6 +175,7 @@ class ContiguousMatch(Layer):
                 # K.sum(tf.cumprod(K.sum(tf.multiply(single_x, v_germline_aa_onehot), axis=1))),
                 # K.sum(tf.cumprod(K.sum(tf.multiply(single_x, j_germline_aa_onehot), axis=1), reverse=True))
             ])
+
         return tf.map_fn(single_contiguous_match, x)
 
     def compute_output_shape(self, input_shape):
