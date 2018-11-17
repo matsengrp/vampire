@@ -4,6 +4,16 @@ of amino acids that match the corresponding V and J gene. Here we reconstruct
 the one-hot vector that encodes this information and add a loss concerning how
 well we are doing in matching it.
 
+Here's something we can use to check to make sure that the VAE's assessment of
+the contiguous match length is the same as manually computing it.
+
+v = tcr_vae.TCRVAE.of_directory('.')
+(cdr3_output, cdr3_length_output, v_gene_output, j_gene_output, contiguous_match_output) = v.decoder.predict(
+    np.random.normal(0, 1, size=(10, 35)))
+v_germline, j_germline = conversion.adaptive_aa_encoding_tensors(30)
+onehot_df = conversion.avj_raw_triple_to_tcr_df(cdr3_output, v_gene_output, j_gene_output)
+np.allclose(conversion.contiguous_match_counts_df(onehot_df, v_germline, j_germline), contiguous_match_output)
+
 Model diagram with 35 latent dimensions and 100 dense nodes:
 """
 
@@ -19,7 +29,7 @@ import vampire.common as common
 import vampire.xcr_vector_conversion as conversion
 from vampire.layers import CDR3Length, ContiguousMatch, EmbedViaMatrix, RightTensordot
 
-from germline_cdr3_aa_tensor import max_germline_aas
+from vampire.germline_cdr3_aa_tensor import max_germline_aas
 
 
 def build(params):
@@ -142,7 +152,7 @@ def build(params):
             'cdr3_length_output': 1000.,
             'v_gene_output': 5.,
             'j_gene_output': 5.,
-            'contiguous_match_output': 5.
+            'contiguous_match_output': 500.
         })
 
     return {'encoder': encoder, 'decoder': decoder, 'vae': vae}

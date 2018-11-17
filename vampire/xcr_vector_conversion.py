@@ -111,6 +111,16 @@ def avj_triple_to_tcr_df(amino_acid, v_gene, j_gene):
     return pd.DataFrame({'amino_acid': amino_acid, 'v_gene': v_gene, 'j_gene': j_gene})
 
 
+def avj_raw_triple_to_tcr_df(amino_acid, v_gene, j_gene):
+    """
+    A "raw" triple here means as a big np array.
+    """
+    return avj_triple_to_tcr_df(
+        [amino_acid[i,:,:] for i in range(amino_acid.shape[0])],
+        [v_gene[i,:] for i in range(v_gene.shape[0])],
+        [j_gene[i,:] for i in range(j_gene.shape[0])])
+
+
 def unpadded_tcrbs_to_onehot(df, desired_length):
     """
     Translate a data frame of TCR betas written as (CDR3 sequence, V gene name,
