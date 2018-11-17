@@ -100,6 +100,34 @@ class CDR3Length(Layer):
         return tuple(input_shape[:-2] + tuple([1]))
 
 
+def cumprod(tensor, axis=0):
+    """
+    Cumulative product.
+
+    There is a known problem with TF's cumprod, giving nans, so this is from
+    https://github.com/tensorflow/tensorflow/issues/3862#issuecomment-327462205
+    """
+    transpose_permutation = None
+    n_dim = len(tensor.get_shape())
+    if n_dim > 1 and axis != 0:
+
+        if axis < 0:
+            axis = n_dim + axis
+
+        transpose_permutation = np.arange(n_dim)
+        transpose_permutation[-1], transpose_permutation[0] = 0, axis
+
+    tensor = tf.transpose(tensor, transpose_permutation)
+
+    def prod(acc, x):
+        return acc * x
+
+    prob = tf.scan(prod, tensor)
+    tensor = tf.transpose(prob, transpose_permutation)
+    return tensor
+
+
+
 class ContiguousMatch(Layer):
     """
     """
@@ -116,8 +144,12 @@ class ContiguousMatch(Layer):
         def single_contiguous_match(single_x):
             return tf.convert_to_tensor([
                 # The inner sum is across alternative germline genes.
-                K.sum(tf.cumprod(K.sum(tf.multiply(single_x, v_germline_aa_onehot), axis=1))),
-                K.sum(tf.cumprod(K.sum(tf.multiply(single_x, j_germline_aa_onehot), axis=1), reverse=True))
+                # K.prod(K.sum(tf.multiply(single_x, v_germline_aa_onehot), axis=1)),
+                K.sum(cumprod(K.sum(tf.multiply(single_x, v_germline_aa_onehot), axis=1))),
+                K.sum(tf.multiply(single_x, j_germline_aa_onehot))
+                # The inner sum is across alternative germline genes.
+                # K.sum(tf.cumprod(K.sum(tf.multiply(single_x, v_germline_aa_onehot), axis=1))),
+                # K.sum(tf.cumprod(K.sum(tf.multiply(single_x, j_germline_aa_onehot), axis=1), reverse=True))
             ])
         return tf.map_fn(single_contiguous_match, x)
 

@@ -14,6 +14,7 @@ from keras.models import Model
 from keras.layers import Activation, Add, Dense, Lambda, Input, Reshape
 from keras import backend as K
 from keras import objectives
+import tensorflow as tf
 
 import vampire.common as common
 import vampire.xcr_vector_conversion as conversion
@@ -42,6 +43,19 @@ def build(params):
         kl_loss = -0.5 * K.sum(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
         kl_loss *= 1 / 4 * params['batch_size']  # Because we have four input/output pairs.
         return (xent_loss + kl_loss)
+
+    def mean_squared_error_2d(io_encoder, io_decoder):
+        # def mse(i):
+        #     return keras.losses.mean_squared_error(io_encoder[:,i], io_decoder[:,i])
+
+        #return mse(0) + mse(1)
+        # out = K.square(io_encoder[:,0] - io_decoder[:,0])
+        #out = io_encoder[:,0]
+        out = io_decoder[:,0]
+        # out = keras.losses.mean_squared_error(io_encoder[:,0], io_decoder[:,0])
+        works = tf.ones([io_decoder.shape[0]])
+        #import pdb; pdb.set_trace()  # noqa
+        return out
 
     # Input:
     cdr3_input_shape = (params['max_cdr3_len'], params['n_aas'])
@@ -125,7 +139,7 @@ def build(params):
             'cdr3_length_output': keras.losses.mean_squared_error,
             'v_gene_output': vae_loss,
             'j_gene_output': vae_loss,
-            'contiguous_match_output': keras.losses.mean_squared_error
+            'contiguous_match_output': mean_squared_error_2d
         },
         loss_weights={
             'cdr3_output': 1.,
