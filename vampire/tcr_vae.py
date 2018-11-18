@@ -63,10 +63,10 @@ class TCRVAE:
         """
         return dict(
             # Models:
-            # - krdav
-            # - germline_decoder
-            # - germline_decoder_length
-            model='germline_decoder_length',
+            # model='krdav',
+            # model='germline_decoder',
+            # model='germline_decoder_length',
+            model='count_match',
             # Model parameters.
             latent_dim=35,
             dense_nodes=100,

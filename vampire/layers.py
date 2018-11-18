@@ -1,5 +1,6 @@
 from keras import backend as K
 from keras.engine.topology import Layer
+import numpy as np
 import tensorflow as tf
 
 
@@ -98,3 +99,68 @@ class CDR3Length(Layer):
         assert input_shape[-1] == 21
         # We are contracting two dimensions (positions and amino acids) and replacing with a scalar.
         return tuple(input_shape[:-2] + tuple([1]))
+
+
+def cumprod_sum(a, length, reverse=False):
+    """
+    Given a matrix a, take sum_{j=0}^{length-1} prod_{i=0}^j a_{,i} in TensorFlow.
+
+    If reverse is True, flip the input across the last axis before the operations.
+
+    See test for numpy equivalent.
+    """
+    last_dim = a.shape[-1]
+    assert length <= last_dim
+    if reverse:
+        start = last_dim - 1
+        it = range(start - 1, start - length, -1)
+    else:
+        start = 0
+        it = range(1, length)
+    cum = tf.identity(a[:, start])
+    result = tf.identity(a[:, start])
+    for i in it:
+        cum *= a[:, i]
+        result += cum
+    return result
+
+
+class ContiguousMatch(Layer):
+    """
+    A layer that takes in a CDR3 sequence and tensors representing the V and J
+    germline amino acids (marginalized over V and J assignments) and spits out
+    the (marginalized) number of amino acids matched by the CDR3.
+    """
+
+    def __init__(self, v_max_germline_aas, j_max_germline_aas, **kwargs):
+        """
+        :param v_max_germline_aas: the maximum number of V germline AAs that
+        can be matched in the CDR3.
+        :param v_max_germline_aas: the maximum number of J germline AAs that
+        can be matched in the CDR3.
+        """
+        self.v_max_germline_aas = v_max_germline_aas
+        self.j_max_germline_aas = j_max_germline_aas
+        super(ContiguousMatch, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        super(ContiguousMatch, self).build(input_shape)  # Be sure to call this at the end
+
+    def call(self, inputs):
+        (x, v_germline_aa_onehot, j_germline_aa_onehot) = inputs
+
+        # The inner sum is across amino acids, so the result of this multiply
+        # then sum is to get an indicator of the germline matches of x across
+        # the germline genes. The cumprod_sum then returns the number of
+        # contiguous matches for the V and J gene sides.
+        return tf.stack([
+                cumprod_sum(K.sum(tf.multiply(x, v_germline_aa_onehot), axis=2), self.v_max_germline_aas),
+                cumprod_sum(K.sum(tf.multiply(x, j_germline_aa_onehot), axis=2), self.j_max_germline_aas, reverse=True)
+            ], axis=1)
+
+    def compute_output_shape(self, input_shape):
+        # All input should be of shape (batch_size, max_cdr3_len, len(AA_LIST)).
+        assert input_shape[0] == input_shape[1]
+        assert input_shape[1] == input_shape[2]
+        # We just return two numbers for every input.
+        return tuple(input_shape[0][:-2] + tuple([2]))
