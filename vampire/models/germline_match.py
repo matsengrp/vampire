@@ -76,7 +76,8 @@ def build(params):
     v_gene_embedding = Dense(params['v_gene_embedding_dim'], name='v_gene_embedding')(v_gene_input)
     j_gene_embedding = Dense(params['j_gene_embedding_dim'], name='j_gene_embedding')(j_gene_input)
     merged_embedding = keras.layers.concatenate(
-        [cdr3_embedding_flat, cdr3_length_input, v_gene_embedding, j_gene_embedding], name='merged_embedding')
+        [cdr3_embedding_flat, cdr3_length_input, v_gene_embedding, j_gene_embedding, contiguous_match_input],
+        name='merged_embedding')
     encoder_dense_1 = Dense(params['dense_nodes'], activation='elu', name='encoder_dense_1')(merged_embedding)
     encoder_dense_2 = Dense(params['dense_nodes'], activation='elu', name='encoder_dense_2')(encoder_dense_1)
 
