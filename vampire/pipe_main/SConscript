@@ -74,6 +74,9 @@ nest.add('data_label', [localenv['data_label']], label_func=lambda p: '_output_'
 # Nest: the sample, named by sample name.
 nest.add('sample', apply_mode(DATA[localenv['data_label']]['paths']), label_func=common.strip_dirpath_extn)
 
+# Nest: the model.
+nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
+
 
 @nest.add_target_with_env(localenv)
 def preprocess(env, outdir, c):
@@ -140,9 +143,9 @@ def model_params(env, outdir, c):
         f"echo '{json.dumps(params)}' > $TARGET")
 
 
-@nest.add_target_with_env(localenv, 'model')
+@nest.add_target_with_env(localenv, 'trained')
 @ns.name_targets
-def model(env, outdir, c):
+def trained(env, outdir, c):
     to_execute = \
             "python3 execute.py --clusters='" + \
             localenv['clusters'] + \
@@ -156,19 +159,19 @@ def model(env, outdir, c):
 # def loss(env, outdir, c):
 #     return env.Command(
 #         join(outdir, 'loss.csv'),
-#         [c['model_params'], c['model']['weights'], c['split']['train'], c['split']['test']],
+#         [c['model_params'], c['trained']['weights'], c['split']['train'], c['split']['test']],
 #         'python3 tcr_vae.py loss $SOURCES $TARGET')
 
 # @nest.add_target_with_env(localenv)
 # def importance(env, outdir, c):
 #     return env.Command(
 #         join(outdir, 'importance.csv'),
-#         [c['model_params'], c['model']['weights'], c['split']['test']],
+#         [c['model_params'], c['trained']['weights'], c['split']['test']],
 #         'python3 tcr_vae.py importance $SOURCES $TARGET')
 
 # @nest.add_target_with_env(localenv)
 # def generated(env, outdir, c):
 #     return env.Command(
 #         join(outdir, 'generated.csv'),
-#         [c['model_params'], c['model']['weights']],
+#         [c['model_params'], c['trained']['weights']],
 #         'python3 tcr_vae.py generate --nseqs 500 $SOURCES $TARGET')
