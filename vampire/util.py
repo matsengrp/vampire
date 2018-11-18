@@ -14,15 +14,16 @@ def cli():
 
 
 @cli.command()
+@click.option('--test-size', default=0.5, help="Proportion of sample to hold out for testing.")
 @click.argument('in_csv', type=click.File('r'))
 @click.argument('out1_csv', type=click.File('w'))
 @click.argument('out2_csv', type=click.File('w'))
-def split(in_csv, out1_csv, out2_csv):
+def split(test_size, in_csv, out1_csv, out2_csv):
     """
-    Do a 50/50 split.
+    Do a train/test split.
     """
     df = pd.read_csv(in_csv)
-    (df1, df2) = train_test_split(df, test_size=0.5)
+    (df1, df2) = train_test_split(df, test_size=test_size)
     df1.to_csv(out1_csv, index=False)
     df2.to_csv(out2_csv, index=False)
 

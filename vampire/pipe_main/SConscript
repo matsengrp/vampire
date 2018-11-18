@@ -99,7 +99,7 @@ def split(env, outdir, c):
         join(outdir, common.strip_dirpath_extn(in_path) + '.train.csv'),
         join(outdir, common.strip_dirpath_extn(in_path) + '.test.csv')],
         in_path,
-        'python3 util.py split $SOURCE $TARGETS')
+        f"python3 util.py split --test-size {localenv['test_size']} $SOURCE $TARGETS")
 
 
 def integer_nest_add(nest_name, int_l):
