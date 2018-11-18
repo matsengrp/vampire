@@ -7,8 +7,7 @@ import os
 import subprocess
 
 
-sbatch_prefix = """
-#!/bin/bash
+sbatch_prefix = """#!/bin/sh
 #SBATCH -c 4
 #SBATCH -N 1
 #SBATCH --exclusive
