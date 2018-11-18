@@ -15,6 +15,7 @@ onehot_df = conversion.avj_raw_triple_to_tcr_df(cdr3_output, v_gene_output, j_ge
 np.allclose(conversion.contiguous_match_counts_df(onehot_df, v_germline, j_germline), contiguous_match_output)
 
 Model diagram with 35 latent dimensions and 100 dense nodes:
+https://user-images.githubusercontent.com/112708/48671639-5ede4900-eae0-11e8-8361-95afc8f9f2f7.png
 """
 
 import numpy as np
