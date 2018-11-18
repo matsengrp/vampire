@@ -24,7 +24,7 @@ DATA = {
     'one-seshadri': {
         'paths': [join(seshadri_path, '02-0249_TCRB.tsv')]
     },
-     'seshadri': {
+    'seshadri': {
         'paths': [join(seshadri_path, '02-0249_TCRB.tsv'),
                   join(seshadri_path, '09-0306_TCRB.tsv')]
     },
@@ -33,8 +33,8 @@ DATA = {
     }
 }
 
-
 # ### Mode-related ###
+
 
 def check_mode():
     if localenv['mode'] not in ['mini', 'default']:
@@ -82,8 +82,8 @@ def preprocess(env, outdir, c):
     """
     in_path = c['sample']
     outfile, = env.Command(
-        join(outdir, common.strip_dirpath_extn(in_path) + '.processed.csv'),
-        in_path,
+        join(outdir,
+             common.strip_dirpath_extn(in_path) + '.processed.csv'), in_path,
         'python3 preprocess_adaptive.py $SOURCE $TARGET')
     return outfile
 
@@ -96,10 +96,11 @@ def split(env, outdir, c):
     """
     in_path = c['preprocess']
     return 'train', 'test', env.Command([
-        join(outdir, common.strip_dirpath_extn(in_path) + '.train.csv'),
-        join(outdir, common.strip_dirpath_extn(in_path) + '.test.csv')],
-        in_path,
-        'python3 util.py split $SOURCE $TARGETS')
+        join(outdir,
+             common.strip_dirpath_extn(in_path) + '.train.csv'),
+        join(outdir,
+             common.strip_dirpath_extn(in_path) + '.test.csv')
+    ], in_path, 'python3 util.py split $SOURCE $TARGETS')
 
 
 def integer_nest_add(nest_name, int_l):
@@ -134,28 +135,27 @@ def model_params(env, outdir, c):
         if k in params:
             params[k] = v
 
-    return env.Command(
-        join(outdir, 'model_params.json'),
-        [],
-        f"echo '{json.dumps(params)}' > $TARGET")
+    return env.Command(join(outdir, 'model_params.json'), [], f"echo '{json.dumps(params)}' > $TARGET")
 
 
 @nest.add_target_with_env(localenv, 'model')
 @ns.name_targets
 def model(env, outdir, c):
+    to_execute = \
+            "python3 execute.py --clusters='" + \
+            localenv['clusters'] + \
+            "' '$SOURCES' '$TARGETS' 'python3 tcr_vae.py train {sources} {targets}'"
     return 'weights', 'diagnostics', env.Command(
-        [join(outdir, 'best_weights.h5'), join(outdir, 'diagnostics.csv')],
-        [c['model_params'], c['split']['train']],
-        f"python3 tcr_vae.py train $SOURCES $TARGETS")
+        [join(outdir, 'best_weights.h5'), join(outdir, 'diagnostics.csv')], [c['model_params'], c['split']['train']],
+        to_execute)
 
 
-@nest.add_target_with_env(localenv)
-def loss(env, outdir, c):
-    return env.Command(
-        join(outdir, 'loss.csv'),
-        [c['model_params'], c['model']['weights'], c['split']['train'], c['split']['test']],
-        'python3 tcr_vae.py loss $SOURCES $TARGET')
-
+# @nest.add_target_with_env(localenv)
+# def loss(env, outdir, c):
+#     return env.Command(
+#         join(outdir, 'loss.csv'),
+#         [c['model_params'], c['model']['weights'], c['split']['train'], c['split']['test']],
+#         'python3 tcr_vae.py loss $SOURCES $TARGET')
 
 # @nest.add_target_with_env(localenv)
 # def importance(env, outdir, c):
@@ -164,10 +164,9 @@ def loss(env, outdir, c):
 #         [c['model_params'], c['model']['weights'], c['split']['test']],
 #         'python3 tcr_vae.py importance $SOURCES $TARGET')
 
-
-@nest.add_target_with_env(localenv)
-def generated(env, outdir, c):
-    return env.Command(
-        join(outdir, 'generated.csv'),
-        [c['model_params'], c['model']['weights']],
-        'python3 tcr_vae.py generate --nseqs 500 $SOURCES $TARGET')
+# @nest.add_target_with_env(localenv)
+# def generated(env, outdir, c):
+#     return env.Command(
+#         join(outdir, 'generated.csv'),
+#         [c['model_params'], c['model']['weights']],
+#         'python3 tcr_vae.py generate --nseqs 500 $SOURCES $TARGET')
