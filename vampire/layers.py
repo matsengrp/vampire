@@ -101,36 +101,9 @@ class CDR3Length(Layer):
         return tuple(input_shape[:-2] + tuple([1]))
 
 
-def cumprod(tensor, axis=0):
-    """
-    Cumulative product.
-
-    There is a known problem with TF's cumprod, giving nans, so this is from
-    https://github.com/tensorflow/tensorflow/issues/3862#issuecomment-327462205
-    """
-    transpose_permutation = None
-    n_dim = len(tensor.get_shape())
-    if n_dim > 1 and axis != 0:
-
-        if axis < 0:
-            axis = n_dim + axis
-
-        transpose_permutation = np.arange(n_dim)
-        transpose_permutation[-1], transpose_permutation[0] = 0, axis
-
-    tensor = tf.transpose(tensor, transpose_permutation)
-
-    def prod(acc, x):
-        return acc * x
-
-    prob = tf.scan(prod, tensor)
-    tensor = tf.transpose(prob, transpose_permutation)
-    return tensor
-
-
 def cumprod_sum(a, length, reverse=False):
     """
-    Given a matrix a, take sum_j prod_{i=0}^j a_{,i} in TensorFlow.
+    Given a matrix a, take sum_{j=0}^{length-1} prod_{i=0}^j a_{,i} in TensorFlow.
 
     If reverse is True, flip the input across the last axis before the operations.
 
@@ -154,10 +127,18 @@ def cumprod_sum(a, length, reverse=False):
 
 class ContiguousMatch(Layer):
     """
-    TODO
+    A layer that takes in a CDR3 sequence and tensors representing the V and J
+    germline amino acids (marginalized over V and J assignments) and spits out
+    the (marginalized) number of amino acids matched by the CDR3.
     """
 
     def __init__(self, v_max_germline_aas, j_max_germline_aas, **kwargs):
+        """
+        :param v_max_germline_aas: the maximum number of V germline AAs that
+        can be matched in the CDR3.
+        :param v_max_germline_aas: the maximum number of J germline AAs that
+        can be matched in the CDR3.
+        """
         self.v_max_germline_aas = v_max_germline_aas
         self.j_max_germline_aas = j_max_germline_aas
         super(ContiguousMatch, self).__init__(**kwargs)

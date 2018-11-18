@@ -66,7 +66,7 @@ class TCRVAE:
             # model='krdav',
             # model='germline_decoder',
             # model='germline_decoder_length',
-            model='germline_match',
+            model='count_match',
             # Model parameters.
             latent_dim=35,
             dense_nodes=100,
