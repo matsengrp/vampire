@@ -33,8 +33,8 @@ DATA = {
     }
 }
 
-# ### Mode-related ###
 
+# ### Mode-related ###
 
 def check_mode():
     if localenv['mode'] not in ['mini', 'default']:
@@ -82,8 +82,8 @@ def preprocess(env, outdir, c):
     """
     in_path = c['sample']
     outfile, = env.Command(
-        join(outdir,
-             common.strip_dirpath_extn(in_path) + '.processed.csv'), in_path,
+        join(outdir, common.strip_dirpath_extn(in_path) + '.processed.csv'),
+        in_path,
         'python3 preprocess_adaptive.py $SOURCE $TARGET')
     return outfile
 
@@ -96,11 +96,10 @@ def split(env, outdir, c):
     """
     in_path = c['preprocess']
     return 'train', 'test', env.Command([
-        join(outdir,
-             common.strip_dirpath_extn(in_path) + '.train.csv'),
-        join(outdir,
-             common.strip_dirpath_extn(in_path) + '.test.csv')
-    ], in_path, 'python3 util.py split $SOURCE $TARGETS')
+        join(outdir, common.strip_dirpath_extn(in_path) + '.train.csv'),
+        join(outdir, common.strip_dirpath_extn(in_path) + '.test.csv')],
+        in_path,
+        'python3 util.py split $SOURCE $TARGETS')
 
 
 def integer_nest_add(nest_name, int_l):
@@ -135,7 +134,10 @@ def model_params(env, outdir, c):
         if k in params:
             params[k] = v
 
-    return env.Command(join(outdir, 'model_params.json'), [], f"echo '{json.dumps(params)}' > $TARGET")
+    return env.Command(
+        join(outdir, 'model_params.json'),
+        [],
+        f"echo '{json.dumps(params)}' > $TARGET")
 
 
 @nest.add_target_with_env(localenv, 'model')
