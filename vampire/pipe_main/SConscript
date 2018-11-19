@@ -158,12 +158,12 @@ def trained(env, outdir, c):
         to_execute)
 
 
-# @nest.add_target_with_env(localenv)
-# def loss(env, outdir, c):
-#     return env.Command(
-#         join(outdir, 'loss.csv'),
-#         [c['model_params'], c['trained']['weights'], c['split']['train'], c['split']['test']],
-#         'python3 tcr_vae.py loss $SOURCES $TARGET')
+@nest.add_target_with_env(localenv)
+def loss(env, outdir, c):
+    return env.Command(
+        join(outdir, 'loss.csv'),
+        [c['model_params'], c['trained']['weights'], c['split']['train'], c['split']['test']],
+        'python3 tcr_vae.py loss $SOURCES $TARGET')
 
 # @nest.add_target_with_env(localenv)
 # def importance(env, outdir, c):
@@ -172,9 +172,9 @@ def trained(env, outdir, c):
 #         [c['model_params'], c['trained']['weights'], c['split']['test']],
 #         'python3 tcr_vae.py importance $SOURCES $TARGET')
 
-# @nest.add_target_with_env(localenv)
-# def generated(env, outdir, c):
-#     return env.Command(
-#         join(outdir, 'generated.csv'),
-#         [c['model_params'], c['trained']['weights']],
-#         'python3 tcr_vae.py generate --nseqs 500 $SOURCES $TARGET')
+@nest.add_target_with_env(localenv)
+def generated(env, outdir, c):
+    return env.Command(
+        join(outdir, 'generated.csv'),
+        [c['model_params'], c['trained']['weights']],
+        'python3 tcr_vae.py generate --nseqs 500 $SOURCES $TARGET')
