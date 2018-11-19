@@ -30,6 +30,9 @@ DATA = {
     },
     'healthy-seshadri': {
         'paths': glob.glob(join(seshadri_path, '[01]*TCRB.tsv'))
+    },
+    'merged-healthy-seshadri': {
+        'paths': ['/home/matsen/re/vampire/vampire/_ignore/all-seshadri-01-TCRB.tsv']
     }
 }
 
