@@ -5,6 +5,8 @@ Execute commands locally or via sbatch.
 import click
 import os
 import subprocess
+import time
+import uuid
 
 
 sbatch_prefix = """#!/bin/sh
@@ -43,11 +45,19 @@ def cli(clusters, sources, targets, to_execute_f_string):
     # Put the batch script in the directory of the first target.
     execution_dir = os.path.dirname(targets.split()[0])
     script_name = 'job.sh'
+    sentinel_path = os.path.join(execution_dir, 'sentinel.'+uuid.uuid4().hex)
     with open(os.path.join(execution_dir, script_name), 'w') as fp:
         fp.write(sbatch_prefix)
         fp.write(to_execute+'\n')
+        fp.write(f'touch {sentinel_path}\n')
 
-    return subprocess.check_output(f'cd {execution_dir}; sbatch --clusters {clusters} {script_name}', shell=True)
+    out = subprocess.check_output(f'cd {execution_dir}; sbatch --clusters {clusters} {script_name}', shell=True)
+    click.echo(out.decode('UTF-8'))
+
+    while not os.path.exists(sentinel_path):
+        time.sleep(5)
+
+    return out
 
 
 if __name__ == '__main__':
