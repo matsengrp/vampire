@@ -89,7 +89,7 @@ def dedup_on_vjcdr3(df):
     c = collections.Counter([len(v) for (_, v) in dup_dict.items()])
     click.echo("A count of the frequency of vjcdr3 duplicates:")
     click.echo(c)
-    indices = sum([random.sample(v, 1) for (_, v) in dup_dict.items()], [])
+    indices = [random.choice(v) for (_, v) in dup_dict.items()]
     indices.sort()
     return df.loc[indices].reset_index(drop=True)
 
