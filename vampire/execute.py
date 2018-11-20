@@ -14,7 +14,7 @@ sbatch_prefix = """#!/bin/sh
 #SBATCH -N 1
 #SBATCH --exclusive
 #SBATCH -p campus
-#SBATCH --mem=31000
+#SBATCH --mem=15000
 #SBATCH -o job_%j.out
 #SBATCH -e job_%j.err
 #SBATCH --mail-type=ALL
@@ -56,6 +56,8 @@ def cli(clusters, sources, targets, to_execute_f_string):
 
     while not os.path.exists(sentinel_path):
         time.sleep(5)
+
+    os.remove(sentinel_path)
 
     return out
 
