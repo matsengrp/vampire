@@ -8,7 +8,6 @@ import subprocess
 import time
 import uuid
 
-
 sbatch_prefix = """#!/bin/sh
 #SBATCH -c 18
 #SBATCH -N 1
@@ -24,16 +23,19 @@ source activate py36
 cd /home/matsen/re/vampire/vampire/
 """
 
+
 def translate_paths(in_paths, dest_dir):
     """
     Copy all files in in_paths to dest_dir and return a tuple consisting of
     their new paths and cp instructions about how to get them there.
     """
+
     def aux():
         for path in in_paths:
             fname = os.path.basename(path)
             dest_path = os.path.join(dest_dir, fname)
             yield dest_path, f'cp {path} {dest_path}'
+
     return zip(*aux())
 
 
@@ -67,9 +69,9 @@ def cli(clusters, sources, targets, to_execute_f_string):
     with open(os.path.join(execution_dir, script_name), 'w') as fp:
         fp.write(sbatch_prefix)
         for instruction in cp_instructions:
-             fp.write(instruction)
+            fp.write(instruction)
         to_execute = to_execute_f_string.format(sources=sources, targets=targets)
-        fp.write(to_execute+'\n')
+        fp.write(to_execute + '\n')
         fp.write(f'touch {sentinel_path}\n')
 
     out = subprocess.check_output(f'cd {execution_dir}; sbatch --clusters {clusters} {script_name}', shell=True)
