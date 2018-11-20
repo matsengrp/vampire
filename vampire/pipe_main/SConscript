@@ -80,9 +80,6 @@ nest.add('data_label', [localenv['data_label']], label_func=lambda p: '_output_'
 # Nest: the sample, named by sample name.
 nest.add('sample', apply_mode(DATA[localenv['data_label']]['paths']), label_func=common.strip_dirpath_extn)
 
-# Nest: the model.
-nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
-
 
 @nest.add_target_with_env(localenv)
 def preprocess(env, outdir, c):
@@ -117,6 +114,9 @@ def integer_nest_add(nest_name, int_l):
     """
     nest.add(nest_name, apply_mode(int_l), label_func=common.zero_pad_list_func(int_l))
 
+
+# Nest: the model.
+nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
 
 # # Nest: the dimension of the latent space.
 # integer_nest_add('latent_dim', [30, 35, 40])
