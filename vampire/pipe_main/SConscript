@@ -168,12 +168,14 @@ def loss(env, outdir, c):
         [c['model_params'], c['trained']['weights'], c['split']['train'], c['split']['test']],
         'python3 tcr_vae.py loss $SOURCES $TARGET')
 
+
 # @nest.add_target_with_env(localenv)
 # def importance(env, outdir, c):
 #     return env.Command(
 #         join(outdir, 'importance.csv'),
 #         [c['model_params'], c['trained']['weights'], c['split']['test']],
 #         'python3 tcr_vae.py importance $SOURCES $TARGET')
+
 
 @nest.add_target_with_env(localenv)
 def generated(env, outdir, c):
