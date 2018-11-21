@@ -20,11 +20,14 @@ conda install -y numpy
 pip install olga
 ```
 
-Test it by running:
+Test it by running
 
 ```
 olga-compute_pgen --humanTRB CASSLGRDGGHEQYF
 ```
+
+inside the `olga` conda environment.
+
 
 
 ## Running
