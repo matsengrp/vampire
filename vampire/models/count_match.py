@@ -48,12 +48,12 @@ def build(params):
         """
         The loss function is the sum of the cross-entropy and KL divergence.
         """
-        # Notice that "objectives.categorical_crossentropy(io_encoder,
-        # io_decoder)" is a vector so it is averaged using "K.mean":
-        xent_loss = io_decoder.shape.num_elements() * K.mean(
+        # Here we multiply by the number of sites, so that we have a
+        # total loss across the sites rather than a mean loss.
+        xent_loss = params['max_cdr3_len'] * K.mean(
             objectives.categorical_crossentropy(io_encoder, io_decoder))
         kl_loss = -0.5 * K.sum(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
-        kl_loss *= 1 / 4 * params['batch_size']  # Because we have four input/output pairs.
+        kl_loss *= params['beta'] * params['batch_size']
         return (xent_loss + kl_loss)
 
     def mean_squared_error_2d(io_encoder, io_decoder):
@@ -145,16 +145,20 @@ def build(params):
         loss={
             'cdr3_output': vae_loss,
             'cdr3_length_output': keras.losses.mean_squared_error,
-            'v_gene_output': vae_loss,
-            'j_gene_output': vae_loss,
+            'v_gene_output': keras.losses.categorical_crossentropy,
+            'j_gene_output': keras.losses.categorical_crossentropy,
             'contiguous_match_output': mean_squared_error_2d
         },
         loss_weights={
+            # Keep the cdr3_output weight to be 1. The weights are relative
+            # anyhow, and buried inside the vae_loss is a beta weight that
+            # determines how much weight the KL loss has. If we keep this
+            # weight as 1 then we can interpret beta in a straightforward way.
             'cdr3_output': 1.,
-            'cdr3_length_output': 1000.,
-            'v_gene_output': 5.,
-            'j_gene_output': 5.,
-            'contiguous_match_output': 500.
+            'cdr3_length_output': 2.,
+            'v_gene_output': 4.,
+            'j_gene_output': 4.,
+            'contiguous_match_output': 10.
         })
 
     return {'encoder': encoder, 'decoder': decoder, 'vae': vae}
