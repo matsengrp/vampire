@@ -24,12 +24,18 @@ DATA = {
     'one-seshadri': {
         'paths': [join(seshadri_path, '02-0249_TCRB.tsv')]
     },
-     'seshadri': {
+    'one-seshadri-tb': {
+        'paths': [join(seshadri_path, 'TB-1052-2M_TCRB.tsv')]
+    },
+    'seshadri': {
         'paths': [join(seshadri_path, '02-0249_TCRB.tsv'),
                   join(seshadri_path, '09-0306_TCRB.tsv')]
     },
     'healthy-seshadri': {
         'paths': glob.glob(join(seshadri_path, '[01]*TCRB.tsv'))
+    },
+    'merged-healthy-seshadri': {
+        'paths': ['/home/matsen/re/vampire/vampire/_ignore/all-seshadri-01-TCRB.tsv']
     }
 }
 
@@ -99,7 +105,7 @@ def split(env, outdir, c):
         join(outdir, common.strip_dirpath_extn(in_path) + '.train.csv'),
         join(outdir, common.strip_dirpath_extn(in_path) + '.test.csv')],
         in_path,
-        'python3 util.py split $SOURCE $TARGETS')
+        f"python3 util.py split --test-size {localenv['test_size']} $SOURCE $TARGETS")
 
 
 def integer_nest_add(nest_name, int_l):
@@ -108,6 +114,9 @@ def integer_nest_add(nest_name, int_l):
     """
     nest.add(nest_name, apply_mode(int_l), label_func=common.zero_pad_list_func(int_l))
 
+
+# Nest: the model.
+nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
 
 # # Nest: the dimension of the latent space.
 # integer_nest_add('latent_dim', [30, 35, 40])
@@ -140,20 +149,23 @@ def model_params(env, outdir, c):
         f"echo '{json.dumps(params)}' > $TARGET")
 
 
-@nest.add_target_with_env(localenv, 'model')
+@nest.add_target_with_env(localenv, 'trained')
 @ns.name_targets
-def model(env, outdir, c):
+def trained(env, outdir, c):
+    to_execute = \
+            "python3 execute.py --clusters='" + \
+            localenv['clusters'] + \
+            "' '$SOURCES' '$TARGETS' 'python3 tcr_vae.py train {sources} {targets}'"
     return 'weights', 'diagnostics', env.Command(
-        [join(outdir, 'best_weights.h5'), join(outdir, 'diagnostics.csv')],
-        [c['model_params'], c['split']['train']],
-        f"python3 tcr_vae.py train $SOURCES $TARGETS")
+        [join(outdir, 'best_weights.h5'), join(outdir, 'diagnostics.csv')], [c['model_params'], c['split']['train']],
+        to_execute)
 
 
 @nest.add_target_with_env(localenv)
 def loss(env, outdir, c):
     return env.Command(
         join(outdir, 'loss.csv'),
-        [c['model_params'], c['model']['weights'], c['split']['train'], c['split']['test']],
+        [c['model_params'], c['trained']['weights'], c['split']['train'], c['split']['test']],
         'python3 tcr_vae.py loss $SOURCES $TARGET')
 
 
@@ -161,7 +173,7 @@ def loss(env, outdir, c):
 # def importance(env, outdir, c):
 #     return env.Command(
 #         join(outdir, 'importance.csv'),
-#         [c['model_params'], c['model']['weights'], c['split']['test']],
+#         [c['model_params'], c['trained']['weights'], c['split']['test']],
 #         'python3 tcr_vae.py importance $SOURCES $TARGET')
 
 
@@ -169,5 +181,13 @@ def loss(env, outdir, c):
 def generated(env, outdir, c):
     return env.Command(
         join(outdir, 'generated.csv'),
-        [c['model_params'], c['model']['weights']],
-        'python3 tcr_vae.py generate --nseqs 500 $SOURCES $TARGET')
+        [c['model_params'], c['trained']['weights']],
+        'python3 tcr_vae.py generate --nseqs 500 $SOURCES $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def pgen(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['generated'])+'.pgen.csv',
+        c['generated'],
+        'scripts/olga-pgen.sh $SOURCE $TARGET')
