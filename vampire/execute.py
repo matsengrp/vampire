@@ -44,16 +44,21 @@ def translate_paths(in_paths, dest_dir):
 
 @click.command()
 @click.option('--clusters', default='', help='Clusters to submit to. Default is local execution.')
-@click.argument('sources', help='Input files as a space-separated list.')
-@click.argument('targets', help='Output files as a space-separated list.')
-@click.argument(
-    'to_execute_f_string',
-    help="The command to execute, where '{sources}' gets replaced by the sources argument, \
-            and '{targets}' gets replaced by the targets argument.")
+@click.argument('sources')
+@click.argument('targets')
+@click.argument('to_execute_f_string')
 def cli(clusters, sources, targets, to_execute_f_string):
     """
     Execute a command with certain sources and targets, perhaps on a SLURM
     cluster via sbatch. Wait until the command has completed.
+
+    SOURCES: Input files as a space-separated list.
+
+    TARGETS: Output files as a space-separated list.
+
+    TO_EXECUTE_F_STRING: The command to execute, where '{sources}' gets
+    replaced by the sources argument, and '{targets}' gets replaced by the
+    targets argument.
     """
 
     if clusters == '':
