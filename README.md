@@ -9,6 +9,23 @@ conda install -y biopython click flake8 keras matplotlib pandas pydot pytest sci
 pip install nestly
 ```
 
+The full SCons pipeline includes running [OLGA](https://github.com/zsethna/OLGA).
+If you would like to run this component, we need a separate conda environment named `olga` because OLGA is a Python 2.7 program.
+Create it as follows:
+
+```
+conda create -y -n olga python=2.7
+source activate olga
+conda install -y numpy
+pip install olga
+```
+
+Test it by running:
+
+```
+olga-compute_pgen --humanTRB CASSLGRDGGHEQYF
+```
+
 
 ## Running
 
