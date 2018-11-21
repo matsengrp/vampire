@@ -182,4 +182,12 @@ def generated(env, outdir, c):
     return env.Command(
         join(outdir, 'generated.csv'),
         [c['model_params'], c['trained']['weights']],
-        'python3 tcr_vae.py generate --nseqs 500 $SOURCES $TARGET')
+        'python3 tcr_vae.py generate --nseqs 500 $SOURCES $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def pgen(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['generated'])+'.pgen.csv',
+        c['generated'],
+        'scripts/olga-pgen.sh $SOURCE $TARGET')
