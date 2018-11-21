@@ -29,7 +29,8 @@ cd /home/matsen/re/vampire/vampire/
 def translate_paths(in_paths, dest_dir):
     """
     Copy all files in in_paths to dest_dir and return a tuple consisting of
-    their new paths and cp instructions about how to get them there.
+    a list of their new paths and a list of cp instructions about how to get
+    them there.
     """
 
     def aux():
@@ -43,18 +44,20 @@ def translate_paths(in_paths, dest_dir):
 
 @click.command()
 @click.option('--clusters', default='', help='Clusters to submit to. Default is local execution.')
-@click.argument('sources')
-@click.argument('targets')
-@click.argument('to_execute_f_string')
+@click.argument('sources', help='Input files as a space-separated list.')
+@click.argument('targets', help='Output files as a space-separated list.')
+@click.argument(
+    'to_execute_f_string',
+    help="The command to execute, where '{sources}' gets replaced by the sources argument, \
+            and '{targets}' gets replaced by the targets argument.")
 def cli(clusters, sources, targets, to_execute_f_string):
     """
-    Execute a command with certain sources and targets.
+    Execute a command with certain sources and targets, perhaps on a SLURM
+    cluster via sbatch. Wait until the command has completed.
     """
 
-    # Put the batch script in the directory of the first target.
-    execution_dir = os.path.dirname(targets.split()[0])
-
     if clusters == '':
+        # Local execution.
         to_execute = to_execute_f_string.format(sources=sources, targets=targets)
         click.echo("Executing locally:")
         click.echo(to_execute)
@@ -69,22 +72,23 @@ def cli(clusters, sources, targets, to_execute_f_string):
     else:
         cp_instructions = []
 
+    # Put the batch script in the directory of the first target.
+    execution_dir = os.path.dirname(targets.split()[0])
     script_name = 'job.sh'
     sentinel_path = os.path.join(execution_dir, 'sentinel.txt')
     with open(os.path.join(execution_dir, script_name), 'w') as fp:
         fp.write(sbatch_prelude)
         for instruction in cp_instructions:
             fp.write(instruction + '\n')
-        to_execute = to_execute_f_string.format(sources=sources, targets=targets)
-        fp.write(to_execute + '\n')
+        fp.write(to_execute_f_string.format(sources=sources, targets=targets) + '\n')
         fp.write(f'touch {sentinel_path}\n')
 
     out = subprocess.check_output(f'cd {execution_dir}; sbatch --clusters {clusters} {script_name}', shell=True)
     click.echo(out.decode('UTF-8'))
 
+    # Wait until the sentinel file appears, then clean up.
     while not os.path.exists(sentinel_path):
         time.sleep(5)
-
     os.remove(sentinel_path)
 
     return out
