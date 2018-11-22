@@ -108,27 +108,30 @@ def split(env, outdir, c):
         f"python3 util.py split --test-size {localenv['test_size']} $SOURCE $TARGETS")
 
 
-def integer_nest_add(nest_name, int_l):
+def numerical_nest_add(nest_name, number_list):
     """
     Add an nest for a list of integers, with nice zero-padded directory names.
     """
-    nest.add(nest_name, apply_mode(int_l), label_func=common.zero_pad_list_func(int_l))
+    nest.add(nest_name, apply_mode(number_list), label_func=common.zero_pad_list_func(number_list))
 
 
-# Nest: the model.
-nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
+# # Nest: the model.
+# nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
 
 # # Nest: the dimension of the latent space.
-# integer_nest_add('latent_dim', [30, 35, 40])
+# numerical_nest_add('latent_dim', [30, 35, 40])
 
 # # Nest: the number of dense nodes.
-# integer_nest_add('dense_nodes', [50, 100, 150, 200])
+# numerical_nest_add('dense_nodes', [50, 100, 150, 200])
 
 # # Nest: the amino acid embedding dimension.
-# integer_nest_add('aa_embedding_dim', [10, 15, 20, 21])
+# numerical_nest_add('aa_embedding_dim', [10, 15, 20, 21])
 
 # # Nest: the V gene embedding dimension.
-# integer_nest_add('v_gene_embedding_dim', [20, 30, 40])
+# numerical_nest_add('v_gene_embedding_dim', [20, 30, 40])
+
+# Nest: the strength of the KL component of the VAE loss.
+numerical_nest_add('beta', [0.25, 1., 4., 16., 64.])
 
 
 @nest.add_target_with_env(localenv)
