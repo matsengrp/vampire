@@ -60,12 +60,14 @@ class TCRVAE:
     def default_params(cls):
         """
         Return a dictionary with default parameters.
+
+        The parameters below should be self explanatory except for:
+
+        * beta is the weight put on the KL term of the VAE. See the models for
+          how it gets incorporated.
         """
         return dict(
             # Models:
-            # model='krdav',
-            # model='germline_decoder',
-            # model='germline_decoder_length',
             model='count_match',
             # Model parameters.
             latent_dim=35,
