@@ -31,16 +31,16 @@ def build(params):
         # Reparameterization trick!
         return (z_mean + K.exp(z_log_var / 2) * epsilon)
 
-    def vae_loss(io_encoder, io_decoder):
+    def vae_cdr3_loss(io_encoder, io_decoder):
         """
-        The loss function is the sum of the cross-entropy and KL divergence.
+        The loss function is the sum of the cross-entropy and KL divergence. KL
+        gets a weight of beta.
         """
-        # Notice that "objectives.categorical_crossentropy(io_encoder,
-        # io_decoder)" is a vector so it is averaged using "K.mean":
-        xent_loss = io_decoder.shape.num_elements() * K.mean(
-            objectives.categorical_crossentropy(io_encoder, io_decoder))
+        # Here we multiply by the number of sites, so that we have a
+        # total loss across the sites rather than a mean loss.
+        xent_loss = params['max_cdr3_len'] * K.mean(objectives.categorical_crossentropy(io_encoder, io_decoder))
         kl_loss = -0.5 * K.sum(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
-        kl_loss *= 1 / 3 * params['batch_size']  # Because we have three input/output
+        kl_loss *= params['beta']
         return (xent_loss + kl_loss)
 
     # Input:
@@ -107,7 +107,13 @@ def build(params):
     encoder = Model([cdr3_input, v_gene_input, j_gene_input], [z_mean, z_log_var])
     decoder = Model(z_mean_input, [decoder_cdr3_output, decoder_v_gene_output, decoder_j_gene_output])
     vae = Model([cdr3_input, v_gene_input, j_gene_input], [cdr3_output, v_gene_output, j_gene_output])
-    vae.compile(optimizer="adam", loss=vae_loss)
+    vae.compile(
+        optimizer="adam",
+        loss={
+            'cdr3_output': vae_cdr3_loss,
+            'v_gene_output': keras.losses.categorical_crossentropy,
+            'j_gene_output': keras.losses.categorical_crossentropy,
+        })
 
     return {'encoder': encoder, 'decoder': decoder, 'vae': vae}
 
