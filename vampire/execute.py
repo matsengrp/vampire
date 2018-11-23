@@ -44,10 +44,11 @@ def translate_paths(in_paths, dest_dir):
 
 @click.command()
 @click.option('--clusters', default='', help='Clusters to submit to. Default is local execution.')
+@click.option('--script-name', default='job.sh', help='Name for job script.')
 @click.argument('sources')
 @click.argument('targets')
 @click.argument('to_execute_f_string')
-def cli(clusters, sources, targets, to_execute_f_string):
+def cli(clusters, script_name, sources, targets, to_execute_f_string):
     """
     Execute a command with certain sources and targets, perhaps on a SLURM
     cluster via sbatch. Wait until the command has completed.
@@ -81,7 +82,6 @@ def cli(clusters, sources, targets, to_execute_f_string):
 
     # Put the batch script in the directory of the first target.
     execution_dir = os.path.dirname(targets.split()[0])
-    script_name = 'job.sh'
     sentinel_path = os.path.join(execution_dir, 'sentinel.' + job_uuid)
     with open(os.path.join(execution_dir, script_name), 'w') as fp:
         fp.write(sbatch_prelude)

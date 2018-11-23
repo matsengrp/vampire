@@ -77,7 +77,8 @@ def cluster_execution_string(command):
     *The command string but where $SOURCES is replaced by {sources} and
     $TARGETS is replaced by {targets}.
     """
-    return f"python3 execute.py --clusters='{localenv['clusters']}' '$SOURCES' '$TARGETS' '{command}'"
+    script_name = command.split()[2]+'.sh'
+    return f"python3 execute.py --clusters='{localenv['clusters']}' --script-name={script_name} '$SOURCES' '$TARGETS' '{command}'"
 
 
 # ### Nests and targets ###
