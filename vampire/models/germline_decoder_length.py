@@ -117,16 +117,6 @@ def build(params):
             'cdr3_length_output': keras.losses.mean_squared_error,
             'v_gene_output': keras.losses.categorical_crossentropy,
             'j_gene_output': keras.losses.categorical_crossentropy,
-        },
-        loss_weights={
-            # Keep the cdr3_output weight to be 1. The weights are relative
-            # anyhow, and buried inside the vae_cdr3_loss is a beta weight that
-            # determines how much weight the KL loss has. If we keep this
-            # weight as 1 then we can interpret beta in a straightforward way.
-            'cdr3_output': 1.,
-            'cdr3_length_output': 1000.,
-            'v_gene_output': 5.,
-            'j_gene_output': 5.
         })
 
     return {'encoder': encoder, 'decoder': decoder, 'vae': vae}
