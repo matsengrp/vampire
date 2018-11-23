@@ -60,12 +60,14 @@ class TCRVAE:
     def default_params(cls):
         """
         Return a dictionary with default parameters.
+
+        The parameters below should be self explanatory except for:
+
+        * beta is the weight put on the KL term of the VAE. See the models for
+          how it gets incorporated.
         """
         return dict(
             # Models:
-            # model='krdav',
-            # model='germline_decoder',
-            # model='germline_decoder_length',
             model='count_match',
             # Model parameters.
             latent_dim=35,
@@ -73,6 +75,7 @@ class TCRVAE:
             aa_embedding_dim=21,
             v_gene_embedding_dim=30,
             j_gene_embedding_dim=13,
+            beta=1.,
             # Input data parameters.
             max_cdr3_len=30,
             n_aas=len(conversion.AA_LIST),
@@ -207,6 +210,10 @@ class TCRVAE:
         We emphasize that this is _one_ importance sample. Run this lots and
         take the average to get a good estimate.
 
+        The VAE is allowed to have features besides the input of CDR3 amino
+        acids and V/J genes. We have to have those be deterministically
+        computed from the input, otherwise the methods below won't work.
+
         Stupid notes:
         * We could save time by only computing the encoding and the _obs
         variables once.
@@ -229,7 +236,8 @@ class TCRVAE:
         aa_probs, v_gene_probs, j_gene_probs = self.decode(z_sample)
 
         # Onehot-encoded observations.
-        aa_obs, v_gene_obs, j_gene_obs = self.prepare_data(x_df)
+        # We use interpret_output to cut down to what we care about.
+        aa_obs, v_gene_obs, j_gene_obs = self.interpret_output(self.prepare_data(x_df))
 
         # Loop over observations.
         for i in range(len(x_df)):

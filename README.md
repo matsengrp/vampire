@@ -38,7 +38,7 @@ Get a demo by running `scons` inside the `vampire` directory.
 ## Contributors
 
 * Original version (immortalized in the [`original` branch](https://github.com/matsengrp/vampire/tree/original)) by Kristian Davidsen.
-* Pedantic rewrite, sconsery, and extension by Erick Matsen.
+* Pedantic rewrite, sconsery, extension, and additional models by Erick Matsen.
 * Contributions from Phil Bradley, Will DeWitt, Jean Feng, Eli Harkins, and Branden Olson.
 
 

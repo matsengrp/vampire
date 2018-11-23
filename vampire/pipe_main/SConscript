@@ -22,7 +22,7 @@ DATA = {
         'paths': ['sample_data/02-0249_TCRB.4000.tsv.bz2']
     },
     'one-seshadri': {
-        'paths': [join(seshadri_path, '02-0249_TCRB.tsv')]
+        'paths': [join(seshadri_path, '09-0306_TCRB.tsv')]
     },
     'one-seshadri-tb': {
         'paths': [join(seshadri_path, 'TB-1052-2M_TCRB.tsv')]
@@ -40,7 +40,7 @@ DATA = {
 }
 
 
-# ### Mode-related ###
+# ### Command-line-flag related ###
 
 def check_mode():
     if localenv['mode'] not in ['mini', 'default']:
@@ -68,6 +68,18 @@ def default_params_by_mode():
         params['epochs'] = 5
 
     return params
+
+
+def cluster_execution_string(command):
+    """
+    Apply this to your scons command string* to get it to execute on the
+    cluster.
+
+    *The command string but where $SOURCES is replaced by {sources} and
+    $TARGETS is replaced by {targets}.
+    """
+    script_name = command.split()[2]+'.sh'
+    return f"python3 execute.py --clusters='{localenv['clusters']}' --script-name={script_name} '$SOURCES' '$TARGETS' '{command}'"
 
 
 # ### Nests and targets ###
@@ -108,27 +120,31 @@ def split(env, outdir, c):
         f"python3 util.py split --test-size {localenv['test_size']} $SOURCE $TARGETS")
 
 
-def integer_nest_add(nest_name, int_l):
+def numerical_nest_add(nest_name, number_list):
     """
-    Add an nest for a list of integers, with nice zero-padded directory names.
+    Add an nest for a list of non-negative numbers, with nice zero-padded
+    directory names.
     """
-    nest.add(nest_name, apply_mode(int_l), label_func=common.zero_pad_list_func(int_l))
+    nest.add(nest_name, apply_mode(number_list), label_func=common.zero_pad_list_func(number_list))
 
 
-# Nest: the model.
-nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
+# # Nest: the model.
+# nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
 
 # # Nest: the dimension of the latent space.
-# integer_nest_add('latent_dim', [30, 35, 40])
+# numerical_nest_add('latent_dim', [30, 35, 40])
 
 # # Nest: the number of dense nodes.
-# integer_nest_add('dense_nodes', [50, 100, 150, 200])
+# numerical_nest_add('dense_nodes', [50, 100, 150, 200])
 
 # # Nest: the amino acid embedding dimension.
-# integer_nest_add('aa_embedding_dim', [10, 15, 20, 21])
+# numerical_nest_add('aa_embedding_dim', [10, 15, 20, 21])
 
 # # Nest: the V gene embedding dimension.
-# integer_nest_add('v_gene_embedding_dim', [20, 30, 40])
+# numerical_nest_add('v_gene_embedding_dim', [20, 30, 40])
+
+# Nest: the strength of the KL component of the VAE loss.
+numerical_nest_add('beta', [2.**i for i in range(-4,0)])
 
 
 @nest.add_target_with_env(localenv)
@@ -152,13 +168,9 @@ def model_params(env, outdir, c):
 @nest.add_target_with_env(localenv, 'trained')
 @ns.name_targets
 def trained(env, outdir, c):
-    to_execute = \
-            "python3 execute.py --clusters='" + \
-            localenv['clusters'] + \
-            "' '$SOURCES' '$TARGETS' 'python3 tcr_vae.py train {sources} {targets}'"
     return 'weights', 'diagnostics', env.Command(
         [join(outdir, 'best_weights.h5'), join(outdir, 'diagnostics.csv')], [c['model_params'], c['split']['train']],
-        to_execute)
+        cluster_execution_string('python3 tcr_vae.py train {sources} {targets}'))
 
 
 @nest.add_target_with_env(localenv)
@@ -169,12 +181,12 @@ def loss(env, outdir, c):
         'python3 tcr_vae.py loss $SOURCES $TARGET')
 
 
-# @nest.add_target_with_env(localenv)
-# def importance(env, outdir, c):
-#     return env.Command(
-#         join(outdir, 'importance.csv'),
-#         [c['model_params'], c['trained']['weights'], c['split']['test']],
-#         'python3 tcr_vae.py importance $SOURCES $TARGET')
+@nest.add_target_with_env(localenv)
+def importance(env, outdir, c):
+    return env.Command(
+        join(outdir, 'importance.test.500.csv'),
+        [c['model_params'], c['trained']['weights'], c['split']['test']],
+        cluster_execution_string('python3 tcr_vae.py importance --limit-input-to 500 {sources} {targets}'))
 
 
 @nest.add_target_with_env(localenv)

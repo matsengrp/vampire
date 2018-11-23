@@ -7,6 +7,7 @@ import os
 import subprocess
 import time
 import uuid
+import re
 
 sbatch_prelude = """#!/bin/bash
 #SBATCH -c 18
@@ -44,10 +45,11 @@ def translate_paths(in_paths, dest_dir):
 
 @click.command()
 @click.option('--clusters', default='', help='Clusters to submit to. Default is local execution.')
+@click.option('--script-name', default='job.sh', help='Name for job script.')
 @click.argument('sources')
 @click.argument('targets')
 @click.argument('to_execute_f_string')
-def cli(clusters, sources, targets, to_execute_f_string):
+def cli(clusters, script_name, sources, targets, to_execute_f_string):
     """
     Execute a command with certain sources and targets, perhaps on a SLURM
     cluster via sbatch. Wait until the command has completed.
@@ -61,6 +63,10 @@ def cli(clusters, sources, targets, to_execute_f_string):
     targets argument.
     """
 
+    # Remove all quotes: they can get in the way with our basename noodling.
+    sources = re.sub('"*\'*','', sources)
+    targets = re.sub('"*\'*','', targets)
+
     if clusters == '':
         # Local execution.
         to_execute = to_execute_f_string.format(sources=sources, targets=targets)
@@ -68,9 +74,11 @@ def cli(clusters, sources, targets, to_execute_f_string):
         click.echo(to_execute)
         return subprocess.check_output(to_execute, shell=True)
 
+    job_uuid = uuid.uuid4().hex
+
     if clusters == 'beagle':
         # Put the data where beagle likes it.
-        beagle_input_dir = os.path.join('/mnt/beagle/delete10/matsen_e/vampire/uuid', uuid.uuid4().hex)
+        beagle_input_dir = os.path.join('/mnt/beagle/delete10/matsen_e/vampire/uuid', job_uuid)
         sources_l, cp_instructions = translate_paths(sources.split(), beagle_input_dir)
         cp_instructions = [f'mkdir -p {beagle_input_dir}'] + list(cp_instructions)
         sources = ' '.join(sources_l)
@@ -79,8 +87,7 @@ def cli(clusters, sources, targets, to_execute_f_string):
 
     # Put the batch script in the directory of the first target.
     execution_dir = os.path.dirname(targets.split()[0])
-    script_name = 'job.sh'
-    sentinel_path = os.path.join(execution_dir, 'sentinel.txt')
+    sentinel_path = os.path.join(execution_dir, 'sentinel.' + job_uuid)
     with open(os.path.join(execution_dir, script_name), 'w') as fp:
         fp.write(sbatch_prelude)
         for instruction in cp_instructions:

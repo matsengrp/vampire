@@ -78,8 +78,8 @@ def read_data_csv(fname):
 
 def zero_pad_list_func(l):
     """
-    Make a function from a list of natural numbers to pad this list on the left
-    with zeros according to maximum length.
+    Make a function from a list of positive numbers to pad this list on the
+    left with zeros according to length of the maximum number.
     """
     max_len = len(str(max(l)))
     return lambda i: str(i).zfill(max_len)
