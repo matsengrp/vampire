@@ -155,11 +155,15 @@ def build(params):
             # anyhow, and buried inside the vae_cdr3_loss is a beta weight that
             # determines how much weight the KL loss has. If we keep this
             # weight as 1 then we can interpret beta in a straightforward way.
+            #
+            # The rest of these weights were set just by trying to get the
+            # contribution of all of the losses to be about the same for a
+            # single arbitrarily-chosen data set.
             'cdr3_output': 1.,
             'cdr3_length_output': 2.,
-            'v_gene_output': 4.,
+            'v_gene_output': 50.,
             'j_gene_output': 4.,
-            'contiguous_match_output': 10.
+            'contiguous_match_output': 20.
         })
 
     return {'encoder': encoder, 'decoder': decoder, 'vae': vae}
