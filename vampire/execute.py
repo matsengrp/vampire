@@ -7,6 +7,7 @@ import os
 import subprocess
 import time
 import uuid
+import re
 
 sbatch_prelude = """#!/bin/bash
 #SBATCH -c 18
@@ -61,6 +62,10 @@ def cli(clusters, script_name, sources, targets, to_execute_f_string):
     replaced by the sources argument, and '{targets}' gets replaced by the
     targets argument.
     """
+
+    # Remove all quotes: they can get in the way with our basename noodling.
+    sources = re.sub('"*\'*','', sources)
+    targets = re.sub('"*\'*','', targets)
 
     if clusters == '':
         # Local execution.
