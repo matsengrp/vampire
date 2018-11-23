@@ -72,7 +72,8 @@ def default_params_by_mode():
 
 def cluster_execution_string(command):
     """
-    Apply this to your scons command string* to get it to execute on the cluster.
+    Apply this to your scons command string* to get it to execute on the
+    cluster.
 
     *The command string but where $SOURCES is replaced by {sources} and
     $TARGETS is replaced by {targets}.
@@ -121,7 +122,8 @@ def split(env, outdir, c):
 
 def numerical_nest_add(nest_name, number_list):
     """
-    Add an nest for a list of integers, with nice zero-padded directory names.
+    Add an nest for a list of non-negative numbers, with nice zero-padded
+    directory names.
     """
     nest.add(nest_name, apply_mode(number_list), label_func=common.zero_pad_list_func(number_list))
 
