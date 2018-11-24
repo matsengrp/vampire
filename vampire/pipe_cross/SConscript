@@ -62,4 +62,4 @@ def loss(env, outdir, c):
     return env.Command(
         join(outdir, join(common.strip_dirpath_extn(c['run_on']), 'loss.csv')),
         sources,
-        'python3 tcr_vae.py loss $SOURCES $TARGET')
+        'tcr-vae loss $SOURCES $TARGET')
