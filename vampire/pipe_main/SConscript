@@ -78,7 +78,7 @@ def cluster_execution_string(command):
     *The command string but where $SOURCES is replaced by {sources} and
     $TARGETS is replaced by {targets}.
     """
-    script_name = command.split()[2]+'.sh'
+    script_name = command.split()[1]+'.sh'
     return f"python3 execute.py --clusters='{localenv['clusters']}' --script-name={script_name} '$SOURCES' '$TARGETS' '{command}'"
 
 
@@ -170,7 +170,7 @@ def model_params(env, outdir, c):
 def trained(env, outdir, c):
     return 'weights', 'diagnostics', env.Command(
         [join(outdir, 'best_weights.h5'), join(outdir, 'diagnostics.csv')], [c['model_params'], c['split']['train']],
-        cluster_execution_string('python3 tcr_vae.py train {sources} {targets}'))
+        cluster_execution_string('tcr-vae train {sources} {targets}'))
 
 
 @nest.add_target_with_env(localenv)
@@ -178,7 +178,7 @@ def loss(env, outdir, c):
     return env.Command(
         join(outdir, 'loss.csv'),
         [c['model_params'], c['trained']['weights'], c['split']['train'], c['split']['test']],
-        'python3 tcr_vae.py loss $SOURCES $TARGET')
+        'tcr-vae loss $SOURCES $TARGET')
 
 
 @nest.add_target_with_env(localenv)
@@ -186,7 +186,7 @@ def importance(env, outdir, c):
     return env.Command(
         join(outdir, 'importance.test.500.csv'),
         [c['model_params'], c['trained']['weights'], c['split']['test']],
-        cluster_execution_string('python3 tcr_vae.py importance --limit-input-to 500 {sources} {targets}'))
+        cluster_execution_string('tcr-vae importance --limit-input-to 500 {sources} {targets}'))
 
 
 @nest.add_target_with_env(localenv)
@@ -194,7 +194,7 @@ def generated(env, outdir, c):
     return env.Command(
         join(outdir, 'generated.csv'),
         [c['model_params'], c['trained']['weights']],
-        'python3 tcr_vae.py generate --nseqs 500 $SOURCES $TARGET')[0]
+        'tcr-vae generate --nseqs 500 $SOURCES $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)

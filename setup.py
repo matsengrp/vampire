@@ -8,5 +8,7 @@ setup(
     author='Matsen group',
     author_email='ematsen@gmail.com',
     packages=['vampire'],
-    package_data={'vampire': ['data/*']}
-    )
+    package_data={'vampire': ['data/*']},
+    entry_points={'console_scripts': [
+        'tcr-vae=vampire.tcr_vae:cli',
+    ]})

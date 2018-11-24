@@ -2,11 +2,18 @@
 
 ## Install
 
+Install dependencies:
 ```
 conda create -n py36 python=3.6
 source activate py36
 conda install -y biopython click flake8 keras matplotlib pandas pydot pytest scikit-learn scons seaborn yapf
 pip install nestly
+```
+Then:
+```
+git clone https://github.com/matsengrp/vampire.git
+cd vampire
+pip install .
 ```
 
 The full SCons pipeline includes running [OLGA](https://github.com/zsethna/OLGA).
@@ -32,7 +39,8 @@ inside the `olga` conda environment.
 
 ## Running
 
-Get a demo by running `scons` inside the `vampire` directory.
+Get a list of example commands by running `scons -n` inside the `vampire` directory.
+Execute the commands by running `scons`.
 
 
 ## Contributors
