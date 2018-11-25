@@ -184,7 +184,7 @@ def loss(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def importance(env, outdir, c):
     return env.Command(
-        join(outdir, 'importance.test.500.csv'),
+        join(outdir, 'test.500.pvae.csv'),
         [c['model_params'], c['trained']['weights'], c['split']['test']],
         cluster_execution_string('tcr-vae importance --limit-input-to 500 {sources} {targets}'))
 
@@ -203,3 +203,14 @@ def pgen(env, outdir, c):
         common.strip_extn(c['generated'])+'.pgen.csv',
         c['generated'],
         'scripts/olga-pgen.sh $SOURCE $TARGET')
+
+
+@nest.add_target_with_env(localenv)
+def summarized(env, outdir, c):
+    name = '/'.join(outdir.split('/')[-2:])
+    return env.Command(
+        join(outdir, 'summarized.csv'),
+        [c['importance'], c['pgen'], c['loss']],
+        'python3 util.py summarize --name '+
+            name+
+            ' --prefix test_ --pvae ${SOURCES[0]} --generated-pgen ${SOURCES[1]} ${SOURCES[2]} $TARGET')
