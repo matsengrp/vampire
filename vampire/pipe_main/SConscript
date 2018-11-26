@@ -217,15 +217,12 @@ def pgen(env, outdir, c):
 
 @nest.add_target_with_env(localenv)
 def summarized(env, outdir, c):
-    name = '/'.join(outdir.split('/')[-2:])
     summarized = join(outdir, 'summarized.csv')
     c['summarized_agg'].append((summarized, c))
     return env.Command(
         summarized,
         [c['pvae'], c['pgen'], c['loss']],
-        'python3 util.py summarize --name '+
-            name+
-            ' --prefix test_ --pvae ${SOURCES[0]} --generated-pgen ${SOURCES[1]} ${SOURCES[2]} $TARGET')
+        'python3 util.py summarize --prefix test_ --pvae ${SOURCES[0]} --generated-pgen ${SOURCES[1]} ${SOURCES[2]} $TARGET')
 
 
 for nest_name in reversed(summarized_agg_names):

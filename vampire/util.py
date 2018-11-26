@@ -48,7 +48,10 @@ def summarize(name, prefix, pvae, generated_pgen, loss_csv, out_csv):
     if generated_pgen:
         generated_pgen_df = pd.read_csv(generated_pgen, header=None)
         df['generated_median_pgen'] = np.median(np.log(generated_pgen_df[1]))
-    df.to_csv(out_csv)
+    if name == '':
+        df.to_csv(out_csv, index=False)
+    else:
+        df.to_csv(out_csv)
 
 
 if __name__ == '__main__':
