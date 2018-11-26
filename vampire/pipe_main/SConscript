@@ -113,6 +113,30 @@ nest.add_aggregate('summarized_agg', list)
 summarized_agg_names = []
 
 
+@nest.add_target_with_env(localenv)
+def olga_generated_tsv(env, outdir, c):
+    """
+    Generate sequences using OLGA.
+    """
+    outfile, = env.Command(
+        join(outdir, 'olga-generated.tsv'),
+        [],
+        f"scripts/olga-generate.sh {c['nseqs']} $TARGET")
+    return outfile
+
+
+@nest.add_target_with_env(localenv)
+def olga_generated(env, outdir, c):
+    """
+    Convert OLGA TSV to a adaptive CSV.
+    """
+    outfile, = env.Command(
+        join(outdir, 'olga-generated.csv'),
+        c['olga_generated_tsv'],
+        'python3 gene_name_conversion.py olga2adaptive $SOURCE $TARGET')
+    return outfile
+
+
 # Nest: the sample, named by sample name.
 nest.add('sample', apply_mode(DATA[localenv['data_label']]['paths']), label_func=common.strip_dirpath_extn)
 summarized_agg_names.append('sample')
