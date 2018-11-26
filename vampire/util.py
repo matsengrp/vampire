@@ -30,28 +30,40 @@ def split(test_size, in_csv, out1_csv, out2_csv):
 
 
 @cli.command()
+@click.option('--out', type=click.File('w'), help='Output file path.', required=True)
 @click.option('--name', default='', help='The row entry for the summary output.')
-@click.option('--prefix', default='', help='A string to prepend to loss column headers.')
-@click.option('--pvae', type=click.File('r'), help='Path to a file with Pvae values.')
-@click.option('--generated-pgen', type=click.File('r'), help='Path to a file with Pgen values for generated sequences.')
-@click.argument('loss_csv', type=click.File('r'))
-@click.argument('out_csv', type=click.File('w'))
-def summarize(name, prefix, pvae, generated_pgen, loss_csv, out_csv):
+@click.option(
+    '--ids', default='', help='Comma-separated column identifier names corresponding to the files that follow.')
+@click.argument('in_paths', nargs=-1)
+def summarize(out, name, ids, in_paths):
     """
-    Summarize results of a run as a single-row CSV.
+    Summarize results of a run as a single-row CSV. The input is of flexible
+    length: each input file is associated with an identifier specified using
+    the --ids flag.
     """
-    loss_df = pd.read_csv(loss_csv, index_col=0)
+    headers = ids.split(',')
+    if len(headers) != len(in_paths):
+        raise Exception("The number of headers is not equal to the number of input files.")
+    input_d = {k: v for k, v in zip(headers, in_paths)}
+
     index = pd.Index([name], name='name')
-    df = pd.DataFrame(dict(zip([prefix+i for i in loss_df.index], loss_df['test'].transpose())), index=index)
-    if pvae:
-        df['test_median_pvae'] = np.median(pd.read_csv(pvae)['log_p_x'])
-    if generated_pgen:
-        generated_pgen_df = pd.read_csv(generated_pgen, header=None)
-        df['generated_median_pgen'] = np.median(np.log(generated_pgen_df[1]))
-    if name == '':
-        df.to_csv(out_csv, index=False)
+    if 'loss' in input_d:
+        loss_df = pd.read_csv(input_d['loss'], index_col=0)
+        df = pd.DataFrame(dict(zip(loss_df.index, loss_df['test'].transpose())), index=index)
     else:
-        df.to_csv(out_csv)
+        df = pd.DataFrame(index=index)
+
+    for k, path in input_d.items():
+        if k == 'pvae':
+            df['test_median_pvae'] = np.median(pd.read_csv(path)['log_p_x'])
+        if k == 'generated_pgen':
+            generated_pgen_df = pd.read_csv(path, header=None)
+            df['generated_median_pgen'] = np.median(np.log(generated_pgen_df[1]))
+
+    if name == '':
+        df.to_csv(out, index=False)
+    else:
+        df.to_csv(out)
 
 
 if __name__ == '__main__':

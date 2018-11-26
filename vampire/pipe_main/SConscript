@@ -83,7 +83,10 @@ def cluster_execution_string(command):
     $TARGETS is replaced by {targets}.
     """
     script_name = command.split()[1]+'.sh'
-    return f"python3 execute.py --clusters='{localenv['clusters']}' --script-name={script_name} '$SOURCES' '$TARGETS' '{command}'"
+    return (
+        f"python3 execute.py --clusters='{localenv['clusters']}' --script-name={script_name} "
+        f"'$SOURCES' '$TARGETS' '{command}'"
+    )
 
 
 # ### Nests and targets ###
@@ -219,10 +222,13 @@ def pgen(env, outdir, c):
 def summarized(env, outdir, c):
     summarized = join(outdir, 'summarized.csv')
     c['summarized_agg'].append((summarized, c))
+    c['test'] = c['split']['test']
+    to_pass = ['pvae', 'pgen', 'loss', 'generated', 'test']
+    ids = ','.join(to_pass)
     return env.Command(
         summarized,
-        [c['pvae'], c['pgen'], c['loss']],
-        'python3 util.py summarize --prefix test_ --pvae ${SOURCES[0]} --generated-pgen ${SOURCES[1]} ${SOURCES[2]} $TARGET')
+        [c[k] for k in to_pass],
+        f'python3 util.py summarize --out $TARGET --ids {ids} $SOURCES')
 
 
 for nest_name in reversed(summarized_agg_names):
