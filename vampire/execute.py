@@ -45,11 +45,11 @@ def translate_paths(in_paths, dest_dir):
 
 @click.command()
 @click.option('--clusters', default='', help='Clusters to submit to. Default is local execution.')
-@click.option('--script-name', default='job.sh', help='Name for job script.')
+@click.option('--script-prefix', default='job', help='Prefix for job script name.')
 @click.argument('sources')
 @click.argument('targets')
 @click.argument('to_execute_f_string')
-def cli(clusters, script_name, sources, targets, to_execute_f_string):
+def cli(clusters, script_prefix, sources, targets, to_execute_f_string):
     """
     Execute a command with certain sources and targets, perhaps on a SLURM
     cluster via sbatch. Wait until the command has completed.
@@ -64,8 +64,8 @@ def cli(clusters, script_name, sources, targets, to_execute_f_string):
     """
 
     # Remove all quotes: they can get in the way with our basename noodling.
-    sources = re.sub('"*\'*','', sources)
-    targets = re.sub('"*\'*','', targets)
+    sources = re.sub('"*\'*', '', sources)
+    targets = re.sub('"*\'*', '', targets)
 
     if clusters == '':
         # Local execution.
@@ -88,6 +88,7 @@ def cli(clusters, script_name, sources, targets, to_execute_f_string):
     # Put the batch script in the directory of the first target.
     execution_dir = os.path.dirname(targets.split()[0])
     sentinel_path = os.path.join(execution_dir, 'sentinel.' + job_uuid)
+    script_name = f'{script_prefix}.{job_uuid}.sh'
     with open(os.path.join(execution_dir, script_name), 'w') as fp:
         fp.write(sbatch_prelude)
         for instruction in cp_instructions:

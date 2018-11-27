@@ -95,9 +95,9 @@ def cluster_execution_string(command):
     *The command string but where $SOURCES is replaced by {sources} and
     $TARGETS is replaced by {targets}.
     """
-    script_name = command.split()[1]+'.sh'
+    script_prefix = command.split()[1]
     return (
-        f"python3 execute.py --clusters='{localenv['clusters']}' --script-name={script_name} "
+        f"python3 execute.py --clusters='{localenv['clusters']}' --script-prefix={script_prefix} "
         f"'$SOURCES' '$TARGETS' '{command}'"
     )
 
@@ -118,11 +118,10 @@ def olga_generated_tsv(env, outdir, c):
     """
     Generate sequences using OLGA.
     """
-    outfile, = env.Command(
+    return env.Command(
         join(outdir, 'olga-generated.tsv'),
         [],
-        f"scripts/olga-generate.sh {c['nseqs']} $TARGET")
-    return outfile
+        f"scripts/olga-generate.sh {c['nseqs']} $TARGET")[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -130,11 +129,10 @@ def olga_generated(env, outdir, c):
     """
     Convert OLGA TSV to a adaptive CSV.
     """
-    outfile, = env.Command(
+    return env.Command(
         join(outdir, 'olga-generated.csv'),
         c['olga_generated_tsv'],
-        'python3 gene_name_conversion.py olga2adaptive $SOURCE $TARGET')
-    return outfile
+        'python3 gene_name_conversion.py olga2adaptive $SOURCE $TARGET')[0]
 
 
 # Nest: the sample, named by sample name.
@@ -148,11 +146,10 @@ def preprocess(env, outdir, c):
     Run the preprocess_adaptive.py script.
     """
     in_path = c['sample']
-    outfile, = env.Command(
+    return env.Command(
         join(outdir, common.strip_dirpath_extn(in_path) + '.processed.csv'),
         in_path,
-        'python3 preprocess_adaptive.py $SOURCE $TARGET')
-    return outfile
+        'python3 preprocess_adaptive.py $SOURCE $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv, 'split')
@@ -212,7 +209,7 @@ def model_params(env, outdir, c):
     return env.Command(
         join(outdir, 'model_params.json'),
         [],
-        f"echo '{json.dumps(params)}' > $TARGET")
+        f"echo '{json.dumps(params)}' > $TARGET")[0]
 
 
 @nest.add_target_with_env(localenv, 'trained')
@@ -228,19 +225,35 @@ def loss(env, outdir, c):
     return env.Command(
         join(outdir, 'loss.csv'),
         [c['model_params'], c['trained']['weights'], c['split']['train'], c['split']['test']],
-        'tcr-vae loss $SOURCES $TARGET')
+        'tcr-vae loss $SOURCES $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
-def pvae(env, outdir, c):
+def test_head(env, outdir, c):
     return env.Command(
-        join(outdir, f"test.{c['nseqs']}.pvae.csv"),
-        [c['model_params'], c['trained']['weights'], c['split']['test']],
-        cluster_execution_string('tcr-vae pvae --limit-input-to '+str(c['nseqs'])+' {sources} {targets}'))
+        join(outdir, f"test.{c['nseqs']}.csv"),
+        c['split']['test'],
+        f"head -n {c['nseqs']+1} $SOURCE > $TARGET")[0]
 
 
 @nest.add_target_with_env(localenv)
-def generated(env, outdir, c):
+def test_pvae(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['test_head'])+'.pvae.csv',
+        [c['model_params'], c['trained']['weights'], c['test_head']],
+        cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
+
+
+@nest.add_target_with_env(localenv)
+def test_pgen(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['test_head'])+'.pgen.csv',
+        c['test_head'],
+        'scripts/olga-pgen.sh $SOURCE $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def vae_generated(env, outdir, c):
     return env.Command(
         join(outdir, 'generated.csv'),
         [c['model_params'], c['trained']['weights']],
@@ -248,11 +261,19 @@ def generated(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
-def pgen(env, outdir, c):
+def vae_generated_pgen(env, outdir, c):
     return env.Command(
-        common.strip_extn(c['generated'])+'.pgen.csv',
-        c['generated'],
-        'scripts/olga-pgen.sh $SOURCE $TARGET')
+        common.strip_extn(c['vae_generated'])+'.pgen.csv',
+        c['vae_generated'],
+        'scripts/olga-pgen.sh $SOURCE $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def olga_generated_pvae(env, outdir, c):
+    return env.Command(
+        join(outdir, common.strip_dirpath_extn(c['olga_generated'])+'.pvae.csv'),
+        [c['model_params'], c['trained']['weights'], c['olga_generated']],
+        cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -260,12 +281,12 @@ def summarized(env, outdir, c):
     summarized = join(outdir, 'summarized.csv')
     c['summarized_agg'].append((summarized, c))
     c['test'] = c['split']['test']
-    to_pass = ['pvae', 'pgen', 'loss', 'generated', 'test']
+    to_pass = ['loss', 'test', 'test_pvae', 'test_pgen', 'vae_generated_pgen', 'vae_generated_pgen']
     ids = ','.join(to_pass)
     return env.Command(
         summarized,
         [c[k] for k in to_pass],
-        f'python3 util.py summarize --out $TARGET --ids {ids} $SOURCES')
+        f'python3 util.py summarize --out $TARGET --ids {ids} $SOURCES')[0]
 
 
 for nest_name in reversed(summarized_agg_names):
@@ -287,4 +308,4 @@ def aggregate(env, outdir, c):
     return env.Command(
         target,
         [s for (s, _) in c['summarized_agg']],
-        'touch $TARGET')
+        'touch $TARGET')[0]
