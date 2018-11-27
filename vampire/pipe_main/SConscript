@@ -293,19 +293,19 @@ for nest_name in reversed(summarized_agg_names):
     nest.pop(nest_name)
 
 
-@nest.add_target_with_env(localenv)
-def aggregate(env, outdir, c):
-    dfs = []
-    for (s, agg_c) in c['summarized_agg']:
-        df = pd.read_csv(s)
-        for nest_name in summarized_agg_names:
-            df[nest_name] = agg_c[nest_name]
-        dfs.append(df)
-    df_agg = pd.concat(dfs).set_index(summarized_agg_names)
-    target = join(outdir, 'aggregated.csv')
-    df_agg.to_csv(target)
-
-    return env.Command(
-        target,
-        [s for (s, _) in c['summarized_agg']],
-        'touch $TARGET')[0]
+# @nest.add_target_with_env(localenv)
+# def aggregate(env, outdir, c):
+#     dfs = []
+#     for (s, agg_c) in c['summarized_agg']:
+#         df = pd.read_csv(s)
+#         for nest_name in summarized_agg_names:
+#             df[nest_name] = agg_c[nest_name]
+#         dfs.append(df)
+#     df_agg = pd.concat(dfs).set_index(summarized_agg_names)
+#     target = join(outdir, 'aggregated.csv')
+#     df_agg.to_csv(target)
+#
+#     return env.Command(
+#         target,
+#         [s for (s, _) in c['summarized_agg']],
+#         'touch $TARGET')[0]

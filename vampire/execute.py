@@ -75,12 +75,16 @@ def cli(clusters, script_prefix, sources, targets, to_execute_f_string):
         return subprocess.check_output(to_execute, shell=True)
 
     job_uuid = uuid.uuid4().hex
+    cluster_directory_d = {
+        'beagle': '/mnt/beagle/delete10/matsen_e/vampire/uuid',
+        'koshu': '/fh/scratch/delete30/matsen_e/vampire/uuid'
+    }
 
-    if clusters == 'beagle':
-        # Put the data where beagle likes it.
-        beagle_input_dir = os.path.join('/mnt/beagle/delete10/matsen_e/vampire/uuid', job_uuid)
-        sources_l, cp_instructions = translate_paths(sources.split(), beagle_input_dir)
-        cp_instructions = [f'mkdir -p {beagle_input_dir}'] + list(cp_instructions)
+    if clusters in cluster_directory_d:
+        # Put the data where the cluster likes it.
+        input_dir = os.path.join(cluster_directory_d[clusters], job_uuid)
+        sources_l, cp_instructions = translate_paths(sources.split(), input_dir)
+        cp_instructions = [f'mkdir -p {input_dir}'] + list(cp_instructions)
         sources = ' '.join(sources_l)
     else:
         cp_instructions = []
