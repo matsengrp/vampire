@@ -10,7 +10,7 @@ import uuid
 import re
 
 sbatch_prelude = """#!/bin/bash
-#SBATCH -c 18
+#SBATCH -c 8
 #SBATCH -N 1
 #SBATCH --exclusive
 #SBATCH -p largenode

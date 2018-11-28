@@ -233,7 +233,7 @@ def test_head(env, outdir, c):
     return env.Command(
         join(outdir, f"test.{c['nseqs']}.csv"),
         c['split']['test'],
-        f"head -n {c['nseqs']+1} $SOURCE > $TARGET")[0]
+        f"cut -f 2-4 -d, $SOURCE | head -n {c['nseqs']+1} > $TARGET")[0]
 
 
 @nest.add_target_with_env(localenv)
