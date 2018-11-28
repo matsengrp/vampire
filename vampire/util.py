@@ -67,5 +67,18 @@ def summarize(out, name, ids, in_paths):
         df.to_csv(out)
 
 
+@cli.command()
+@click.option('--out', type=click.File('w'), help='Output file path.', required=True)
+@click.argument('in_paths', nargs=-1)
+def csvstack(out, in_paths):
+    """
+    Like csvkit's csvstack, but can deal with varying columns.
+    See https://github.com/wireservice/csvkit/issues/245 for details.
+
+    Note that this sorts the columns by name (part of merging columns).
+    """
+    pd.concat([pd.read_csv(path) for path in in_paths], sort=True).to_csv(out, index=False)
+
+
 if __name__ == '__main__':
     cli()

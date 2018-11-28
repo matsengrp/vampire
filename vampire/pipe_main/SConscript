@@ -299,4 +299,4 @@ def aggregate_summarized(env, outdir, c):
     return env.Command(
         join(outdir, 'aggregated.csv'),
         [s for (s, _) in c['summarized_agg']],
-        'csvstack $SOURCES >  $TARGET')[0]
+        'python3 util.py csvstack --out $TARGET $SOURCES')[0]

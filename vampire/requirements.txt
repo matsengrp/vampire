@@ -1,6 +1,5 @@
 biopython
 click
-csvkit
 flake8
 keras
 matplotlib
