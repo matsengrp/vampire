@@ -1,0 +1,3 @@
+[submodule "vampire/R/sumrep"]
+	path = vampire/R/sumrep
+	url = https://github.com/matsengrp/sumrep.git
