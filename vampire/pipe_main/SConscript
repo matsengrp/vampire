@@ -166,6 +166,22 @@ def split(env, outdir, c):
         f"python3 util.py split --test-size {localenv['test_size']} $SOURCE $TARGETS")
 
 
+@nest.add_target_with_env(localenv)
+def test_head(env, outdir, c):
+    return env.Command(
+        join(outdir, f"test.{c['nseqs']}.csv"),
+        c['split']['test'],
+        f"cut -f 2-4 -d, $SOURCE | head -n {c['nseqs']+1} > $TARGET")[0]
+
+
+@nest.add_target_with_env(localenv)
+def test_pgen(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['test_head'])+'.pgen.csv',
+        c['test_head'],
+        'scripts/olga-pgen.sh $SOURCE $TARGET')[0]
+
+
 def numerical_nest_add(nest_name, number_list):
     """
     Add an nest for a list of non-negative numbers, with nice zero-padded
@@ -229,27 +245,11 @@ def loss(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
-def test_head(env, outdir, c):
-    return env.Command(
-        join(outdir, f"test.{c['nseqs']}.csv"),
-        c['split']['test'],
-        f"cut -f 2-4 -d, $SOURCE | head -n {c['nseqs']+1} > $TARGET")[0]
-
-
-@nest.add_target_with_env(localenv)
 def test_pvae(env, outdir, c):
     return env.Command(
-        common.strip_extn(c['test_head'])+'.pvae.csv',
+        join(outdir, common.strip_dirpath_extn(c['test_head'])+'.pvae.csv'),
         [c['model_params'], c['trained']['weights'], c['test_head']],
         cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
-
-
-@nest.add_target_with_env(localenv)
-def test_pgen(env, outdir, c):
-    return env.Command(
-        common.strip_extn(c['test_head'])+'.pgen.csv',
-        c['test_head'],
-        'scripts/olga-pgen.sh $SOURCE $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
