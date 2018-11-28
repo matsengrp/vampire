@@ -190,8 +190,9 @@ def numerical_nest_add(nest_name, number_list):
     nest.add(nest_name, apply_mode(number_list), label_func=common.zero_pad_list_func(number_list))
 
 
-# # Nest: the model.
-# nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
+# Nest: the model.
+nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
+summarized_agg_names.append('model')
 
 # # Nest: the dimension of the latent space.
 # numerical_nest_add('latent_dim', [30, 35, 40])
@@ -205,9 +206,9 @@ def numerical_nest_add(nest_name, number_list):
 # # Nest: the V gene embedding dimension.
 # numerical_nest_add('v_gene_embedding_dim', [20, 30, 40])
 
-# Nest: the strength of the KL component of the VAE loss.
-numerical_nest_add('beta', [2.**i for i in range(-4, 2)])
-summarized_agg_names.append('beta')
+# # Nest: the strength of the KL component of the VAE loss.
+# numerical_nest_add('beta', [2.**i for i in range(-4, 2)])
+# summarized_agg_names.append('beta')
 
 
 @nest.add_target_with_env(localenv)
@@ -280,32 +281,22 @@ def olga_generated_pvae(env, outdir, c):
 def summarized(env, outdir, c):
     summarized = join(outdir, 'summarized.csv')
     c['summarized_agg'].append((summarized, c))
-    c['test'] = c['split']['test']
-    to_pass = ['loss', 'test', 'test_pvae', 'test_pgen', 'vae_generated_pgen', 'vae_generated_pgen']
+    to_pass = ['loss', 'test_pvae', 'test_pgen', 'vae_generated_pgen']
     ids = ','.join(to_pass)
+    name = ';'.join([c[k] for k in summarized_agg_names])
     return env.Command(
         summarized,
         [c[k] for k in to_pass],
-        f'python3 util.py summarize --out $TARGET --ids {ids} $SOURCES')[0]
+        f'python3 util.py summarize --out $TARGET --name "{name}" --ids {ids} $SOURCES')[0]
 
 
 for nest_name in reversed(summarized_agg_names):
     nest.pop(nest_name)
 
 
-# @nest.add_target_with_env(localenv)
-# def aggregate(env, outdir, c):
-#     dfs = []
-#     for (s, agg_c) in c['summarized_agg']:
-#         df = pd.read_csv(s)
-#         for nest_name in summarized_agg_names:
-#             df[nest_name] = agg_c[nest_name]
-#         dfs.append(df)
-#     df_agg = pd.concat(dfs).set_index(summarized_agg_names)
-#     target = join(outdir, 'aggregated.csv')
-#     df_agg.to_csv(target)
-#
-#     return env.Command(
-#         target,
-#         [s for (s, _) in c['summarized_agg']],
-#         'touch $TARGET')[0]
+@nest.add_target_with_env(localenv)
+def aggregate_summarized(env, outdir, c):
+    return env.Command(
+        join(outdir, 'aggregated.csv'),
+        [s for (s, _) in c['summarized_agg']],
+        'csvstack $SOURCES >  $TARGET')[0]

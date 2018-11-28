@@ -54,11 +54,12 @@ def summarize(out, name, ids, in_paths):
         df = pd.DataFrame(index=index)
 
     for k, path in input_d.items():
-        if k == 'pvae':
-            df['test_median_pvae'] = np.median(pd.read_csv(path)['log_p_x'])
-        if k == 'generated_pgen':
-            generated_pgen_df = pd.read_csv(path, header=None)
-            df['generated_median_pgen'] = np.median(np.log(generated_pgen_df[1]))
+        if k == 'test_pvae':
+            log_pvae = pd.read_csv(path)['log_p_x']
+            df['test_log_pvae_median'] = np.median(log_pvae)
+            # Yes, Vladimir, we are taking a standard deviation of something
+            # that isn't normal. They look kinda gamma-ish after applying log.
+            df['test_log_pvae_sd'] = np.std(log_pvae)
 
     if name == '':
         df.to_csv(out, index=False)
