@@ -4,7 +4,6 @@ import json
 
 import nestly
 import nestly.scons as ns
-import pandas as pd
 import SCons.Script as sc
 
 import common
@@ -282,12 +281,14 @@ def summarized(env, outdir, c):
     summarized = join(outdir, 'summarized.csv')
     c['summarized_agg'].append((summarized, c))
     to_pass = ['loss', 'test_pvae', 'test_pgen', 'vae_generated_pgen']
-    ids = ','.join(to_pass)
-    name = ';'.join([str(c[k]) for k in summarized_agg_names])
+    colnames = ','.join(to_pass)
+    idx = ';'.join([str(c[k]) for k in summarized_agg_names])
+    idx_name = ';'.join(summarized_agg_names)
     return env.Command(
         summarized,
         [c[k] for k in to_pass],
-        f'python3 util.py summarize --out $TARGET --name "{name}" --ids {ids} $SOURCES')[0]
+        f'python3 util.py summarize --out $TARGET --idx "{idx}" --idx-name "{idx_name}" --colnames {colnames} $SOURCES'
+    )[0]
 
 
 for nest_name in reversed(summarized_agg_names):
@@ -299,4 +300,4 @@ def aggregate_summarized(env, outdir, c):
     return env.Command(
         join(outdir, 'aggregated.csv'),
         [s for (s, _) in c['summarized_agg']],
-        'python3 util.py csvstack --out $TARGET $SOURCES')[0]
+        'python3 util.py stackrows --out $TARGET $SOURCES')[0]
