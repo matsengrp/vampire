@@ -13,6 +13,7 @@ suppressPackageStartupMessages(devtools::load_all('R/sumrep', quiet=TRUE))
 pwd_distrib = getPairwiseDistanceDistribution(read.csv(args$in_csv, stringsAsFactors=FALSE), column='amino_acid')
 
 summary_df = data.frame(
+    pwd_mean=mean(pwd_distrib),
     pwd_median=median(pwd_distrib),
     pwd_sd=sd(pwd_distrib))
 
