@@ -134,6 +134,14 @@ def olga_generated(env, outdir, c):
         'python3 gene_name_conversion.py olga2adaptive $SOURCE $TARGET')[0]
 
 
+@nest.add_target_with_env(localenv)
+def olga_generated_sumrep(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['olga_generated'])+'.sumrep.csv',
+        c['olga_generated'],
+        'R/single_rep_summaries.R $SOURCE $TARGET')[0]
+
+
 # Nest: the sample, named by sample name.
 nest.add('sample', apply_mode(DATA[localenv['data_label']]['paths']), label_func=common.strip_dirpath_extn)
 summarized_agg_names.append('sample')
@@ -171,6 +179,14 @@ def test_head(env, outdir, c):
         join(outdir, f"test.{c['nseqs']}.csv"),
         c['split']['test'],
         f"cut -f 2-4 -d, $SOURCE | head -n {c['nseqs']+1} > $TARGET")[0]
+
+
+@nest.add_target_with_env(localenv)
+def test_sumrep(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['test_head'])+'.sumrep.csv',
+        c['test_head'],
+        'R/single_rep_summaries.R $SOURCE $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -277,10 +293,18 @@ def olga_generated_pvae(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
+def vae_generated_sumrep(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['vae_generated'])+'.sumrep.csv',
+        c['vae_generated'],
+        'R/single_rep_summaries.R $SOURCE $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
 def summarized(env, outdir, c):
     summarized = join(outdir, 'summarized.csv')
     c['summarized_agg'].append((summarized, c))
-    to_pass = ['loss', 'test_pvae', 'test_pgen', 'vae_generated_pgen']
+    to_pass = ['loss', 'test_pvae', 'test_pgen', 'vae_generated_pgen', 'vae_generated_sumrep']
     colnames = ','.join(to_pass)
     idx = ';'.join([str(c[k]) for k in summarized_agg_names])
     idx_name = ';'.join(summarized_agg_names)

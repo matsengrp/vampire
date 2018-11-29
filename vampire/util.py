@@ -43,10 +43,10 @@ def summarize(out, idx, idx_name, colnames, in_paths):
     length: each input file is associated with an identifier specified using
     the --colnames flag.
     """
-    headers = colnames.split(',')
-    if len(headers) != len(in_paths):
-        raise Exception("The number of headers is not equal to the number of input files.")
-    input_d = {k: v for k, v in zip(headers, in_paths)}
+    colnames = colnames.split(',')
+    if len(colnames) != len(in_paths):
+        raise Exception("The number of colnames is not equal to the number of input files.")
+    input_d = {k: v for k, v in zip(colnames, in_paths)}
 
     index = pd.Index([idx], name=idx_name)
     if 'loss' in input_d:
@@ -55,14 +55,20 @@ def summarize(out, idx, idx_name, colnames, in_paths):
     else:
         df = pd.DataFrame(index=index)
 
-    for k, path in input_d.items():
-        if k == 'test_pvae':
+    for name, path in input_d.items():
+        if name == 'test_pvae':
             log_pvae = pd.read_csv(path)['log_p_x']
             df['test_median_log_pvae'] = np.median(log_pvae)
             df['test_log_mean_pvae'] = np.log(np.mean(np.exp(log_pvae)))
             # Yes, Vladimir, we are taking a standard deviation of something
             # that isn't normal. They look kinda gamma-ish after applying log.
             df['test_log_pvae_sd'] = np.std(log_pvae)
+        if name == 'vae_generated_sumrep':
+            # Sumrep just gives a one-row CSV with various summaries.
+            # We just slurp all of them up.
+            test_sumrep = pd.read_csv(path)
+            for col in test_sumrep:
+                df[col] = test_sumrep.loc[0, col]
 
     df.to_csv(out)
 
