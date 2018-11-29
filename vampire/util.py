@@ -58,7 +58,8 @@ def summarize(out, idx, idx_name, colnames, in_paths):
     for k, path in input_d.items():
         if k == 'test_pvae':
             log_pvae = pd.read_csv(path)['log_p_x']
-            df['test_log_pvae_median'] = np.median(log_pvae)
+            df['test_median_log_pvae'] = np.median(log_pvae)
+            df['test_log_mean_pvae'] = np.log(np.mean(np.exp(log_pvae)))
             # Yes, Vladimir, we are taking a standard deviation of something
             # that isn't normal. They look kinda gamma-ish after applying log.
             df['test_log_pvae_sd'] = np.std(log_pvae)
