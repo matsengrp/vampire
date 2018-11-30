@@ -214,6 +214,9 @@ def numerical_nest_add(nest_name, number_list):
 
 
 # Nest: the model.
+# In order to keep things happy when merging with OLGA results, don't comment
+# this out if you are only interested in one model. Instead, make a
+# single-model nest.
 nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
 summarized_agg_names.append('model')
 
@@ -319,9 +322,11 @@ def vae_generated_sumrep(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def summarized(env, outdir, c):
     summarized = join(outdir, 'summarized.csv')
+    # Adding things to the summarized_agg aggregate.
     c['summarized_agg'].append((summarized, c))
     to_pass = ['loss', 'test_pvae', 'test_pgen', 'vae_generated_pgen', 'vae_generated_sumrep', 'vae_sumrep_divergences']
     colnames = ','.join(to_pass)
+    # These are the identifiers associated with where we are in each nest.
     idx = ';'.join([str(c[k]) for k in summarized_agg_names])
     idx_name = ';'.join(summarized_agg_names)
     return env.Command(
@@ -331,8 +336,29 @@ def summarized(env, outdir, c):
     )[0]
 
 
-for nest_name in reversed(summarized_agg_names):
+# Pop all the way down to sample, so we can summarize OLGA.
+for nest_name in reversed(summarized_agg_names[1:]):
     nest.pop(nest_name)
+
+
+@nest.add_target_with_env(localenv)
+def olga_summarized(env, outdir, c):
+    summarized = join(outdir, 'olga-summarized.csv')
+    c['summarized_agg'].append((summarized, c))
+    to_pass = ['olga_sumrep_divergences']
+    colnames = ','.join(to_pass)
+    # OLGA doesn't have any free parameters, so it only gets the one identifier.
+    pre_idx = [c[summarized_agg_names[0]], 'olga'] + ['']*(len(summarized_agg_names)-2)
+    idx = ';'.join(pre_idx)
+    idx_name = ';'.join(summarized_agg_names)
+    return env.Command(
+        summarized,
+        [c[k] for k in to_pass],
+        f'python3 util.py summarize --out $TARGET --idx "{idx}" --idx-name "{idx_name}" --colnames {colnames} $SOURCES'
+    )[0]
+
+
+nest.pop(summarized_agg_names[0])
 
 
 @nest.add_target_with_env(localenv)

@@ -2,6 +2,8 @@
 Utilities, accessible via subcommands.
 """
 
+import re
+
 import click
 import common
 import numpy as np
@@ -75,7 +77,7 @@ def summarize(out, idx, idx_name, colnames, in_paths):
             df['test_log_pvae_sd'] = np.std(log_pvae)
         elif name == 'vae_generated_sumrep':
             slurp_cols(path, prefix='sumrep_')
-        elif name == 'vae_sumrep_divergences':
+        elif re.search('sumrep_divergences', name):
             slurp_cols(path, prefix='sumdiv_')
 
     df.to_csv(out)
