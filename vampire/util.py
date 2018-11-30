@@ -55,6 +55,16 @@ def summarize(out, idx, idx_name, colnames, in_paths):
     else:
         df = pd.DataFrame(index=index)
 
+    def slurp_cols(path, prefix='', suffix=''):
+        """
+        Given a one-row CSV with summaries, add them to df with an optional
+        prefix and suffix.
+        """
+        to_slurp = pd.read_csv(path)
+        assert(len(to_slurp) == 1)
+        for col in to_slurp:
+            df[prefix+col+suffix] = to_slurp.loc[0, col]
+
     for name, path in input_d.items():
         if name == 'test_pvae':
             log_pvae = pd.read_csv(path)['log_p_x']
@@ -63,12 +73,10 @@ def summarize(out, idx, idx_name, colnames, in_paths):
             # Yes, Vladimir, we are taking a standard deviation of something
             # that isn't normal. They look kinda gamma-ish after applying log.
             df['test_log_pvae_sd'] = np.std(log_pvae)
-        if name == 'vae_generated_sumrep':
-            # Sumrep just gives a one-row CSV with various summaries.
-            # We just slurp all of them up.
-            test_sumrep = pd.read_csv(path)
-            for col in test_sumrep:
-                df[col] = test_sumrep.loc[0, col]
+        elif name == 'vae_generated_sumrep':
+            slurp_cols(path, prefix='sumrep_')
+        elif name == 'vae_sumrep_divergences':
+            slurp_cols(path, prefix='sumdiv_')
 
     df.to_csv(out)
 

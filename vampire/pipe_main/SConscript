@@ -320,7 +320,7 @@ def vae_generated_sumrep(env, outdir, c):
 def summarized(env, outdir, c):
     summarized = join(outdir, 'summarized.csv')
     c['summarized_agg'].append((summarized, c))
-    to_pass = ['loss', 'test_pvae', 'test_pgen', 'vae_generated_pgen', 'vae_generated_sumrep']
+    to_pass = ['loss', 'test_pvae', 'test_pgen', 'vae_generated_pgen', 'vae_generated_sumrep', 'vae_sumrep_divergences']
     colnames = ','.join(to_pass)
     idx = ';'.join([str(c[k]) for k in summarized_agg_names])
     idx_name = ';'.join(summarized_agg_names)
