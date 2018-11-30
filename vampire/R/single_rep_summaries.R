@@ -8,7 +8,7 @@ parser$add_argument('out_csv', help='Desired location for summary CSV. Will over
 
 args = parser$parse_args()
 
-suppressPackageStartupMessages(devtools::load_all('R/sumrep', quiet=TRUE))
+devtools::load_all('R/sumrep', quiet=TRUE)
 
 in_df = read.csv(args$in_csv, stringsAsFactors=FALSE)
 
