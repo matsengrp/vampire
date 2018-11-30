@@ -190,6 +190,14 @@ def test_sumrep(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
+def olga_sumrep_divergences(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['test_head'])+'-olga.sumdiv.csv',
+        [c['test_head'], c['olga_generated']],
+        'R/rep_divergences.R $SOURCES $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
 def test_pgen(env, outdir, c):
     return env.Command(
         common.strip_extn(c['test_head'])+'.pgen.csv',
@@ -274,6 +282,14 @@ def vae_generated(env, outdir, c):
         join(outdir, 'generated.csv'),
         [c['model_params'], c['trained']['weights']],
         f"tcr-vae generate --nseqs {c['nseqs']} $SOURCES $TARGET")[0]
+
+
+@nest.add_target_with_env(localenv)
+def vae_sumrep_divergences(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['vae_generated'])+'-test.sumdiv.csv',
+        [c['test_head'], c['vae_generated']],
+        'R/rep_divergences.R $SOURCES $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
