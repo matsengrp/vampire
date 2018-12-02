@@ -38,7 +38,7 @@ olga-compute_pgen --humanTRB CASSLGRDGGHEQYF
 inside the `olga` conda environment.
 
 
-### sumrep & R
+### sumrep
 As if it wasn't enough to have Python 2.7 and 3.6, to reproduce the full comparative analysis you also need R, the [sumrep](https://github.com/matsengrp/sumrep/) package, and its many dependencies.
 You also need the `argparse` package.
 
