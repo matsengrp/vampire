@@ -2,6 +2,7 @@
 
 ## Install
 
+### vampire itself
 Install dependencies:
 ```
 conda create -n py36 python=3.6
@@ -16,6 +17,7 @@ cd vampire
 pip install .
 ```
 
+### OLGA
 The full SCons pipeline includes running [OLGA](https://github.com/zsethna/OLGA).
 If you would like to run this component, we need a separate conda environment named `olga` because OLGA is a Python 2.7 program.
 Create it as follows:
@@ -34,6 +36,19 @@ olga-compute_pgen --humanTRB CASSLGRDGGHEQYF
 ```
 
 inside the `olga` conda environment.
+
+
+### sumrep
+As if it wasn't enough to have Python 2.7 and 3.6, to reproduce the full comparative analysis you also need R, the [sumrep](https://github.com/matsengrp/sumrep/) package, and its many dependencies.
+You also need the `argparse` package.
+
+sumrep is a submodule in the `vampire/R` directory.
+To use it, do
+```
+git submodule update --init --recursive
+```
+
+There is a script `vampire/R/install_sumrep.sh` which should serve as a starting point for your installation adventure.
 
 
 

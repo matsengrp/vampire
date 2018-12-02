@@ -1,16 +1,18 @@
 import click
 import pandas as pd
 
-translation_csv = 'data/adaptive-olga-translation.csv'
+import common
+
+translation_csv = 'adaptive-olga-translation.csv'
 
 
 def adaptive_to_olga_dict():
-    gb = pd.read_csv(translation_csv).dropna().groupby('locus')
+    gb = common.read_data_csv(translation_csv).dropna().groupby('locus')
     return {locus: {row['adaptive']: row['olga'] for _, row in df.iterrows()} for locus, df in gb}
 
 
 def olga_to_adaptive_dict():
-    gb = pd.read_csv(translation_csv).dropna().groupby('locus')
+    gb = common.read_data_csv(translation_csv).dropna().groupby('locus')
     return {locus: {row['olga']: row['adaptive'] for _, row in df.iterrows()} for locus, df in gb}
 
 

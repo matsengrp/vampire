@@ -10,7 +10,7 @@ import uuid
 import re
 
 sbatch_prelude = """#!/bin/bash
-#SBATCH -c 18
+#SBATCH -c 8
 #SBATCH -N 1
 #SBATCH --exclusive
 #SBATCH -p largenode
@@ -45,11 +45,11 @@ def translate_paths(in_paths, dest_dir):
 
 @click.command()
 @click.option('--clusters', default='', help='Clusters to submit to. Default is local execution.')
-@click.option('--script-name', default='job.sh', help='Name for job script.')
+@click.option('--script-prefix', default='job', help='Prefix for job script name.')
 @click.argument('sources')
 @click.argument('targets')
 @click.argument('to_execute_f_string')
-def cli(clusters, script_name, sources, targets, to_execute_f_string):
+def cli(clusters, script_prefix, sources, targets, to_execute_f_string):
     """
     Execute a command with certain sources and targets, perhaps on a SLURM
     cluster via sbatch. Wait until the command has completed.
@@ -64,8 +64,8 @@ def cli(clusters, script_name, sources, targets, to_execute_f_string):
     """
 
     # Remove all quotes: they can get in the way with our basename noodling.
-    sources = re.sub('"*\'*','', sources)
-    targets = re.sub('"*\'*','', targets)
+    sources = re.sub('"*\'*', '', sources)
+    targets = re.sub('"*\'*', '', targets)
 
     if clusters == '':
         # Local execution.
@@ -75,12 +75,16 @@ def cli(clusters, script_name, sources, targets, to_execute_f_string):
         return subprocess.check_output(to_execute, shell=True)
 
     job_uuid = uuid.uuid4().hex
+    cluster_directory_d = {
+        'beagle': '/mnt/beagle/delete10/matsen_e/vampire/uuid',
+        'koshu': '/fh/scratch/delete30/matsen_e/vampire/uuid'
+    }
 
-    if clusters == 'beagle':
-        # Put the data where beagle likes it.
-        beagle_input_dir = os.path.join('/mnt/beagle/delete10/matsen_e/vampire/uuid', job_uuid)
-        sources_l, cp_instructions = translate_paths(sources.split(), beagle_input_dir)
-        cp_instructions = [f'mkdir -p {beagle_input_dir}'] + list(cp_instructions)
+    if clusters in cluster_directory_d:
+        # Put the data where the cluster likes it.
+        input_dir = os.path.join(cluster_directory_d[clusters], job_uuid)
+        sources_l, cp_instructions = translate_paths(sources.split(), input_dir)
+        cp_instructions = [f'mkdir -p {input_dir}'] + list(cp_instructions)
         sources = ' '.join(sources_l)
     else:
         cp_instructions = []
@@ -88,6 +92,7 @@ def cli(clusters, script_name, sources, targets, to_execute_f_string):
     # Put the batch script in the directory of the first target.
     execution_dir = os.path.dirname(targets.split()[0])
     sentinel_path = os.path.join(execution_dir, 'sentinel.' + job_uuid)
+    script_name = f'{script_prefix}.{job_uuid}.sh'
     with open(os.path.join(execution_dir, script_name), 'w') as fp:
         fp.write(sbatch_prelude)
         for instruction in cp_instructions:

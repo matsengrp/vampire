@@ -193,7 +193,7 @@ class TCRVAE:
         # Convert back, restricting to the desired number of sequences.
         return conversion.onehot_to_tcrbs(amino_acid_arr[:n_seqs], v_gene_arr[:n_seqs], j_gene_arr[:n_seqs])
 
-    def log_p_of_x_importance_sample(self, x_df, out_ps):
+    def log_pvae_importance_sample(self, x_df, out_ps):
         """
         One importance sample to calculate the probability of generating some
         observed x's by decoding from the prior on z.
@@ -330,7 +330,7 @@ def loss(params_json, model_weights, train_csv, test_csv, out_csv):
 @click.argument('model_weights', type=click.Path(exists=True))
 @click.argument('test_csv', type=click.File('r'))
 @click.argument('out_csv', type=click.File('w'))
-def importance(limit_input_to, nsamples, params_json, model_weights, test_csv, out_csv):
+def pvae(limit_input_to, nsamples, params_json, model_weights, test_csv, out_csv):
     """
     Estimate the log generation probability of the sequences in test_csv on the
     VAE determined by params_json and model_weights.
@@ -347,11 +347,11 @@ def importance(limit_input_to, nsamples, params_json, model_weights, test_csv, o
         df_x = df_x.iloc[:int(limit_input_to)]
 
     log_p_x = np.zeros((nsamples, len(df_x)))
-    click.echo(f"Calculating p(x) for {test_csv.name} via importance sampling...")
+    click.echo(f"Calculating pvae for {test_csv.name} via importance sampling...")
 
     with click.progressbar(range(nsamples)) as bar:
         for i in bar:
-            v.log_p_of_x_importance_sample(df_x, log_p_x[i])
+            v.log_pvae_importance_sample(df_x, log_p_x[i])
 
     # Calculate log of mean of numbers given in log space.
     avg = special.logsumexp(log_p_x, axis=0) - np.log(nsamples)
