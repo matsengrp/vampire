@@ -103,7 +103,7 @@ def stackrows(out, in_paths):
     """
     Like csvkit's csvstack, but fancy.
     Assumes the first column is a semicolon-separted thing to split into a
-    multi-index. Also runs strip_dirpath_extn on anything named "sample".
+    multi-index. Also runs strip_dirpath_extn on anything named 'sample'.
 
     Note that this sorts the columns by name (part of merging columns).
     """

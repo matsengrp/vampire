@@ -86,7 +86,7 @@ def base_dict():
     return {'nseqs': 500}
 
 
-def cluster_execution_string(command):
+def cluster_execution_string(command, prefix_position=1):
     """
     Apply this to your scons command string* to get it to execute on the
     cluster.
@@ -94,7 +94,8 @@ def cluster_execution_string(command):
     *The command string but where $SOURCES is replaced by {sources} and
     $TARGETS is replaced by {targets}.
     """
-    script_prefix = command.split()[1]
+    # If we have a subcommand structure, prefix_position=1 makes a nice script prefix.
+    script_prefix = command.split()[prefix_position]
     return (
         f"python3 execute.py --clusters='{localenv['clusters']}' --script-prefix={script_prefix} "
         f"'$SOURCES' '$TARGETS' '{command}'"
