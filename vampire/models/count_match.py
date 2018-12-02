@@ -162,8 +162,8 @@ def build(params):
             'cdr3_output': 1.,
             'cdr3_length_output': 2.,
             'v_gene_output': 50.,
-            'j_gene_output': 4.,
-            'contiguous_match_output': 20.
+            'j_gene_output': 50.,
+            'contiguous_match_output': 1.
         })
 
     return {'encoder': encoder, 'decoder': decoder, 'vae': vae}
