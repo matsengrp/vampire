@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # Usage:
-#   Rscript --vanilla GetDivergences.R file1.csv file2.csv out_filename (optional)
+#   Rscript --vanilla GetDivergences.R file1.csv file2.csv [out_filename]
 #   If out_filename is not specified, it saves the divergences to "divergences.csv"
 # Note that this does full NN distance calculation, an O(n^2) operation, so don't
 # try this for anything too big!
