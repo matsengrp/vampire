@@ -16,6 +16,8 @@ args = parser$parse_args()
 
 pvae = read.csv(args$in_pvae)
 losses = read.csv(args$in_per_seq_loss)
+# Despite my best efforts, on quokka row labels are getting drug in as X. Drop it
+losses = losses[, !names(losses) == 'X']
 # Drop the total weighted loss: we want each one individually.
 losses = losses[, !names(losses) == 'loss']
 fit = lm(log_p_x ~ ., data = cbind(pvae, losses))
