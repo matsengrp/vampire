@@ -358,7 +358,7 @@ def per_seq_loss(params_json, model_weights, in_csv, out_csv):
     df = pd.DataFrame(
         np.array(v.evaluate(v.get_data(in_csv, v.params['batch_size']), per_sequence=True)),
         columns=v.vae.metrics_names)
-    df.to_csv(out_csv)
+    df.to_csv(out_csv, index=False)
 
 
 @cli.command()
