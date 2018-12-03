@@ -238,6 +238,17 @@ numerical_nest_add('beta', [2.**i for i in range(-4, 4, 2)])
 summarized_agg_names.append('beta')
 
 
+# These next two things are handy for outputting where we are in the nest.
+idx_name = ';'.join(summarized_agg_names)
+
+
+def get_idx(c):
+    """
+    Return a semicolon-separated list of where we are in the nest.
+    """
+    return ';'.join([str(c[k]) for k in summarized_agg_names])
+
+
 @nest.add_target_with_env(localenv)
 def model_params(env, outdir, c):
     """
@@ -289,6 +300,14 @@ def test_pvae(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
+def regress_loss(env, outdir, c):
+    return env.Command(
+        join(outdir, 'loss_regression.csv'),
+        [c['test_pvae'], c['test_per_sequence_loss']],
+        f'R/regress_loss.R --idx "{get_idx(c)}" --idx-name "{idx_name}" $SOURCES $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
 def vae_generated(env, outdir, c):
     return env.Command(
         join(outdir, 'generated.csv'),
@@ -335,9 +354,7 @@ def summarized(env, outdir, c):
     c['summarized_agg'].append(summarized)
     to_pass = ['loss', 'test_pvae', 'test_pgen', 'vae_generated_pgen', 'vae_generated_sumrep', 'vae_sumrep_divergences']
     colnames = ','.join(to_pass)
-    # These are the identifiers associated with where we are in each nest.
-    idx = ';'.join([str(c[k]) for k in summarized_agg_names])
-    idx_name = ';'.join(summarized_agg_names)
+    idx = get_idx(c)
     return env.Command(
         summarized,
         [c[k] for k in to_pass],
@@ -359,7 +376,6 @@ def olga_summarized(env, outdir, c):
     # OLGA doesn't have any free parameters, so it only gets the one identifier.
     pre_idx = [c[summarized_agg_names[0]], 'olga'] + ['']*(len(summarized_agg_names)-2)
     idx = ';'.join(pre_idx)
-    idx_name = ';'.join(summarized_agg_names)
     return env.Command(
         summarized,
         [c[k] for k in to_pass],
