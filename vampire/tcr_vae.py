@@ -26,6 +26,7 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint
 import scipy.special as special
 import scipy.stats as stats
 
+import vampire.common as common
 import vampire.xcr_vector_conversion as conversion
 
 
@@ -151,16 +152,34 @@ class TCRVAE:
             validation_split=validation_split,
             callbacks=[checkpoint, early_stopping, tensorboard])
 
-    def evaluate(self, x_df):
+    def evaluate(self, x_df, per_sequence=False):
         """
-        Wrapping Model.evaluate for this setting.
+        By default, wrapping Model.evaluate for this setting.
+        Also providing an option for per-sequence loss evaluation.
 
         :param x_df: A onehot encoded dataframe representing input sequences.
+        :param per_sequence: A flag determining if we should return a
+            collection of evaluation outputs, one per input. (This is not
+            especially efficiently done.)
 
-        :return: loss
+        :return: loss as a list, or a list of lists if per_sequence=True.
         """
+
+        def our_evaluate(data):
+            return self.vae.evaluate(x=data, y=data, batch_size=self.params['batch_size'], verbose=0)
+
         data = self.prepare_data(x_df)
-        return self.vae.evaluate(x=data, y=data, batch_size=self.params['batch_size'])
+
+        if not per_sequence:
+            return our_evaluate(data)
+
+        # data is a list of data elements. Here we repeat_row each of these
+        # data elements the minimum amount for evaluate to work (the
+        # batch_size) and evaluate.
+        return [
+            our_evaluate([common.repeat_row(data_elt, i, self.params['batch_size']) for data_elt in data])
+            for i in range(len(x_df))
+        ]
 
     def encode(self, x_df):
         """
@@ -320,6 +339,25 @@ def loss(params_json, model_weights, train_csv, test_csv, out_csv):
         'test': v.evaluate(v.get_data(test_csv, v.params['batch_size']))
     },
                       index=v.vae.metrics_names)
+    df.to_csv(out_csv)
+
+
+@cli.command()
+@click.argument('params_json', type=click.Path(exists=True))
+@click.argument('model_weights', type=click.Path(exists=True))
+@click.argument('in_csv', type=click.File('r'))
+@click.argument('out_csv', type=click.File('w'))
+def per_seq_loss(params_json, model_weights, in_csv, out_csv):
+    """
+    Record per-sequence losses.
+    """
+
+    v = TCRVAE.of_json_file(params_json)
+    v.vae.load_weights(model_weights)
+
+    df = pd.DataFrame(
+        np.array(v.evaluate(v.get_data(in_csv, v.params['batch_size']), per_sequence=True)),
+        columns=v.vae.metrics_names)
     df.to_csv(out_csv)
 
 

@@ -81,7 +81,7 @@ def base_dict():
     which we evaluate Pvae for on the real data.
     """
     if localenv['mode'] == 'mini':
-        return {'nseqs': 2}
+        return {'nseqs': 100}
 
     return {'nseqs': 500}
 
@@ -270,6 +270,14 @@ def loss(env, outdir, c):
         join(outdir, 'loss.csv'),
         [c['model_params'], c['trained']['weights'], c['split']['train'], c['split']['test']],
         'tcr-vae loss $SOURCES $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def test_per_sequence_loss(env, outdir, c):
+    return env.Command(
+        join(outdir, common.strip_dirpath_extn(c['test_head'])+'.per-seq-loss.csv'),
+        [c['model_params'], c['trained']['weights'], c['test_head']],
+        'tcr-vae per-seq-loss $SOURCES $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)

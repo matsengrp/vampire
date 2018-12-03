@@ -9,8 +9,8 @@ import pandas as pd
 import pkg_resources
 import os
 
-
 # ### Math functions ###
+
 
 def running_avg(x):
     """
@@ -29,7 +29,32 @@ def running_avg(x):
     return (running_avg)
 
 
+def repeat_row(a, which_entry, n_repeats):
+    """
+    Repeat a specified row of the first axis a specified number of times.
+
+    >>> x = np.random.rand(3, 2)
+    >>> x
+    array([[0.39592644, 0.92973981],
+           [0.18207684, 0.54983777],
+           [0.64938797, 0.01808416]])
+    >>> repeat_row(x, 1, 2)
+    array([[0.18207684, 0.54983777],
+           [0.18207684, 0.54983777]])
+    """
+    assert which_entry in range(a.shape[0])
+
+    if type(a) in [pd.Series, pd.DataFrame]:
+        return a.iloc[np.full(n_repeats, which_entry)]
+
+    assert type(a) == np.ndarray
+    repeater_array = np.zeros((a.shape[0]), dtype=np.int64)
+    repeater_array[which_entry] = n_repeats
+    return np.repeat(a, repeater_array, axis=0)
+
+
 # ### Path functions ###
+
 
 def strip_extn(in_path):
     """
@@ -75,6 +100,7 @@ def read_data_csv(fname):
 
 
 # ### Misc functions ###
+
 
 def zero_pad_list_func(l):
     """
