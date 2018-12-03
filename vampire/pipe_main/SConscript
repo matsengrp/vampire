@@ -111,6 +111,7 @@ nest.add('data_label', [localenv['data_label']], label_func=lambda p: '_output_'
 
 nest.add_aggregate('summarized_agg', list)
 summarized_agg_names = []
+nest.add_aggregate('loss_regression_agg', list)
 
 
 @nest.add_target_with_env(localenv)
@@ -301,8 +302,10 @@ def test_pvae(env, outdir, c):
 
 @nest.add_target_with_env(localenv)
 def regress_loss(env, outdir, c):
+    loss_regression = join(outdir, 'loss_regression.csv'),
+    c['loss_regression_agg'].append(loss_regression)
     return env.Command(
-        join(outdir, 'loss_regression.csv'),
+        loss_regression,
         [c['test_pvae'], c['test_per_sequence_loss']],
         f'R/regress_loss.R --idx "{get_idx(c)}" --idx-name "{idx_name}" $SOURCES $TARGET')[0]
 
@@ -387,8 +390,16 @@ nest.pop(summarized_agg_names[0])
 
 
 @nest.add_target_with_env(localenv)
-def aggregate_summarized(env, outdir, c):
+def summarized_agg_target(env, outdir, c):
     return env.Command(
-        join(outdir, 'aggregated.csv'),
+        join(outdir, 'summarized.agg.csv'),
         c['summarized_agg'],
+        'python3 util.py stackrows --out $TARGET $SOURCES')[0]
+
+
+@nest.add_target_with_env(localenv)
+def loss_regression_agg_target(env, outdir, c):
+    return env.Command(
+        join(outdir, 'loss_regression.agg.csv'),
+        c['loss_regression_agg'],
         'python3 util.py stackrows --out $TARGET $SOURCES')[0]
