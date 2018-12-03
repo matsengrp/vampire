@@ -1,4 +1,20 @@
 #!/usr/bin/env Rscript
+
+# Here's some R I used to process the aggregated results of this command:
+#
+#  df = read.csv(paste(dir, 'loss_regression.agg.csv', sep=''))
+#  df = df[, colnames(df)!='X.Intercept.']
+#  df = df[, colnames(df)!='beta']
+#
+#  ggplot(
+#      drop_rows_with_na(melt(df, c('sample', 'model'))),
+#          aes(model, value, color=model)
+#          ) + geom_point() + facet_wrap(vars(variable), scales='free') + theme(axis.text.x=element_blank())
+#
+#  medians = df[-1] %>% group_by(model) %>% summarize_all(funs(median))
+#  write(toJSON(medians, pretty=TRUE), file='medians.json')
+
+
 suppressPackageStartupMessages(library(argparse))
 suppressPackageStartupMessages(library(devtools))
 
