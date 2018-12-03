@@ -11,8 +11,10 @@
 #          aes(model, value, color=model)
 #          ) + geom_point() + facet_wrap(vars(variable), scales='free') + theme(axis.text.x=element_blank())
 #
-#  medians = df[-1] %>% group_by(model) %>% summarize_all(funs(median))
-#  write(toJSON(medians, pretty=TRUE), file='medians.json')
+# medians = df[-1] %>% group_by(model) %>% summarize_all(funs(median))
+# normalized = medians / medians$cdr3_output_loss
+# normalized$model = medians$model
+# write(toJSON(normalized, pretty=TRUE), file='normalized.json')
 
 
 suppressPackageStartupMessages(library(argparse))
@@ -36,9 +38,7 @@ losses = read.csv(args$in_per_seq_loss)
 losses = losses[, !names(losses) == 'X']
 # Drop the total weighted loss: we want each one individually.
 losses = losses[, !names(losses) == 'loss']
-# Note that below we regress the negative log pvae against the other losses, so
-# we can directly use the coefficients as weights.
-fit = lm(-log_p_x ~ ., data = cbind(pvae, losses))
+fit = lm(log_p_x ~ ., data = cbind(pvae, losses))
 coeffs = t(data.frame(fit$coefficients))
 row_label = data.frame(c(args$idx))
 colnames(row_label) = args$idx_name
