@@ -1,6 +1,7 @@
 from os.path import join
 import glob
 import json
+import os
 
 import nestly
 import nestly.scons as ns
@@ -11,6 +12,7 @@ import tcr_vae
 
 sc.Import('env')
 localenv = env.Clone()  # noqa
+
 
 # ### Paths and data sets ###
 
@@ -112,6 +114,28 @@ nest.add('data_label', [localenv['data_label']], label_func=lambda p: '_output_'
 nest.add_aggregate('summarized_agg', list)
 summarized_agg_names = []
 nest.add_aggregate('loss_regression_agg', list)
+
+
+@nest.add_target_with_env(localenv)
+def sconscript(env, outdir, c):
+    """
+    Copy SConscript file.
+    """
+    return env.Command(
+        join(outdir, 'SConscript'),
+        'SConscript',
+        'cp $SOURCE $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def git_sha(env, outdir, c):
+    """
+    Echo git sha to file.
+    """
+    return env.Command(
+        join(outdir, 'git-sha.txt'),
+        [],
+        "git log --pretty=format:'%H' -n 1 > $TARGET")[0]
 
 
 @nest.add_target_with_env(localenv)
