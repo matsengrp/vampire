@@ -1,6 +1,7 @@
 from os.path import join
 import glob
 import json
+import os
 
 import nestly
 import nestly.scons as ns
@@ -11,6 +12,7 @@ import tcr_vae
 
 sc.Import('env')
 localenv = env.Clone()  # noqa
+
 
 # ### Paths and data sets ###
 
@@ -81,7 +83,7 @@ def base_dict():
     which we evaluate Pvae for on the real data.
     """
     if localenv['mode'] == 'mini':
-        return {'nseqs': 2}
+        return {'nseqs': 100}
 
     return {'nseqs': 500}
 
@@ -111,6 +113,29 @@ nest.add('data_label', [localenv['data_label']], label_func=lambda p: '_output_'
 
 nest.add_aggregate('summarized_agg', list)
 summarized_agg_names = []
+nest.add_aggregate('loss_regression_agg', list)
+
+
+@nest.add_target_with_env(localenv)
+def sconscript(env, outdir, c):
+    """
+    Copy SConscript file.
+    """
+    return env.Command(
+        join(outdir, 'SConscript'),
+        'SConscript',
+        'cp $SOURCE $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def git_sha(env, outdir, c):
+    """
+    Echo git sha to file.
+    """
+    return env.Command(
+        join(outdir, 'git-sha.txt'),
+        [],
+        "git log --pretty=format:'%H' -n 1 > $TARGET")[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -238,6 +263,17 @@ numerical_nest_add('beta', [2.**i for i in range(-4, 4, 2)])
 summarized_agg_names.append('beta')
 
 
+# These next two things are handy for outputting where we are in the nest.
+idx_name = ';'.join(summarized_agg_names)
+
+
+def get_idx(c):
+    """
+    Return a semicolon-separated list of where we are in the nest.
+    """
+    return ';'.join([str(c[k]) for k in summarized_agg_names])
+
+
 @nest.add_target_with_env(localenv)
 def model_params(env, outdir, c):
     """
@@ -273,11 +309,29 @@ def loss(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
+def test_per_sequence_loss(env, outdir, c):
+    return env.Command(
+        join(outdir, common.strip_dirpath_extn(c['test_head'])+'.per-seq-loss.csv'),
+        [c['model_params'], c['trained']['weights'], c['test_head']],
+        'tcr-vae per-seq-loss $SOURCES $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
 def test_pvae(env, outdir, c):
     return env.Command(
         join(outdir, common.strip_dirpath_extn(c['test_head'])+'.pvae.csv'),
         [c['model_params'], c['trained']['weights'], c['test_head']],
         cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
+
+
+@nest.add_target_with_env(localenv)
+def regress_loss(env, outdir, c):
+    loss_regression = join(outdir, 'loss_regression.csv'),
+    c['loss_regression_agg'].append(loss_regression)
+    return env.Command(
+        loss_regression,
+        [c['test_pvae'], c['test_per_sequence_loss']],
+        f'R/regress_loss.R --idx "{get_idx(c)}" --idx-name "{idx_name}" $SOURCES $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -327,9 +381,7 @@ def summarized(env, outdir, c):
     c['summarized_agg'].append(summarized)
     to_pass = ['loss', 'test_pvae', 'test_pgen', 'vae_generated_pgen', 'vae_generated_sumrep', 'vae_sumrep_divergences']
     colnames = ','.join(to_pass)
-    # These are the identifiers associated with where we are in each nest.
-    idx = ';'.join([str(c[k]) for k in summarized_agg_names])
-    idx_name = ';'.join(summarized_agg_names)
+    idx = get_idx(c)
     return env.Command(
         summarized,
         [c[k] for k in to_pass],
@@ -351,7 +403,6 @@ def olga_summarized(env, outdir, c):
     # OLGA doesn't have any free parameters, so it only gets the one identifier.
     pre_idx = [c[summarized_agg_names[0]], 'olga'] + ['']*(len(summarized_agg_names)-2)
     idx = ';'.join(pre_idx)
-    idx_name = ';'.join(summarized_agg_names)
     return env.Command(
         summarized,
         [c[k] for k in to_pass],
@@ -363,8 +414,16 @@ nest.pop(summarized_agg_names[0])
 
 
 @nest.add_target_with_env(localenv)
-def aggregate_summarized(env, outdir, c):
+def summarized_agg_target(env, outdir, c):
     return env.Command(
-        join(outdir, 'aggregated.csv'),
+        join(outdir, 'summarized.agg.csv'),
         c['summarized_agg'],
+        'python3 util.py stackrows --out $TARGET $SOURCES')[0]
+
+
+@nest.add_target_with_env(localenv)
+def loss_regression_agg_target(env, outdir, c):
+    return env.Command(
+        join(outdir, 'loss_regression.agg.csv'),
+        c['loss_regression_agg'],
         'python3 util.py stackrows --out $TARGET $SOURCES')[0]
