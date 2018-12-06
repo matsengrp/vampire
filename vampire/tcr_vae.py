@@ -76,7 +76,7 @@ class TCRVAE:
             aa_embedding_dim=21,
             v_gene_embedding_dim=30,
             j_gene_embedding_dim=13,
-            beta=1.,
+            beta=0.5,
             # Input data parameters.
             max_cdr3_len=30,
             n_aas=len(conversion.AA_LIST),
