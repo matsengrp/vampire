@@ -69,7 +69,7 @@ class TCRVAE:
         """
         return dict(
             # Models:
-            model='count_match',
+            model='basic',
             # Model parameters.
             latent_dim=35,
             dense_nodes=100,
@@ -385,7 +385,7 @@ def pvae(limit_input_to, nsamples, params_json, model_weights, test_csv, out_csv
         df_x = df_x.iloc[:int(limit_input_to)]
 
     log_p_x = np.zeros((nsamples, len(df_x)))
-    click.echo(f"Calculating pvae for {test_csv.name} via importance sampling...")
+    click.echo("Calculating pvae for {} via importance sampling...".format(test_csv.name))
 
     with click.progressbar(range(nsamples)) as bar:
         for i in bar:
