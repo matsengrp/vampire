@@ -11,6 +11,7 @@ that can convert whatever the VAE spits out back to our familiar triple of
 amino_acid, v_gene, and j_gene.
 """
 
+from collections import OrderedDict
 import importlib
 import json
 import math
@@ -315,7 +316,7 @@ def train(params_json, train_csv, best_weights_fname, diagnostics_fname):
     vp = TCRVAE.of_json_file(params_json)
     vp.vae.load_weights(best_weights_fname)
 
-    df = pd.DataFrame({'train': v.evaluate(train_data), 'vp_train': vp.evaluate(train_data)}, index=v.vae.metrics_names)
+    df = pd.DataFrame(OrderedDict([('train', v.evaluate(train_data)), ('vp_train', vp.evaluate(train_data))]), index=v.vae.metrics_names)
     df.to_csv(diagnostics_fname)
     return v
 
@@ -334,9 +335,9 @@ def loss(params_json, model_weights, train_csv, test_csv, out_csv):
     v = TCRVAE.of_json_file(params_json)
     v.vae.load_weights(model_weights)
 
-    df = pd.DataFrame({
-        'train': v.evaluate(v.get_data(train_csv, v.params['batch_size'])),
-        'test': v.evaluate(v.get_data(test_csv, v.params['batch_size']))
+    df = pd.DataFrame(OrderedDict([
+        ('train', v.evaluate(v.get_data(train_csv, v.params['batch_size']))),
+        ('test', v.evaluate(v.get_data(test_csv, v.params['batch_size'])))]))
     },
                       index=v.vae.metrics_names)
     df.to_csv(out_csv)
