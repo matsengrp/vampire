@@ -331,7 +331,7 @@ def train(params_json, train_csv, best_weights_fname, diagnostics_fname):
 @click.argument('out_csv', type=click.File('w'))
 def loss(params_json, model_weights, train_csv, test_csv, out_csv):
     """
-    Record the losses on the train vs. the hold out test set.
+    Record aggregate losses.
     """
 
     v = TCRVAE.of_json_file(params_json)
