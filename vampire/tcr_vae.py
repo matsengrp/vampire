@@ -332,7 +332,7 @@ def train(params_json, train_csv, best_weights_fname, diagnostics_fname):
 @click.argument('train_csv', type=click.File('r'))
 @click.argument('test_csv', type=click.File('r'))
 @click.argument('out_csv', type=click.File('w'))
-def loss(params_json, model_weights, train_csv, test_csv, out_csv):
+def loss(params_json, model_weights, train_csv, validation_csv, test_csv, out_csv):
     """
     Record aggregate losses.
     """
@@ -342,6 +342,7 @@ def loss(params_json, model_weights, train_csv, test_csv, out_csv):
 
     df = pd.DataFrame(
         OrderedDict([('train', v.evaluate(v.get_data(train_csv, v.params['batch_size']))),
+                     ('validation', v.evaluate(v.get_data(validation_csv, v.params['batch_size']))),
                      ('test', v.evaluate(v.get_data(test_csv, v.params['batch_size'])))]),
         index=v.vae.metrics_names)
     df.to_csv(out_csv)

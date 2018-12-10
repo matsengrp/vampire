@@ -12,7 +12,8 @@ import SCons.Script as sc
 
 # Command line options
 sc.AddOption('--pipe', type='string', help="Which pipeline to run.", default='pipe_main')
-sc.AddOption('--data', type='string', help="The label of the data to be run in the specified pipeline.", default='test')
+sc.AddOption('--data', type='string', help="The label of the data to be run in the specified pipeline.", default='dryrun')
+sc.AddOption('--test', type='string', help="The label of the data to be used as test.", default='dryrun')
 sc.AddOption(
     '--mode', type='string', help="The mode of the run, which is up to the SConscript to define.", default='default')
 sc.AddOption('--clusters', type='string', help="Clusters to submit to. Default is local execution.", default='')
@@ -22,6 +23,7 @@ sc.AddOption('--test-size', type=float, help="Proportion of sample to hold out f
 env = sc.Environment(
     ENV=os.environ,
     data_label=sc.GetOption('data'),
+    test_label=sc.GetOption('test'),
     mode=sc.GetOption('mode'),
     clusters=sc.GetOption('clusters'),
     test_size=sc.GetOption('test_size'))
