@@ -86,7 +86,7 @@ def base_dict():
 
     d = {'nseqs': 500,
          'val_frac': 0.1,
-         'test_data': DATA[localenv['test_label']]['paths'],
+         'test_data': DATA[localenv['test_label']]['paths'][0],
          }
 
     if localenv['mode'] == 'mini':
