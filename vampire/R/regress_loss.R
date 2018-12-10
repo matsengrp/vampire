@@ -16,9 +16,8 @@
 # normalized$model = medians$model
 # write(toJSON(normalized, pretty=TRUE), file='normalized.json')
 
-
-suppressPackageStartupMessages(library(argparse))
-suppressPackageStartupMessages(library(devtools))
+suppressMessages(library(argparse))
+suppressMessages(library(devtools))
 
 parser = ArgumentParser(description='Perform regression to obtain optimal loss weights.')
 

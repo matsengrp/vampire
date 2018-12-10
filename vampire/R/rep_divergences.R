@@ -11,8 +11,8 @@ if(length(args) < 2) {
     stop("Unused arguments (at most 3 allowed).")
 }
 
-suppressPackageStartupMessages(library(devtools))
-suppressPackageStartupMessages(devtools::load_all('R/sumrep', quiet=TRUE))
+suppressMessages(library(devtools))
+suppressMessages(devtools::load_all('R/sumrep', quiet=TRUE))
 
 getDataTableFromCsv <- function(i) {
     dat <- args[i] %>% data.table::fread()
