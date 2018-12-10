@@ -330,6 +330,7 @@ def train(params_json, train_csv, best_weights_fname, diagnostics_fname):
 @click.argument('params_json', type=click.Path(exists=True))
 @click.argument('model_weights', type=click.Path(exists=True))
 @click.argument('train_csv', type=click.File('r'))
+@click.argument('validation_csv', type=click.File('r'))
 @click.argument('test_csv', type=click.File('r'))
 @click.argument('out_csv', type=click.File('w'))
 def loss(params_json, model_weights, train_csv, validation_csv, test_csv, out_csv):
