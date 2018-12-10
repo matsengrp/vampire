@@ -83,10 +83,13 @@ def base_dict():
 
     test_frac: the fraction of sequences to take for test.
     """
-    if localenv['mode'] == 'mini':
-        return {'nseqs': 100}
 
-    return {'nseqs': 500, 'test_frac': 0.1}
+    d = {'nseqs': 500, 'test_frac': 0.1}
+
+    if localenv['mode'] == 'mini':
+        d['nseqs'] = 100
+
+    return d
 
 
 def cluster_execution_string(command, prefix_position=1):
@@ -407,7 +410,6 @@ for nest_name in reversed(summarized_agg_names[1:]):
     nest.pop(nest_name)
 
 
-
 # We need to have the OLGA summary here so that we have summarized_agg_names populated.
 @nest.add_target_with_env(localenv)
 def olga_summarized(env, outdir, c):
@@ -423,6 +425,7 @@ def olga_summarized(env, outdir, c):
         [c[k] for k in to_pass],
         f'python3 util.py summarize --out $TARGET --idx "{idx}" --idx-name "{idx_name}" --colnames {colnames} $SOURCES'
     )[0]
+
 
 nest.pop(summarized_agg_names[0])
 
