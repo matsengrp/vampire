@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
-suppressPackageStartupMessages(library(argparse))
-suppressPackageStartupMessages(library(devtools))
+suppressMessages(library(argparse))
+suppressMessages(library(devtools))
 
 parser = ArgumentParser(description='Calculate single-repertoire summaries, writing out a single-row CSV.')
 parser$add_argument('in_csv', help='A CSV with `amino_acid,v_gene,j_gene` columns.')
@@ -8,7 +8,7 @@ parser$add_argument('out_csv', help='Desired location for summary CSV. Will over
 
 args = parser$parse_args()
 
-devtools::load_all('R/sumrep', quiet=TRUE)
+suppressMessages(devtools::load_all('R/sumrep', quiet=TRUE))
 
 in_df = read.csv(args$in_csv, stringsAsFactors=FALSE)
 
