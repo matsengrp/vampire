@@ -16,6 +16,7 @@ import re
 batch_prelude = """#!/bin/bash
 #SBATCH -c 4
 #SBATCH -N 1
+#SBATCH --exclusive
 #SBATCH -p campus
 #SBATCH -o {execution_dir}/job_cpu_%j.out
 #SBATCH -e {execution_dir}/job_cpu_%j.err
