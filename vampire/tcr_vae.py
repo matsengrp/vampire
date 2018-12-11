@@ -9,6 +9,9 @@ We also require each model to define a corresponding `prepare_data` function
 that prepares data for input into the vae, and a `interpret_output` function
 that can convert whatever the VAE spits out back to our familiar triple of
 amino_acid, v_gene, and j_gene.
+
+This file is written in Python 3.5 so that we can run in the Tensorflow
+Docker container.
 """
 
 from collections import OrderedDict
