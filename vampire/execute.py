@@ -9,15 +9,15 @@ import time
 import uuid
 import re
 
-sbatch_prelude = """#!/bin/bash
+batch_prelude = """#!/bin/bash
 #SBATCH -c 4
 #SBATCH -N 1
 #SBATCH -p campus
-#SBATCH -o job_cpu_%j.out
-#SBATCH -e job_cpu_%j.err
+#SBATCH -o {execution_dir}/job_cpu_%j.out
+#SBATCH -e {execution_dir}/job_cpu_%j.err
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=matsen@fredhutch.org
-set -eux
+set -eu
 
 source /app/Lmod/lmod/lmod/init/zsh
 export LMOD_PACKAGE_PATH=/app/Lmod
@@ -32,6 +32,7 @@ set -eux
 
 pip install -e /home/matsen/re/vampire
 """
+
 
 def translate_paths(in_paths, dest_dir):
     """
@@ -92,6 +93,7 @@ def cli(clusters, script_prefix, sources, targets, to_execute_f_string):
         sources_l, cp_instructions = translate_paths(sources.split(), input_dir)
         cp_instructions = [f'mkdir -p {input_dir}'] + list(cp_instructions)
         sources = ' '.join(sources_l)
+        targets = ' '.join([os.path.join(os.getcwd(), s) for s in targets.split()])
     else:
         cp_instructions = []
 
@@ -100,18 +102,19 @@ def cli(clusters, script_prefix, sources, targets, to_execute_f_string):
     sentinel_path = os.path.join(execution_dir, 'sentinel.' + job_uuid)
     run_path = os.path.join(execution_dir, f'{script_prefix}.{job_uuid}.run.sh')
     with open(run_path, 'w') as fp:
-        fp.write(sbatch_prelude)
+        fp.write(run_prelude)
         for instruction in cp_instructions:
             fp.write(instruction + '\n')
         fp.write(to_execute_f_string.format(sources=sources, targets=targets) + '\n')
         fp.write(f'touch {sentinel_path}\n')
+    os.chmod(run_path, 0o755)
 
     batch_path = os.path.join(execution_dir, f'{script_prefix}.{job_uuid}.batch.sh')
-    with open(os.path.join(execution_dir, batch_name), 'w') as fp:
-        fp.write(run_prelude)
-        fp.write("singularity exec docker://matsen/vampire " + run_path)
+    with open(batch_path, 'w') as fp:
+        fp.write(batch_prelude.format(execution_dir=execution_dir))
+        fp.write("singularity exec docker://matsen/vampire " + run_path + '\n')
 
-#    out = subprocess.check_output(f'cd {execution_dir}; sbatch --clusters {clusters} {batch_path}', shell=True)
+    out = subprocess.check_output(f'sbatch --clusters {clusters} {batch_path}', shell=True)
     click.echo(out.decode('UTF-8'))
 
     # Wait until the sentinel file appears, then clean up.
