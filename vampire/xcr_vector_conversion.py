@@ -8,6 +8,7 @@ Erick: try to keep everything that assumes this gene set in here so
 generalization is easier.
 """
 
+from collections import OrderedDict
 import pkg_resources
 
 import numpy as np
@@ -108,7 +109,7 @@ def avj_triple_to_tcr_df(amino_acid, v_gene, j_gene):
     """
     Put our TCR triple into an appropriate DataFrame.
     """
-    return pd.DataFrame({'amino_acid': amino_acid, 'v_gene': v_gene, 'j_gene': j_gene})
+    return pd.DataFrame(OrderedDict([('amino_acid', amino_acid), ('v_gene', v_gene), ('j_gene', j_gene)]))
 
 
 def avj_raw_triple_to_tcr_df(amino_acid, v_gene, j_gene):

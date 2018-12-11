@@ -9,8 +9,12 @@ We also require each model to define a corresponding `prepare_data` function
 that prepares data for input into the vae, and a `interpret_output` function
 that can convert whatever the VAE spits out back to our familiar triple of
 amino_acid, v_gene, and j_gene.
+
+This file is written in Python 3.5 so that we can run in the Tensorflow
+Docker container.
 """
 
+from collections import OrderedDict
 import importlib
 import json
 import math
@@ -69,7 +73,7 @@ class TCRVAE:
         """
         return dict(
             # Models:
-            model='count_match',
+            model='basic',
             # Model parameters.
             latent_dim=35,
             dense_nodes=100,
@@ -315,7 +319,9 @@ def train(params_json, train_csv, best_weights_fname, diagnostics_fname):
     vp = TCRVAE.of_json_file(params_json)
     vp.vae.load_weights(best_weights_fname)
 
-    df = pd.DataFrame({'train': v.evaluate(train_data), 'vp_train': vp.evaluate(train_data)}, index=v.vae.metrics_names)
+    df = pd.DataFrame(
+        OrderedDict([('train', v.evaluate(train_data)), ('vp_train', vp.evaluate(train_data))]),
+        index=v.vae.metrics_names)
     df.to_csv(diagnostics_fname)
     return v
 
@@ -328,17 +334,16 @@ def train(params_json, train_csv, best_weights_fname, diagnostics_fname):
 @click.argument('out_csv', type=click.File('w'))
 def loss(params_json, model_weights, train_csv, test_csv, out_csv):
     """
-    Record the losses on the train vs. the hold out test set.
+    Record aggregate losses.
     """
 
     v = TCRVAE.of_json_file(params_json)
     v.vae.load_weights(model_weights)
 
-    df = pd.DataFrame({
-        'train': v.evaluate(v.get_data(train_csv, v.params['batch_size'])),
-        'test': v.evaluate(v.get_data(test_csv, v.params['batch_size']))
-    },
-                      index=v.vae.metrics_names)
+    df = pd.DataFrame(
+        OrderedDict([('train', v.evaluate(v.get_data(train_csv, v.params['batch_size']))),
+                     ('test', v.evaluate(v.get_data(test_csv, v.params['batch_size'])))]),
+        index=v.vae.metrics_names)
     df.to_csv(out_csv)
 
 
@@ -385,7 +390,7 @@ def pvae(limit_input_to, nsamples, params_json, model_weights, test_csv, out_csv
         df_x = df_x.iloc[:int(limit_input_to)]
 
     log_p_x = np.zeros((nsamples, len(df_x)))
-    click.echo(f"Calculating pvae for {test_csv.name} via importance sampling...")
+    click.echo("Calculating pvae for {} via importance sampling...".format(test_csv.name))
 
     with click.progressbar(range(nsamples)) as bar:
         for i in bar:
