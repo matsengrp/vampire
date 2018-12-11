@@ -93,7 +93,6 @@ def cli(clusters, script_prefix, sources, targets, to_execute_f_string):
         sources_l, cp_instructions = translate_paths(sources.split(), input_dir)
         cp_instructions = [f'mkdir -p {input_dir}'] + list(cp_instructions)
         sources = ' '.join(sources_l)
-        targets = ' '.join([os.path.join(os.getcwd(), s) for s in targets.split()])
     else:
         cp_instructions = []
 
