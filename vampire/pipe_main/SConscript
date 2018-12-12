@@ -402,7 +402,7 @@ def test_pvae(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def vae_sumrep_divergences(env, outdir, c):
     return env.Command(
-        common.strip_extn(c['vae_generated'])+'-test.sumdiv.csv',
+        common.strip_extn(c['vae_generated'])+'.'+common.strip_dirpath_extn(c['test_set'])+'.sumdiv.csv',
         [c['test_set'], c['vae_generated']],
         'R/rep_divergences.R $SOURCES $TARGET')[0]
 
