@@ -280,7 +280,7 @@ summarized_agg_names.append('latent_dim')
 
 # Nest: the number of dense nodes.
 # numerical_nest_add('dense_nodes', [50, 75, 100, 125, 150])
-numerical_nest_add('dense_nodes', [5, 10, 25, 50, 75, 100, 125, 150, 200, 500])
+numerical_nest_add('dense_nodes', [10, 25, 50, 100, 150, 200])
 summarized_agg_names.append('dense_nodes')
 
 # # Nest: the amino acid embedding dimension.
@@ -358,14 +358,14 @@ def test_pvae(env, outdir, c):
         cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
 
 
-@nest.add_target_with_env(localenv)
-def regress_loss(env, outdir, c):
-    loss_regression = join(outdir, 'loss_regression.csv'),
-    c['loss_regression_agg'].append(loss_regression)
-    return env.Command(
-        loss_regression,
-        [c['test_pvae'], c['test_per_sequence_loss']],
-        f'R/regress_loss.R --idx "{get_idx(c)}" --idx-name "{idx_name}" $SOURCES $TARGET')[0]
+# @nest.add_target_with_env(localenv)
+# def regress_loss(env, outdir, c):
+#     loss_regression = join(outdir, 'loss_regression.csv'),
+#     c['loss_regression_agg'].append(loss_regression)
+#     return env.Command(
+#         loss_regression,
+#         [c['test_pvae'], c['test_per_sequence_loss']],
+#         f'R/regress_loss.R --idx "{get_idx(c)}" --idx-name "{idx_name}" $SOURCES $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -456,9 +456,9 @@ def summarized_agg_target(env, outdir, c):
         'python3 util.py stackrows --out $TARGET $SOURCES')[0]
 
 
-@nest.add_target_with_env(localenv)
-def loss_regression_agg_target(env, outdir, c):
-    return env.Command(
-        join(outdir, 'loss_regression.agg.csv'),
-        c['loss_regression_agg'],
-        'python3 util.py stackrows --out $TARGET $SOURCES')[0]
+# @nest.add_target_with_env(localenv)
+# def loss_regression_agg_target(env, outdir, c):
+#     return env.Command(
+#         join(outdir, 'loss_regression.agg.csv'),
+#         c['loss_regression_agg'],
+#         'python3 util.py stackrows --out $TARGET $SOURCES')[0]
