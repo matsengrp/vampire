@@ -10,11 +10,10 @@ import uuid
 import re
 
 sbatch_prelude = """#!/bin/bash
-#SBATCH -c 8
+#SBATCH -c 4
 #SBATCH -N 1
 #SBATCH --exclusive
-#SBATCH -p largenode
-#SBATCH --mem=30000
+#SBATCH -p campus
 #SBATCH -o job_%j.out
 #SBATCH -e job_%j.err
 #SBATCH --mail-type=ALL
