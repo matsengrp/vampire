@@ -196,7 +196,7 @@ def preprocess_test(env, outdir, c):
     """
     in_path = c['test_data']
     return env.Command(
-        join(outdir, common.strip_dirpath_extn(in_path) + '.processed-for-test.csv'),
+        join(outdir, common.strip_dirpath_extn(in_path) + '.for-test.csv'),
         in_path,
         'python3 preprocess_adaptive.py $SOURCE $TARGET')[0]
 
@@ -299,17 +299,6 @@ summarized_agg_names.append('dense_nodes')
 # summarized_agg_names.append('beta')
 
 
-# These next two things are handy for outputting where we are in the nest.
-idx_name = ';'.join(summarized_agg_names)
-
-
-def get_idx(c):
-    """
-    Return a semicolon-separated list of where we are in the nest.
-    """
-    return ';'.join([str(c[k]) for k in summarized_agg_names])
-
-
 @nest.add_target_with_env(localenv)
 def model_params(env, outdir, c):
     """
@@ -338,6 +327,18 @@ def trained(env, outdir, c):
 
 # Nest: evaluation on the test sets.
 nest.add('test_set', lambda c: c['test_set_agg'], label_func=common.strip_dirpath_extn)
+summarized_agg_names.append('test_set')
+
+
+# These next two things are handy for outputting where we are in the nest.
+idx_name = ';'.join(summarized_agg_names)
+
+
+def get_idx(c):
+    """
+    Return a semicolon-separated list of where we are in the nest.
+    """
+    return ';'.join([str(c[k]) for k in summarized_agg_names])
 
 
 @nest.add_target_with_env(localenv)
