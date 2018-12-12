@@ -185,6 +185,51 @@ def olga_generated_sumrep(env, outdir, c):
         'R/single_rep_summaries.R $SOURCE $TARGET')[0]
 
 
+# Nest: initial processing of the test sets.
+nest.add('test_data', DATA[localenv['test_label']]['paths'], label_func=common.strip_dirpath_extn)
+
+
+@nest.add_target_with_env(localenv)
+def preprocess_test(env, outdir, c):
+    """
+    Run the preprocess_adaptive.py script on the test data.
+    """
+    in_path = c['test_data']
+    return env.Command(
+        join(outdir, common.strip_dirpath_extn(in_path) + '.processed-for-test.csv'),
+        in_path,
+        'python3 preprocess_adaptive.py $SOURCE $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def test_head(env, outdir, c):
+    test_head_path = join(outdir, common.strip_dirpath_extn(c['preprocess_test'])+f".{c['nseqs']}.csv")
+    c['test_set_agg'].append(test_head_path)
+    return env.Command(
+        test_head_path,
+        c['preprocess_test'],
+        f"cut -f 2-4 -d, $SOURCE | head -n {c['nseqs']+1} > $TARGET")[0]
+
+
+@nest.add_target_with_env(localenv)
+def test_sumrep(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['test_head'])+'.sumrep.csv',
+        c['test_head'],
+        'R/single_rep_summaries.R $SOURCE $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def olga_sumrep_divergences(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['test_head'])+'-olga.sumdiv.csv',
+        [c['test_head'], c['olga_generated']],
+        'R/rep_divergences.R $SOURCES $TARGET')[0]
+
+
+nest.pop('test_data')
+
+
 # Nest: the sample, named by sample name.
 nest.add('sample', apply_mode(DATA[localenv['data_label']]['paths']), label_func=common.strip_dirpath_extn)
 summarized_agg_names.append('sample')
@@ -221,63 +266,6 @@ def split(env, outdir, c):
         join(outdir, common.strip_dirpath_extn(in_path) + '.validation.csv')],
         in_path,
         f"python3 util.py split --test-size {c['val_frac']} $SOURCE $TARGETS")
-
-
-# Nest: the test set for initial processing.
-def test_label(path):
-    return 'test_' + common.strip_dirpath_extn(path)
-
-
-nest.add('test_data', DATA[localenv['test_label']]['paths'], label_func=test_label)
-
-
-@nest.add_target_with_env(localenv)
-def preprocess_test(env, outdir, c):
-    """
-    Run the preprocess_adaptive.py script on the test data.
-    """
-    in_path = c['test_data']
-    return env.Command(
-        join(outdir, common.strip_dirpath_extn(in_path) + '.processed-for-test.csv'),
-        in_path,
-        'python3 preprocess_adaptive.py $SOURCE $TARGET')[0]
-
-
-@nest.add_target_with_env(localenv)
-def test_head(env, outdir, c):
-    test_head_path = join(outdir, f"testing.{c['nseqs']}.csv")
-    c['test_set_agg'].append(test_head_path)
-    return env.Command(
-        test_head_path,
-        c['preprocess_test'],
-        f"cut -f 2-4 -d, $SOURCE | head -n {c['nseqs']+1} > $TARGET")[0]
-
-
-@nest.add_target_with_env(localenv)
-def test_sumrep(env, outdir, c):
-    return env.Command(
-        common.strip_extn(c['test_head'])+'.sumrep.csv',
-        c['test_head'],
-        'R/single_rep_summaries.R $SOURCE $TARGET')[0]
-
-
-@nest.add_target_with_env(localenv)
-def olga_sumrep_divergences(env, outdir, c):
-    return env.Command(
-        common.strip_extn(c['test_head'])+'-olga.sumdiv.csv',
-        [c['test_head'], c['olga_generated']],
-        'R/rep_divergences.R $SOURCES $TARGET')[0]
-
-
-@nest.add_target_with_env(localenv)
-def test_pgen(env, outdir, c):
-    return env.Command(
-        common.strip_extn(c['test_head'])+'.pgen.csv',
-        c['test_head'],
-        'scripts/olga-pgen.sh $SOURCE $TARGET')[0]
-
-
-nest.pop('test_data')
 
 
 # Nest: the model.
@@ -348,8 +336,8 @@ def trained(env, outdir, c):
         cluster_execution_string('tcr-vae train {sources} {targets}'))
 
 
-# Nest: the test set, named by sample name.
-nest.add('test_set', lambda c: c['test_set_agg'], label_func=test_label)
+# Nest: evaluation on the test sets.
+nest.add('test_set', lambda c: c['test_set_agg'], label_func=common.strip_dirpath_extn)
 
 
 @nest.add_target_with_env(localenv)
@@ -427,14 +415,22 @@ def vae_generated_sumrep(env, outdir, c):
         'R/single_rep_summaries.R $SOURCE $TARGET')[0]
 
 
+# TODO To move this into the first test nest we need to pack more information
+# into our test agg.
+@nest.add_target_with_env(localenv)
+def test_pgen(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['test_set'])+'.pgen.csv',
+        c['test_set'],
+        'scripts/olga-pgen.sh $SOURCE $TARGET')[0]
+
+
 @nest.add_target_with_env(localenv)
 def summarized(env, outdir, c):
     summarized = join(outdir, 'summarized.csv')
     # Adding things to the summarized_agg aggregate.
     c['summarized_agg'].append(summarized)
-    # TODO
-    # to_pass = ['loss', 'test_pvae', 'test_pgen', 'vae_generated_pgen', 'vae_generated_sumrep', 'vae_sumrep_divergences']
-    to_pass = ['loss', 'test_pvae', 'vae_generated_pgen', 'vae_generated_sumrep', 'vae_sumrep_divergences']
+    to_pass = ['loss', 'test_pvae', 'test_pgen', 'vae_generated_pgen', 'vae_generated_sumrep', 'vae_sumrep_divergences']
     colnames = ','.join(to_pass)
     idx = get_idx(c)
     return env.Command(
@@ -444,11 +440,12 @@ def summarized(env, outdir, c):
     )[0]
 
 
-# Pop all the way down to sample, so we can summarize OLGA.
-for nest_name in reversed(summarized_agg_names[1:]):
-    nest.pop(nest_name)
-
-
+# TODO To make this work we need to pack more information into our test agg.
+# # Pop all the way down to sample, so we can summarize OLGA.
+# for nest_name in reversed(summarized_agg_names[1:]):
+#     nest.pop(nest_name)
+#
+#
 # # We need to have the OLGA summary here so that we have summarized_agg_names populated.
 # @nest.add_target_with_env(localenv)
 # def olga_summarized(env, outdir, c):
@@ -462,7 +459,7 @@ for nest_name in reversed(summarized_agg_names[1:]):
 #     return env.Command(
 #         summarized,
 #         [c[k] for k in to_pass],
-#         f'python3 util.py summarize --out $TARGET --idx "{idx}" --idx-name "{idx_name}" --colnames {colnames} $SOURCES'
+#        f'python3 util.py summarize --out $TARGET --idx "{idx}" --idx-name "{idx_name}" --colnames {colnames} $SOURCES'
 #     )[0]
 
 
