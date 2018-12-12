@@ -79,6 +79,8 @@ def summarize(out, idx, idx_name, colnames, in_paths):
             slurp_cols(path, prefix='sumrep_')
         elif re.search('sumrep_divergences', name):
             slurp_cols(path, prefix='sumdiv_')
+        elif re.search('auc_', name):
+            slurp_cols(path)
 
     df.to_csv(out)
 

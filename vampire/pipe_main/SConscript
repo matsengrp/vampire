@@ -1,6 +1,7 @@
 from os.path import join
 import glob
 import json
+import os
 
 import nestly
 import nestly.scons as ns
@@ -427,11 +428,29 @@ def test_pgen(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
+def auc_pgen(env, outdir, c):
+    # Below is not a typo:  we are using the location of test_pvae as a place to put our Pgen AUC.
+    return env.Command(
+        join(os.path.dirname(str(c['test_pvae'])), 'pgen_auc.csv'),
+        [c['test_pgen'], c['vae_generated_pgen']],
+        'R/auc.R $SOURCES $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def auc_pvae(env, outdir, c):
+    return env.Command(
+        join(os.path.dirname(str(c['test_pvae'])), 'pvae_auc.csv'),
+        [c['test_pvae'], c['olga_generated_pvae']],
+        'R/auc.R --pvae $SOURCES $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
 def summarized(env, outdir, c):
     summarized = join(outdir, 'summarized.csv')
     # Adding things to the summarized_agg aggregate.
     c['summarized_agg'].append(summarized)
-    to_pass = ['loss', 'test_pvae', 'test_pgen', 'vae_generated_pgen', 'vae_generated_sumrep', 'vae_sumrep_divergences']
+    to_pass = ['loss', 'test_pvae', 'test_pgen', 'vae_generated_pgen', 'vae_generated_sumrep', 'vae_sumrep_divergences',
+               'auc_pgen', 'auc_pvae']
     colnames = ','.join(to_pass)
     idx = get_idx(c)
     return env.Command(
