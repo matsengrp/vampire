@@ -116,7 +116,7 @@ def stackrows(out, in_paths):
         row.drop(row.columns[0], axis=1, inplace=True)
 
         for k, v in zip(idx_names, idx):
-            if k == 'sample':
+            if k in ['sample', 'test_set']:
                 v = common.strip_dirpath_extn(v)
             row[k] = v
 
