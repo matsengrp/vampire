@@ -86,7 +86,6 @@ def base_dict():
 
     d = {'nseqs': 500,
          'val_frac': 0.1,
-         'test_data': DATA[localenv['test_label']]['paths'][0],
          }
 
     if localenv['mode'] == 'mini':
@@ -128,6 +127,7 @@ nest = ns.SConsWrap(nestly.Nest(base_dict=base_dict()), alias_environment=locale
 # Nest: the data set choice, named via data name prepended with `_output_`.
 nest.add('data_label', [localenv['data_label']], label_func=lambda p: '_output_' + p)
 
+nest.add_aggregate('test_set_agg', list)
 nest.add_aggregate('summarized_agg', list)
 summarized_agg_names = []
 nest.add_aggregate('loss_regression_agg', list)
@@ -202,6 +202,35 @@ def preprocess(env, outdir, c):
         'python3 preprocess_adaptive.py $SOURCE $TARGET')[0]
 
 
+# # Nest: validation fraction.
+# numerical_nest_add('val_frac', [0.99, 0.9, 0.75, 0.5, 0.01])
+# summarized_agg_names.append('val_frac')
+
+
+@nest.add_target_with_env(localenv, 'split')
+@ns.name_targets
+def split(env, outdir, c):
+    """
+    Split the sample into training and validation. Note that this is the
+    training-validation split even though the command-line flag says
+    `test-size`.
+    """
+    in_path = c['preprocess']
+    return 'training', 'validation', env.Command([
+        join(outdir, common.strip_dirpath_extn(in_path) + '.training.csv'),
+        join(outdir, common.strip_dirpath_extn(in_path) + '.validation.csv')],
+        in_path,
+        f"python3 util.py split --test-size {c['val_frac']} $SOURCE $TARGETS")
+
+
+# Nest: the test set for initial processing.
+def test_label(path):
+    return 'test_' + common.strip_dirpath_extn(path)
+
+
+nest.add('test_data', DATA[localenv['test_label']]['paths'], label_func=test_label)
+
+
 @nest.add_target_with_env(localenv)
 def preprocess_test(env, outdir, c):
     """
@@ -214,29 +243,12 @@ def preprocess_test(env, outdir, c):
         'python3 preprocess_adaptive.py $SOURCE $TARGET')[0]
 
 
-# # Nest: validation fraction.
-# numerical_nest_add('val_frac', [0.99, 0.9, 0.75, 0.5, 0.01])
-# summarized_agg_names.append('val_frac')
-
-
-@nest.add_target_with_env(localenv, 'split')
-@ns.name_targets
-def split(env, outdir, c):
-    """
-    Split the sample into training and validation.
-    """
-    in_path = c['preprocess']
-    return 'training', 'validation', env.Command([
-        join(outdir, common.strip_dirpath_extn(in_path) + '.training.csv'),
-        join(outdir, common.strip_dirpath_extn(in_path) + '.validation.csv')],
-        in_path,
-        f"python3 util.py split --test-size {c['val_frac']} $SOURCE $TARGETS")
-
-
 @nest.add_target_with_env(localenv)
 def test_head(env, outdir, c):
+    test_head_path = join(outdir, f"testing.{c['nseqs']}.csv")
+    c['test_set_agg'].append(test_head_path)
     return env.Command(
-        join(outdir, f"testing.{c['nseqs']}.csv"),
+        test_head_path,
         c['preprocess_test'],
         f"cut -f 2-4 -d, $SOURCE | head -n {c['nseqs']+1} > $TARGET")[0]
 
@@ -263,6 +275,9 @@ def test_pgen(env, outdir, c):
         common.strip_extn(c['test_head'])+'.pgen.csv',
         c['test_head'],
         'scripts/olga-pgen.sh $SOURCE $TARGET')[0]
+
+
+nest.pop('test_data')
 
 
 # Nest: the model.
@@ -333,28 +348,32 @@ def trained(env, outdir, c):
         cluster_execution_string('tcr-vae train {sources} {targets}'))
 
 
+# Nest: the test set, named by sample name.
+nest.add('test_set', lambda c: c['test_set_agg'], label_func=test_label)
+
+
 @nest.add_target_with_env(localenv)
 def loss(env, outdir, c):
     return env.Command(
         join(outdir, 'loss.csv'),
         [c['model_params'], c['trained']['weights'], c['split']['training'],
-            c['split']['validation'], c['preprocess_test']],
+            c['split']['validation'], c['test_set']],
         'tcr-vae loss $SOURCES $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
 def test_per_sequence_loss(env, outdir, c):
     return env.Command(
-        join(outdir, common.strip_dirpath_extn(c['test_head'])+'.per-seq-loss.csv'),
-        [c['model_params'], c['trained']['weights'], c['test_head']],
+        join(outdir, common.strip_dirpath_extn(c['test_set'])+'.per-seq-loss.csv'),
+        [c['model_params'], c['trained']['weights'], c['test_set']],
         'tcr-vae per-seq-loss $SOURCES $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
 def test_pvae(env, outdir, c):
     return env.Command(
-        join(outdir, common.strip_dirpath_extn(c['test_head'])+'.pvae.csv'),
-        [c['model_params'], c['trained']['weights'], c['test_head']],
+        join(outdir, common.strip_dirpath_extn(c['test_set'])+'.pvae.csv'),
+        [c['model_params'], c['trained']['weights'], c['test_set']],
         cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
 
 
@@ -380,7 +399,7 @@ def vae_generated(env, outdir, c):
 def vae_sumrep_divergences(env, outdir, c):
     return env.Command(
         common.strip_extn(c['vae_generated'])+'-test.sumdiv.csv',
-        [c['test_head'], c['vae_generated']],
+        [c['test_set'], c['vae_generated']],
         'R/rep_divergences.R $SOURCES $TARGET')[0]
 
 
@@ -413,7 +432,9 @@ def summarized(env, outdir, c):
     summarized = join(outdir, 'summarized.csv')
     # Adding things to the summarized_agg aggregate.
     c['summarized_agg'].append(summarized)
-    to_pass = ['loss', 'test_pvae', 'test_pgen', 'vae_generated_pgen', 'vae_generated_sumrep', 'vae_sumrep_divergences']
+    # TODO
+    # to_pass = ['loss', 'test_pvae', 'test_pgen', 'vae_generated_pgen', 'vae_generated_sumrep', 'vae_sumrep_divergences']
+    to_pass = ['loss', 'test_pvae', 'vae_generated_pgen', 'vae_generated_sumrep', 'vae_sumrep_divergences']
     colnames = ','.join(to_pass)
     idx = get_idx(c)
     return env.Command(
@@ -428,21 +449,21 @@ for nest_name in reversed(summarized_agg_names[1:]):
     nest.pop(nest_name)
 
 
-# We need to have the OLGA summary here so that we have summarized_agg_names populated.
-@nest.add_target_with_env(localenv)
-def olga_summarized(env, outdir, c):
-    summarized = join(outdir, 'olga-summarized.csv')
-    c['summarized_agg'].append(summarized)
-    to_pass = ['olga_sumrep_divergences']
-    colnames = ','.join(to_pass)
-    # OLGA doesn't have any free parameters, so it only gets the one identifier.
-    pre_idx = [c[summarized_agg_names[0]], 'olga'] + ['']*(len(summarized_agg_names)-2)
-    idx = ';'.join(pre_idx)
-    return env.Command(
-        summarized,
-        [c[k] for k in to_pass],
-        f'python3 util.py summarize --out $TARGET --idx "{idx}" --idx-name "{idx_name}" --colnames {colnames} $SOURCES'
-    )[0]
+# # We need to have the OLGA summary here so that we have summarized_agg_names populated.
+# @nest.add_target_with_env(localenv)
+# def olga_summarized(env, outdir, c):
+#     summarized = join(outdir, 'olga-summarized.csv')
+#     c['summarized_agg'].append(summarized)
+#     to_pass = ['olga_sumrep_divergences']
+#     colnames = ','.join(to_pass)
+#     # OLGA doesn't have any free parameters, so it only gets the one identifier.
+#     pre_idx = [c[summarized_agg_names[0]], 'olga'] + ['']*(len(summarized_agg_names)-2)
+#     idx = ';'.join(pre_idx)
+#     return env.Command(
+#         summarized,
+#         [c[k] for k in to_pass],
+#         f'python3 util.py summarize --out $TARGET --idx "{idx}" --idx-name "{idx_name}" --colnames {colnames} $SOURCES'
+#     )[0]
 
 
 nest.pop(summarized_agg_names[0])
