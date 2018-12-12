@@ -35,7 +35,7 @@ module load Singularity/2.5.2-GCC-5.4.0-2.26
 run_prelude = """#!/bin/bash
 set -eux
 
-pip install -e /home/matsen/re/vampire
+pip install /home/matsen/re/vampire
 """
 
 
