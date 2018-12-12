@@ -325,6 +325,38 @@ def trained(env, outdir, c):
         cluster_execution_string('tcr-vae train {sources} {targets}'))
 
 
+@nest.add_target_with_env(localenv)
+def vae_generated(env, outdir, c):
+    return env.Command(
+        join(outdir, 'generated.csv'),
+        [c['model_params'], c['trained']['weights']],
+        f"tcr-vae generate --nseqs {c['nseqs']} $SOURCES $TARGET")[0]
+
+
+@nest.add_target_with_env(localenv)
+def vae_generated_pgen(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['vae_generated'])+'.pgen.csv',
+        c['vae_generated'],
+        'scripts/olga-pgen.sh $SOURCE $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def vae_generated_sumrep(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['vae_generated'])+'.sumrep.csv',
+        c['vae_generated'],
+        'R/single_rep_summaries.R $SOURCE $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def olga_generated_pvae(env, outdir, c):
+    return env.Command(
+        join(outdir, common.strip_dirpath_extn(c['olga_generated'])+'.pvae.csv'),
+        [c['model_params'], c['trained']['weights'], c['olga_generated']],
+        cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
+
+
 # Nest: evaluation on the test sets.
 nest.add('test_set', lambda c: c['test_set_agg'], label_func=common.strip_dirpath_extn)
 summarized_agg_names.append('test_set')
@@ -366,24 +398,6 @@ def test_pvae(env, outdir, c):
         cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
 
 
-# @nest.add_target_with_env(localenv)
-# def regress_loss(env, outdir, c):
-#     loss_regression = join(outdir, 'loss_regression.csv'),
-#     c['loss_regression_agg'].append(loss_regression)
-#     return env.Command(
-#         loss_regression,
-#         [c['test_pvae'], c['test_per_sequence_loss']],
-#         f'R/regress_loss.R --idx "{get_idx(c)}" --idx-name "{idx_name}" $SOURCES $TARGET')[0]
-
-
-@nest.add_target_with_env(localenv)
-def vae_generated(env, outdir, c):
-    return env.Command(
-        join(outdir, 'generated.csv'),
-        [c['model_params'], c['trained']['weights']],
-        f"tcr-vae generate --nseqs {c['nseqs']} $SOURCES $TARGET")[0]
-
-
 @nest.add_target_with_env(localenv)
 def vae_sumrep_divergences(env, outdir, c):
     return env.Command(
@@ -392,28 +406,14 @@ def vae_sumrep_divergences(env, outdir, c):
         'R/rep_divergences.R $SOURCES $TARGET')[0]
 
 
-@nest.add_target_with_env(localenv)
-def vae_generated_pgen(env, outdir, c):
-    return env.Command(
-        common.strip_extn(c['vae_generated'])+'.pgen.csv',
-        c['vae_generated'],
-        'scripts/olga-pgen.sh $SOURCE $TARGET')[0]
-
-
-@nest.add_target_with_env(localenv)
-def olga_generated_pvae(env, outdir, c):
-    return env.Command(
-        join(outdir, common.strip_dirpath_extn(c['olga_generated'])+'.pvae.csv'),
-        [c['model_params'], c['trained']['weights'], c['olga_generated']],
-        cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
-
-
-@nest.add_target_with_env(localenv)
-def vae_generated_sumrep(env, outdir, c):
-    return env.Command(
-        common.strip_extn(c['vae_generated'])+'.sumrep.csv',
-        c['vae_generated'],
-        'R/single_rep_summaries.R $SOURCE $TARGET')[0]
+# @nest.add_target_with_env(localenv)
+# def regress_loss(env, outdir, c):
+#     loss_regression = join(outdir, 'loss_regression.csv'),
+#     c['loss_regression_agg'].append(loss_regression)
+#     return env.Command(
+#         loss_regression,
+#         [c['test_pvae'], c['test_per_sequence_loss']],
+#         f'R/regress_loss.R --idx "{get_idx(c)}" --idx-name "{idx_name}" $SOURCES $TARGET')[0]
 
 
 # TODO To move this into the first test nest we need to pack more information
