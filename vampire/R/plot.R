@@ -34,22 +34,27 @@ drop_rows_with_na = function(df) { df[complete.cases(df), ] }
 
 ### Plotting ###
 
-plot_likelihoods = function(df, numerical_col) {
-    df = df[df$model != 'olga', ]
-    df = restrict_to_true_test(df)
+plot_likelihoods = function(df, numerical_col, out_path=NULL) {
     id_vars = c('test_set', 'model', numerical_col)
     measure_vars = c('test_log_mean_pvae', 'test_log_pvae_sd')
+
+    df = df[df$model != 'olga', ]
+    df = restrict_to_true_test(df)
     df = df[c(id_vars, measure_vars)]
     df$ymin = df$test_log_mean_pvae - 0.5*df$test_log_pvae_sd
     df$ymax = df$test_log_mean_pvae + 0.5*df$test_log_pvae_sd
-    ggplot(df, aes_string(numerical_col, 'test_log_mean_pvae', color='model')) +
+
+    p = ggplot(df, aes_string(numerical_col, 'test_log_mean_pvae', color='model')) +
         geom_line() +
         geom_errorbar(aes(ymin=ymin, ymax=ymax), alpha=0.3) +
         facet_wrap(vars(test_set), scales='free') +
         scale_x_log10()
+
+    if(length(out_path)) ggsave(out_path, height=4, width=8)
+    p
 }
 
-plot_divergences = function(df, numerical_col) {
+plot_divergences = function(df, numerical_col, out_path=NULL) {
     id_vars = c('test_set', 'model', 'class', numerical_col)
     measure_vars = grep('sumdiv_', colnames(df), value=TRUE)
     numerical_col='beta'
@@ -59,7 +64,7 @@ plot_divergences = function(df, numerical_col) {
     df = add_model_class(df)
     df = df[c(id_vars, measure_vars)]
 
-    ggplot(
+    p = ggplot(
         melt(df, id_vars, measure_vars, variable.name='divergence'),
         aes(beta, value, color=model, linetype=class)
     ) + geom_line() +
@@ -67,6 +72,27 @@ plot_divergences = function(df, numerical_col) {
         scale_x_log10() +
         scale_y_log10() +
         theme(strip.text.y = element_text(angle = 0))
+
+    if(length(out_path)) ggsave(out_path, height=8)
+    p
 }
 
+plot_fooling = function(df, numerical_col, out_path=NULL) {
+    id_vars = c('test_set', 'model', numerical_col)
+    measure_vars = c('auc_pgen', 'auc_pvae')
+
+    df = restrict_to_true_test(df)
+    df = df[c(id_vars, measure_vars)]
+    df = drop_rows_with_na(df)
+
+    p = ggplot(
+        melt(df, id_vars, measure_vars, variable.name='AUC'),
+        aes_string(numerical_col, 'value', color='AUC')
+    ) + geom_line() +
+        facet_grid(vars(model), vars(test_set), scales='free') +
+        scale_x_log10()
+
+    if(length(out_path)) ggsave(out_path)
+    p
+}
 
