@@ -2,6 +2,7 @@ from os.path import join
 import glob
 import json
 import os
+import re
 
 import nestly
 import nestly.scons as ns
@@ -128,7 +129,11 @@ nest = ns.SConsWrap(nestly.Nest(base_dict=base_dict()), alias_environment=locale
 # Nest: the data set choice, named via data name prepended with `_output_`.
 nest.add('data_label', [localenv['data_label']], label_func=lambda p: '_output_' + p)
 
+# The test_set_agg allows us to process the test sets once in the things that don't depend on the VAE.
 nest.add_aggregate('test_set_agg', list)
+# The test_set_info_agg gathers information about the processed test sets so we can get at them later.
+nest.add_aggregate('test_set_info_agg', dict)
+# The summarized_agg gathers everything we want to summarize and then stack at the end.
 nest.add_aggregate('summarized_agg', list)
 summarized_agg_names = []
 nest.add_aggregate('loss_regression_agg', list)
@@ -205,7 +210,8 @@ def preprocess_test(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def test_head(env, outdir, c):
     test_head_path = join(outdir, common.strip_dirpath_extn(c['preprocess_test'])+f".{c['nseqs']}.csv")
-    c['test_set_agg'].append(test_head_path)
+    # Remove a pesky and meaningless leading `./` that was making trouble later.
+    c['test_set_agg'].append(re.sub('^\./', '', test_head_path))
     return env.Command(
         test_head_path,
         c['preprocess_test'],
@@ -213,17 +219,31 @@ def test_head(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
-def test_sumrep(env, outdir, c):
+def test_pgen(env, outdir, c):
+    test_pgen_path = common.strip_extn(c['test_head'])+'.pgen.csv'
+    c['test_set_info_agg'][(str(c['test_head']), 'test_pgen')] = test_pgen_path
     return env.Command(
-        common.strip_extn(c['test_head'])+'.sumrep.csv',
+        test_pgen_path,
+        c['test_head'],
+        'scripts/olga-pgen.sh $SOURCE $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def test_sumrep(env, outdir, c):
+    test_sumrep_path = common.strip_extn(c['test_head'])+'.sumrep.csv'
+    c['test_set_info_agg'][(str(c['test_head']), 'test_sumrep')] = test_sumrep_path
+    return env.Command(
+        test_sumrep_path,
         c['test_head'],
         'R/single_rep_summaries.R $SOURCE $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
 def olga_sumrep_divergences(env, outdir, c):
+    olga_sumrep_divergences_path = common.strip_extn(c['test_head'])+'-olga.sumdiv.csv'
+    c['test_set_info_agg'][(str(c['test_head']), 'olga_sumrep_divergences')] = olga_sumrep_divergences_path
     return env.Command(
-        common.strip_extn(c['test_head'])+'-olga.sumdiv.csv',
+        olga_sumrep_divergences_path,
         [c['test_head'], c['olga_generated']],
         'R/rep_divergences.R $SOURCES $TARGET')[0]
 
@@ -415,18 +435,9 @@ def vae_sumrep_divergences(env, outdir, c):
 #         f'R/regress_loss.R --idx "{get_idx(c)}" --idx-name "{idx_name}" $SOURCES $TARGET')[0]
 
 
-# TODO To move this into the first test nest we need to pack more information
-# into our test agg.
-@nest.add_target_with_env(localenv)
-def test_pgen(env, outdir, c):
-    return env.Command(
-        common.strip_extn(c['test_set'])+'.pgen.csv',
-        c['test_set'],
-        'scripts/olga-pgen.sh $SOURCE $TARGET')[0]
-
-
 @nest.add_target_with_env(localenv)
 def auc_pgen(env, outdir, c):
+    c['test_pgen'] = c['test_set_info_agg'][(c['test_set'], 'test_pgen')]
     # Below is not a typo:  we are using the location of test_pvae as a place to put our Pgen AUC.
     return env.Command(
         join(os.path.dirname(str(c['test_pvae'])), 'pgen_auc.csv'),
@@ -458,27 +469,28 @@ def summarized(env, outdir, c):
     )[0]
 
 
-# TODO To make this work we need to pack more information into our test agg.
-# # Pop all the way down to sample, so we can summarize OLGA.
-# for nest_name in reversed(summarized_agg_names[1:]):
-#     nest.pop(nest_name)
-#
-#
-# # We need to have the OLGA summary here so that we have summarized_agg_names populated.
-# @nest.add_target_with_env(localenv)
-# def olga_summarized(env, outdir, c):
-#     summarized = join(outdir, 'olga-summarized.csv')
-#     c['summarized_agg'].append(summarized)
-#     to_pass = ['olga_sumrep_divergences']
-#     colnames = ','.join(to_pass)
-#     # OLGA doesn't have any free parameters, so it only gets the one identifier.
-#     pre_idx = [c[summarized_agg_names[0]], 'olga'] + ['']*(len(summarized_agg_names)-2)
-#     idx = ';'.join(pre_idx)
-#     return env.Command(
-#         summarized,
-#         [c[k] for k in to_pass],
-#        f'python3 util.py summarize --out $TARGET --idx "{idx}" --idx-name "{idx_name}" --colnames {colnames} $SOURCES'
-#     )[0]
+# It's slickest to have the OLGA summary here so that we have summarized_agg_names populated.
+# Pop all the way down to sample, so we can summarize OLGA.
+nest.pop(summarized_agg_names[1])
+
+# Now nest back up to loop through the test sets.
+nest.add('test_set', lambda c: c['test_set_agg'], label_func=common.strip_dirpath_extn)
+
+
+@nest.add_target_with_env(localenv)
+def olga_summarized(env, outdir, c):
+    summarized = join(outdir, 'olga-summarized.csv')
+    c['summarized_agg'].append(summarized)
+    colnames = 'olga_sumrep_divergences'
+    olga_sumrep_divergences_path = c['test_set_info_agg'][(c['test_set'], 'olga_sumrep_divergences')]
+    # OLGA doesn't have any free parameters, so it only gets the one identifier.
+    pre_idx = [c[summarized_agg_names[0]], 'olga'] + ['']*(len(summarized_agg_names)-2)
+    idx = ';'.join(pre_idx)
+    return env.Command(
+        summarized,
+        [olga_sumrep_divergences_path],
+        f'python3 util.py summarize --out $TARGET --idx "{idx}" --idx-name "{idx_name}" --colnames {colnames} $SOURCES'
+    )[0]
 
 
 nest.pop(summarized_agg_names[0])
