@@ -1,0 +1,72 @@
+#!/usr/bin/env Rscript
+
+suppressMessages(library(ggplot2))
+
+
+### Utilities ###
+
+# Restrict the rows of df to ones in which sample is not a trimmed version of test_set.
+restrict_to_true_test = function(df) {
+    # We use a convention in which processing information is added after the sample name with periods.
+    # Here we trim that off.
+    df$trimmed_test_set_name = sapply(strsplit(as.character(df$test_set), '\\.'), `[`, 1)
+    df = df[complete.cases(df$trimmed_test_set_name), ]
+    df[df$sample != df$trimmed_test_set_name, ]
+}
+
+# Do a little gymnastics to fill in fake values for OLGA (which is missing numerical_col)
+# so that it will draw a line when relevant.
+fake_extra_entries = function(df, numerical_col) {
+    to_duplicate = df[is.na(df[,numerical_col]), ]
+    to_duplicate[ , numerical_col] = max(df[,numerical_col], na.rm=TRUE)
+    df[is.na(df[,numerical_col]), numerical_col] = min(df[,numerical_col], na.rm=TRUE)
+    rbind(df, to_duplicate)
+}
+
+add_model_class = function(df) {
+    df$class = 'dnn'
+    df[df$model == 'olga', ]$class = 'graphical'
+    df
+}
+
+drop_rows_with_na = function(df) { df[complete.cases(df), ] }
+
+
+### Plotting ###
+
+plot_likelihoods = function(df, numerical_col) {
+    df = df[df$model != 'olga', ]
+    df = restrict_to_true_test(df)
+    id_vars = c('test_set', 'model', numerical_col)
+    measure_vars = c('test_log_mean_pvae', 'test_log_pvae_sd')
+    df = df[c(id_vars, measure_vars)]
+    df$ymin = df$test_log_mean_pvae - 0.5*df$test_log_pvae_sd
+    df$ymax = df$test_log_mean_pvae + 0.5*df$test_log_pvae_sd
+    ggplot(df, aes_string(numerical_col, 'test_log_mean_pvae', color='model')) +
+        geom_line() +
+        geom_errorbar(aes(ymin=ymin, ymax=ymax), alpha=0.3) +
+        facet_wrap(vars(test_set), scales='free') +
+        scale_x_log10()
+}
+
+plot_divergences = function(df, numerical_col) {
+    id_vars = c('test_set', 'model', 'class', numerical_col)
+    measure_vars = grep('sumdiv_', colnames(df), value=TRUE)
+    numerical_col='beta'
+
+    df = restrict_to_true_test(df)
+    df = fake_extra_entries(df, numerical_col)
+    df = add_model_class(df)
+    df = df[c(id_vars, measure_vars)]
+
+    ggplot(
+        melt(df, id_vars, measure_vars, variable.name='divergence'),
+        aes(beta, value, color=model, linetype=class)
+    ) + geom_line() +
+        facet_grid(vars(divergence), vars(test_set), scales='free') +
+        scale_x_log10() +
+        scale_y_log10() +
+        theme(strip.text.y = element_text(angle = 0))
+}
+
+
