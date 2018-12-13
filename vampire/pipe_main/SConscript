@@ -274,18 +274,16 @@ def split(env, outdir, c):
 # this out if you are only interested in one model. Instead, make a
 # single-model nest.
 # nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
-nest.add('model', ['basic', 'count_match'])
+nest.add('model', ['basic', 'germline_decoder_length', 'count_match'])
 summarized_agg_names.append('model')
 
 # Nest: the dimension of the latent space.
 # numerical_nest_add('latent_dim', [30, 35, 40])
-numerical_nest_add('latent_dim', [35])
-summarized_agg_names.append('latent_dim')
+# summarized_agg_names.append('latent_dim')
 
 # Nest: the number of dense nodes.
 # numerical_nest_add('dense_nodes', [50, 75, 100, 125, 150])
-numerical_nest_add('dense_nodes', [10, 25, 50, 100, 150, 200])
-summarized_agg_names.append('dense_nodes')
+# summarized_agg_names.append('dense_nodes')
 
 # # Nest: the amino acid embedding dimension.
 # numerical_nest_add('aa_embedding_dim', [10, 15, 20, 21])
@@ -296,8 +294,8 @@ summarized_agg_names.append('dense_nodes')
 # summarized_agg_names.append('v_gene_embedding_dim')
 
 # # Nest: the strength of the KL component of the VAE loss.
-# numerical_nest_add('beta', [2.**i for i in range(-4, 4, 2)])
-# summarized_agg_names.append('beta')
+numerical_nest_add('beta', [2.**i for i in range(-4, 4, 2)])
+summarized_agg_names.append('beta')
 
 
 @nest.add_target_with_env(localenv)
