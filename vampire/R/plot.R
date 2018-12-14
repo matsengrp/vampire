@@ -57,7 +57,6 @@ plot_likelihoods = function(df, numerical_col, out_path=NULL) {
 plot_divergences = function(df, numerical_col, out_path=NULL) {
     id_vars = c('test_set', 'model', 'class', numerical_col)
     measure_vars = grep('sumdiv_', colnames(df), value=TRUE)
-    numerical_col='beta'
 
     df = restrict_to_true_test(df)
     df = fake_extra_entries(df, numerical_col)
@@ -66,7 +65,7 @@ plot_divergences = function(df, numerical_col, out_path=NULL) {
 
     p = ggplot(
         melt(df, id_vars, measure_vars, variable.name='divergence'),
-        aes(beta, value, color=model, linetype=class)
+        aes_string(numerical_col, 'value', color='model', linetype='class')
     ) + geom_line() +
         facet_grid(vars(divergence), vars(test_set), scales='free') +
         scale_x_log10() +
@@ -87,12 +86,12 @@ plot_fooling = function(df, numerical_col, out_path=NULL) {
 
     p = ggplot(
         melt(df, id_vars, measure_vars, variable.name='AUC'),
-        aes_string(numerical_col, 'value', color='AUC')
+        aes_string(numerical_col, 'value', linetype='AUC', color='model')
     ) + geom_line() +
-        facet_grid(vars(model), vars(test_set), scales='free') +
+        facet_wrap(vars(test_set), scales='free') +
         scale_x_log10()
 
-    if(length(out_path)) ggsave(out_path)
+    if(length(out_path)) ggsave(out_path, height=4, width=7)
     p
 }
 
