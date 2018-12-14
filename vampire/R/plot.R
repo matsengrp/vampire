@@ -72,7 +72,7 @@ plot_divergences = function(df, numerical_col, out_path=NULL) {
         scale_y_log10() +
         theme(strip.text.y = element_text(angle = 0))
 
-    if(length(out_path)) ggsave(out_path, height=8)
+    if(length(out_path)) ggsave(out_path, height=8, width=8)
     p
 }
 
