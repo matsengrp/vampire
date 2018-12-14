@@ -30,6 +30,16 @@ DATA = {
     'one-seshadri-tb': {
         'paths': [join(seshadri_path, 'TB-1052-2M_TCRB.tsv')]
     },
+    'two-seshadri-tb': {
+        'paths': [join(seshadri_path, 'TB-1052-2M_TCRB.tsv'),
+                  join(seshadri_path, 'TB-1112_TCRB.tsv')]
+    },
+    'four-seshadri-tb': {
+        'paths': [join(seshadri_path, 'TB-1052-2M_TCRB.tsv'),
+                  join(seshadri_path, 'TB-1112_TCRB.tsv'),
+                  join(seshadri_path, 'TB-1117_TCRB.tsv'),
+                  join(seshadri_path, 'TB-1126_TCRB.tsv')]
+    },
     'seshadri': {
         'paths': [join(seshadri_path, '02-0249_TCRB.tsv'),
                   join(seshadri_path, '09-0306_TCRB.tsv')]
