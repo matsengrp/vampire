@@ -89,6 +89,7 @@ class TCRVAE:
             # Training parameters.
             stopping_monitor='val_loss',
             batch_size=100,
+            warmup_period=100,
             epochs=500,
             patience=20)
 
@@ -155,7 +156,7 @@ class TCRVAE:
             epochs=self.params['epochs'],
             batch_size=self.params['batch_size'],
             validation_split=validation_split,
-            callbacks=[checkpoint, early_stopping, tensorboard],
+            callbacks=[checkpoint, early_stopping, tensorboard] + self.callbacks,
             verbose=2)
 
     def evaluate(self, x_df, per_sequence=False):

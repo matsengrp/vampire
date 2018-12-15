@@ -294,7 +294,8 @@ def split(env, outdir, c):
 # this out if you are only interested in one model. Instead, make a
 # single-model nest.
 # nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
-nest.add('model', ['basic', 'germline_decoder_length', 'count_match'])
+nest.add('model', ['basic-beta-schedule'])
+# nest.add('model', ['basic', 'basic-beta-schedule'])
 summarized_agg_names.append('model')
 
 # Nest: the dimension of the latent space.
