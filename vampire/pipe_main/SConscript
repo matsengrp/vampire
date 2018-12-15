@@ -298,8 +298,8 @@ nest.add('model', ['basic-beta-schedule'])
 summarized_agg_names.append('model')
 
 # Nest: the dimension of the latent space.
-numerical_nest_add('warmup_period', [50*i for i in range(6)])
-summarized_agg_names.append('latent_dim')
+numerical_nest_add('warmup_period', [50*i for i in range(1,6)])
+summarized_agg_names.append('warmup_period')
 
 # Nest: the dimension of the latent space.
 # numerical_nest_add('latent_dim', [30, 35, 40])
