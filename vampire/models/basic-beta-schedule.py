@@ -24,7 +24,7 @@ class BetaSchedule(keras.callbacks.Callback):
         self.warmup_period = warmup_period
 
     def on_epoch_end(self, epoch, logs={}):
-        self.beta = self.max_beta * min([1., epoch / self.warmup_period])
+        K.set_value(self.beta, self.max_beta * min([1., epoch / self.warmup_period]))
 
 
 def build(params):

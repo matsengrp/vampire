@@ -71,7 +71,7 @@ def default_params_by_mode():
     params = tcr_vae.TCRVAE.default_params()
 
     if localenv['mode'] == 'mini':
-        params['epochs'] = 5
+        params['epochs'] = 100
 
     return params
 
@@ -295,8 +295,11 @@ def split(env, outdir, c):
 # single-model nest.
 # nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
 nest.add('model', ['basic-beta-schedule'])
-# nest.add('model', ['basic', 'basic-beta-schedule'])
 summarized_agg_names.append('model')
+
+# Nest: the dimension of the latent space.
+numerical_nest_add('warmup_period', [50*i for i in range(6)])
+summarized_agg_names.append('latent_dim')
 
 # Nest: the dimension of the latent space.
 # numerical_nest_add('latent_dim', [30, 35, 40])
@@ -314,9 +317,9 @@ summarized_agg_names.append('model')
 # numerical_nest_add('v_gene_embedding_dim', [20, 30, 40])
 # summarized_agg_names.append('v_gene_embedding_dim')
 
-# # Nest: the strength of the KL component of the VAE loss.
-numerical_nest_add('beta', [2.**i for i in range(-4, 4, 2)])
-summarized_agg_names.append('beta')
+# # # Nest: the strength of the KL component of the VAE loss.
+# numerical_nest_add('beta', [0.5])
+# summarized_agg_names.append('beta')
 
 # # Nest: monitor for EarlyStopping.
 # numerical_nest_add('stopping_monitor', ['loss', 'val_loss'])

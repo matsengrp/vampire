@@ -80,7 +80,7 @@ class TCRVAE:
             aa_embedding_dim=21,
             v_gene_embedding_dim=30,
             j_gene_embedding_dim=13,
-            beta=0.5,
+            beta=1.,
             # Input data parameters.
             max_cdr3_len=30,
             n_aas=len(conversion.AA_LIST),
@@ -89,8 +89,8 @@ class TCRVAE:
             # Training parameters.
             stopping_monitor='val_loss',
             batch_size=100,
-            warmup_period=100,
-            epochs=500,
+            warmup_period=200,
+            epochs=1000,
             patience=20)
 
     @classmethod
