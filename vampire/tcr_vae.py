@@ -148,7 +148,17 @@ class TCRVAE:
         """
         data = self.prepare_data(x_df)
         checkpoint = ModelCheckpoint(best_weights_fname, save_best_only=True, mode='min')
-        early_stopping = EarlyStopping(monitor=params['stopping_monitor'], patience=self.params['patience'], mode='min')
+        early_stopping = EarlyStopping(
+            monitor=self.params['stopping_monitor'], patience=self.params['patience'], mode='min')
+        tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir + '_warmup')
+        self.vae.fit(
+            x=data,  # y=X for a VAE.
+            y=data,
+            epochs=1 + self.params['warmup_period'],
+            batch_size=self.params['batch_size'],
+            validation_split=validation_split,
+            callbacks=[tensorboard] + self.callbacks,
+            verbose=2)
         tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir)
         self.vae.fit(
             x=data,  # y=X for a VAE.
@@ -156,7 +166,7 @@ class TCRVAE:
             epochs=self.params['epochs'],
             batch_size=self.params['batch_size'],
             validation_split=validation_split,
-            callbacks=[checkpoint, early_stopping, tensorboard] + self.callbacks,
+            callbacks=[checkpoint, early_stopping, tensorboard],
             verbose=2)
 
     def evaluate(self, x_df, per_sequence=False):
