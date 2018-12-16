@@ -317,6 +317,14 @@ summarized_agg_names.append('model')
 numerical_nest_add('beta', [2.**i for i in range(-4, 4, 2)])
 summarized_agg_names.append('beta')
 
+# # Nest: monitor for EarlyStopping.
+# numerical_nest_add('stopping_monitor', ['loss', 'val_loss'])
+# summarized_agg_names.append('stopping_monitor')
+
+# # Nest: the strength of the KL component of the VAE loss.
+# numerical_nest_add('patience', [5*x for x in range(7)]+[50,100])
+# summarized_agg_names.append('patience')
+
 
 @nest.add_target_with_env(localenv)
 def model_params(env, outdir, c):
