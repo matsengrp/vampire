@@ -87,6 +87,7 @@ class TCRVAE:
             n_v_genes=len(conversion.TCRB_V_GENE_LIST),
             n_j_genes=len(conversion.TCRB_J_GENE_LIST),
             # Training parameters.
+            stopping_monitor='val_loss',
             batch_size=100,
             epochs=500,
             patience=20)
@@ -146,7 +147,7 @@ class TCRVAE:
         """
         data = self.prepare_data(x_df)
         checkpoint = ModelCheckpoint(best_weights_fname, monitor='loss', verbose=0, save_best_only=True, mode='min')
-        early_stopping = EarlyStopping(monitor='loss', patience=self.params['patience'])
+        early_stopping = EarlyStopping(monitor=params['stopping_monitor'], patience=self.params['patience'])
         tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir)
         self.vae.fit(
             x=data,  # y=X for a VAE.
