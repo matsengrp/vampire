@@ -89,8 +89,8 @@ class TCRVAE:
             # Training parameters.
             stopping_monitor='val_loss',
             batch_size=100,
-            warmup_period=200,
-            epochs=1000,
+            warmup_period=20,
+            epochs=500,
             patience=20)
 
     @classmethod
@@ -151,14 +151,16 @@ class TCRVAE:
         early_stopping = EarlyStopping(
             monitor=self.params['stopping_monitor'], patience=self.params['patience'], mode='min')
         tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir + '_warmup')
-        self.vae.fit(
-            x=data,  # y=X for a VAE.
-            y=data,
-            epochs=1 + self.params['warmup_period'],
-            batch_size=self.params['batch_size'],
-            validation_split=validation_split,
-            callbacks=[tensorboard] + self.callbacks,
-            verbose=2)
+
+        if self.params['warmup_period'] > 0:
+            self.vae.fit(
+                x=data,  # y=X for a VAE.
+                y=data,
+                epochs=1 + self.params['warmup_period'],
+                batch_size=self.params['batch_size'],
+                validation_split=validation_split,
+                callbacks=[tensorboard] + self.callbacks,
+                verbose=2)
         tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir)
         self.vae.fit(
             x=data,  # y=X for a VAE.
