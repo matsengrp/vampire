@@ -144,10 +144,13 @@ class TCRVAE:
 
     def fit(self, x_df: pd.DataFrame, validation_split: float, best_weights_fname: str, tensorboard_log_dir: str):
         """
-        Fit the vae with early stopping.
+        Fit the vae with warmup and early stopping.
         """
         data = self.prepare_data(x_df)
 
+        # In our first fitting phase we don't apply EarlyStopping so that we get the number of specifed warmup epochs.
+        # Below we apply the fact that right now the only thing in self.callbacks is the BetaSchedule callback.
+        # If other callbacks appear we'll need to change this.
         if self.params['warmup_period'] > 0:
             tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir + '_warmup')
             self.vae.fit(
@@ -156,7 +159,7 @@ class TCRVAE:
                 epochs=1 + self.params['warmup_period'],
                 batch_size=self.params['batch_size'],
                 validation_split=validation_split,
-                callbacks=[tensorboard] + self.callbacks,
+                callbacks=[tensorboard] + self.callbacks,  # <- here re callbacks
                 verbose=2)
 
         checkpoint = ModelCheckpoint(best_weights_fname, save_best_only=True, mode='min')

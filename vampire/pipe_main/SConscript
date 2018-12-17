@@ -318,15 +318,15 @@ summarized_agg_names.append('model')
 # summarized_agg_names.append('v_gene_embedding_dim')
 
 # # # Nest: the strength of the KL component of the VAE loss.
-# numerical_nest_add('beta', [0.5])
-# summarized_agg_names.append('beta')
+numerical_nest_add('beta', [0.5, 0.75, 1.])
+summarized_agg_names.append('beta')
 
 # # Nest: monitor for EarlyStopping.
 # nest.add('stopping_monitor', ['loss', 'val_loss'])
 # summarized_agg_names.append('stopping_monitor')
 
 # # Nest: the strength of the KL component of the VAE loss.
-# numerical_nest_add('patience', [5*x for x in range(7)]+[50,100])
+# numerical_nest_add('patience', [5*x for x in range(7)])
 # summarized_agg_names.append('patience')
 
 
