@@ -14,7 +14,10 @@ class BetaSchedule(Callback):
         self.warmup_period = warmup_period
 
     def on_epoch_end(self, epoch, logs={}):
-        K.set_value(self.beta, self.max_beta * min([1., epoch / self.warmup_period]))
+        new_beta = self.max_beta
+        if self.warmup_period > 0 and epoch < self.warmup_period:
+            new_beta *= epoch / self.warmup_period
+        K.set_value(self.beta, new_beta)
 
 
 ### Layers ###
