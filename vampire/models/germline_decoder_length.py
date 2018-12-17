@@ -17,7 +17,7 @@ from keras import objectives
 
 import vampire.common as common
 import vampire.xcr_vector_conversion as conversion
-from vampire.custom_keras import BetaSchedule, CDR3Length, EmbedViaMatrix, RightTensordot
+from vampire.custom_keras import BetaWarmup, CDR3Length, EmbedViaMatrix, RightTensordot
 
 
 def build(params):
@@ -132,7 +132,7 @@ def build(params):
             "v_gene_output": 0.9282
         })
 
-    callbacks = [BetaSchedule(beta, params['beta'], params['warmup_period'])]
+    callbacks = [BetaWarmup(beta, params['beta'], params['warmup_period'])]
 
     return {'encoder': encoder, 'decoder': decoder, 'vae': vae, 'callbacks': callbacks}
 

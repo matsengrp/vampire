@@ -7,7 +7,7 @@ import tensorflow as tf
 ### Callbacks ###
 
 
-class BetaSchedule(Callback):
+class BetaWarmup(Callback):
     def __init__(self, beta, max_beta, warmup_period):
         self.beta = beta
         self.max_beta = max_beta

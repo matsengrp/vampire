@@ -28,7 +28,7 @@ from keras import objectives
 
 import vampire.common as common
 import vampire.xcr_vector_conversion as conversion
-from vampire.custom_keras import BetaSchedule, CDR3Length, ContiguousMatch, EmbedViaMatrix, RightTensordot
+from vampire.custom_keras import BetaWarmup, CDR3Length, ContiguousMatch, EmbedViaMatrix, RightTensordot
 
 from vampire.germline_cdr3_aa_tensor import max_germline_aas
 
@@ -165,7 +165,7 @@ def build(params):
             "contiguous_match_output": 0.05
         })
 
-    callbacks = [BetaSchedule(beta, params['beta'], params['warmup_period'])]
+    callbacks = [BetaWarmup(beta, params['beta'], params['warmup_period'])]
 
     return {'encoder': encoder, 'decoder': decoder, 'vae': vae, 'callbacks': callbacks}
 

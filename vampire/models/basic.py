@@ -14,7 +14,7 @@ from keras import backend as K
 from keras import objectives
 
 import vampire.common as common
-from vampire.custom_keras import BetaSchedule, EmbedViaMatrix
+from vampire.custom_keras import BetaWarmup, EmbedViaMatrix
 
 
 def build(params):
@@ -106,7 +106,7 @@ def build(params):
             "v_gene_output": 0.8138
         })
 
-    callbacks = [BetaSchedule(beta, params['beta'], params['warmup_period'])]
+    callbacks = [BetaWarmup(beta, params['beta'], params['warmup_period'])]
 
     return {'encoder': encoder, 'decoder': decoder, 'vae': vae, 'callbacks': callbacks}
 
