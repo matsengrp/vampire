@@ -77,8 +77,10 @@ plot_divergences = function(df, numerical_col, out_path=NULL, x_trans='identity'
 }
 
 plot_fooling = function(df, numerical_col, out_path=NULL, x_trans='identity') {
+    colnames(df)[colnames(df) == 'auc_pgen'] <- 'graphical'
+    colnames(df)[colnames(df) == 'auc_pvae'] <- 'dnn'
     id_vars = c('test_set', 'model', numerical_col)
-    measure_vars = c('auc_pgen', 'auc_pvae')
+    measure_vars = c('dnn', 'graphical')
 
     df = restrict_to_true_test(df)
     df = df[c(id_vars, measure_vars)]
