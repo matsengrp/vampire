@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-suppressMessages(library(ggplot2))
+suppressMessages(library(cowplot))
 
 
 ### Utilities ###
@@ -36,7 +36,7 @@ drop_rows_with_na = function(df) { df[complete.cases(df), ] }
 
 plot_likelihoods = function(df, numerical_col, out_path=NULL, x_trans='identity') {
     id_vars = c('test_set', 'model', numerical_col)
-    measure_vars = c('test_log_mean_pvae', 'test_log_pvae_sd')
+    measure_vars = c('test_log_mean_pvae', 'test_log_pvae_sd', 'test_median_log_pvae')
 
     df = df[df$model != 'olga', ]
     df = restrict_to_true_test(df)
@@ -44,13 +44,20 @@ plot_likelihoods = function(df, numerical_col, out_path=NULL, x_trans='identity'
     df$ymin = df$test_log_mean_pvae - 0.5*df$test_log_pvae_sd
     df$ymax = df$test_log_mean_pvae + 0.5*df$test_log_pvae_sd
 
-    p = ggplot(df, aes_string(numerical_col, 'test_log_mean_pvae', color='model')) +
-        geom_line() +
-        geom_errorbar(aes(ymin=ymin, ymax=ymax), alpha=0.3) +
-        facet_wrap(vars(test_set), scales='free') +
-        scale_x_continuous(trans=x_trans)
+    mean = ggplot(df, aes_string(numerical_col, 'test_log_mean_pvae', color='model')) +
+           geom_line() +
+           geom_errorbar(aes(ymin=ymin, ymax=ymax), alpha=0.3) +
+           facet_wrap(vars(test_set), scales='free') +
+           scale_x_continuous(trans=x_trans)
 
-    if(length(out_path)) ggsave(out_path, height=4, width=8)
+    medn = ggplot(df, aes_string(numerical_col, 'test_median_log_pvae', color='model')) +
+           geom_line() +
+           facet_wrap(vars(test_set), scales='free') +
+           scale_x_continuous(trans=x_trans)
+
+    p = plot_grid(mean, medn, labels = c("mean", "median"), nrow = 2, align = 'v')
+
+    if(length(out_path)) ggsave(out_path, height=6, width=8)
     p
 }
 
