@@ -71,7 +71,7 @@ def default_params_by_mode():
     params = tcr_vae.TCRVAE.default_params()
 
     if localenv['mode'] == 'mini':
-        params['epochs'] = 5
+        params['epochs'] = 100
 
     return params
 
@@ -268,7 +268,7 @@ def preprocess(env, outdir, c):
         'python3 preprocess_adaptive.py $SOURCE $TARGET')[0]
 
 
-# # Nest: validation fraction.
+# Nest: validation fraction.
 # numerical_nest_add('val_frac', [0.99, 0.9, 0.75, 0.5, 0.01])
 # summarized_agg_names.append('val_frac')
 
@@ -293,9 +293,13 @@ def split(env, outdir, c):
 # In order to keep things happy when merging with OLGA results, don't comment
 # this out if you are only interested in one model. Instead, make a
 # single-model nest.
-# nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
-nest.add('model', ['basic', 'germline_decoder_length', 'count_match'])
+nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
+# nest.add('model', ['basic'])
 summarized_agg_names.append('model')
+
+# Nest: the dimension of the latent space.
+# numerical_nest_add('warmup_period', [5*i for i in range(0,6)])
+# summarized_agg_names.append('warmup_period')
 
 # Nest: the dimension of the latent space.
 # numerical_nest_add('latent_dim', [30, 35, 40])
@@ -305,24 +309,24 @@ summarized_agg_names.append('model')
 # numerical_nest_add('dense_nodes', [50, 75, 100, 125, 150])
 # summarized_agg_names.append('dense_nodes')
 
-# # Nest: the amino acid embedding dimension.
+# Nest: the amino acid embedding dimension.
 # numerical_nest_add('aa_embedding_dim', [10, 15, 20, 21])
 # summarized_agg_names.append('aa_embedding_dim')
 
-# # Nest: the V gene embedding dimension.
+# Nest: the V gene embedding dimension.
 # numerical_nest_add('v_gene_embedding_dim', [20, 30, 40])
 # summarized_agg_names.append('v_gene_embedding_dim')
 
-# # Nest: the strength of the KL component of the VAE loss.
-numerical_nest_add('beta', [2.**i for i in range(-4, 4, 2)])
+# Nest: the strength of the KL component of the VAE loss.
+numerical_nest_add('beta', [0.5, 0.75, 1.])
 summarized_agg_names.append('beta')
 
-# # Nest: monitor for EarlyStopping.
-# numerical_nest_add('stopping_monitor', ['loss', 'val_loss'])
+# Nest: monitor for EarlyStopping.
+# nest.add('stopping_monitor', ['loss', 'val_loss'])
 # summarized_agg_names.append('stopping_monitor')
 
-# # Nest: the strength of the KL component of the VAE loss.
-# numerical_nest_add('patience', [5*x for x in range(7)]+[50,100])
+# Nest: the strength of the KL component of the VAE loss.
+# numerical_nest_add('patience', [5*x for x in range(7)])
 # summarized_agg_names.append('patience')
 
 

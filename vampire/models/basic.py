@@ -14,10 +14,13 @@ from keras import backend as K
 from keras import objectives
 
 import vampire.common as common
-from vampire.layers import EmbedViaMatrix
+from vampire.custom_keras import BetaWarmup, EmbedViaMatrix
 
 
 def build(params):
+
+    beta = K.variable(params['beta'])
+
     def sampling(args):
         """
         This function draws a sample from the multivariate normal defined by
@@ -37,7 +40,7 @@ def build(params):
         # total loss across the sites rather than a mean loss.
         xent_loss = params['max_cdr3_len'] * K.mean(objectives.categorical_crossentropy(io_encoder, io_decoder))
         kl_loss = -0.5 * K.sum(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
-        kl_loss *= params['beta']
+        kl_loss *= beta
         return (xent_loss + kl_loss)
 
     # Input:
@@ -103,7 +106,9 @@ def build(params):
             "v_gene_output": 0.8138
         })
 
-    return {'encoder': encoder, 'decoder': decoder, 'vae': vae}
+    callbacks = [BetaWarmup(beta, params['beta'], params['warmup_period'])]
+
+    return {'encoder': encoder, 'decoder': decoder, 'vae': vae, 'callbacks': callbacks}
 
 
 def prepare_data(x_df):

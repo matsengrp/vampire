@@ -80,7 +80,7 @@ class TCRVAE:
             aa_embedding_dim=21,
             v_gene_embedding_dim=30,
             j_gene_embedding_dim=13,
-            beta=0.5,
+            beta=0.75,
             # Input data parameters.
             max_cdr3_len=30,
             n_aas=len(conversion.AA_LIST),
@@ -89,6 +89,7 @@ class TCRVAE:
             # Training parameters.
             stopping_monitor='val_loss',
             batch_size=100,
+            warmup_period=20,
             epochs=500,
             patience=20)
 
@@ -143,11 +144,27 @@ class TCRVAE:
 
     def fit(self, x_df: pd.DataFrame, validation_split: float, best_weights_fname: str, tensorboard_log_dir: str):
         """
-        Fit the vae with early stopping.
+        Fit the vae with warmup and early stopping.
         """
         data = self.prepare_data(x_df)
-        checkpoint = ModelCheckpoint(best_weights_fname, monitor='loss', verbose=0, save_best_only=True, mode='min')
-        early_stopping = EarlyStopping(monitor=params['stopping_monitor'], patience=self.params['patience'])
+
+        # In our first fitting phase we don't apply EarlyStopping so that we get the number of specifed warmup epochs.
+        # Below we apply the fact that right now the only thing in self.callbacks is the BetaSchedule callback.
+        # If other callbacks appear we'll need to change this.
+        if self.params['warmup_period'] > 0:
+            tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir + '_warmup')
+            self.vae.fit(
+                x=data,  # y=X for a VAE.
+                y=data,
+                epochs=1 + self.params['warmup_period'],
+                batch_size=self.params['batch_size'],
+                validation_split=validation_split,
+                callbacks=[tensorboard] + self.callbacks,  # <- here re callbacks
+                verbose=2)
+
+        checkpoint = ModelCheckpoint(best_weights_fname, save_best_only=True, mode='min')
+        early_stopping = EarlyStopping(
+            monitor=self.params['stopping_monitor'], patience=self.params['patience'], mode='min')
         tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir)
         self.vae.fit(
             x=data,  # y=X for a VAE.
@@ -155,7 +172,8 @@ class TCRVAE:
             epochs=self.params['epochs'],
             batch_size=self.params['batch_size'],
             validation_split=validation_split,
-            callbacks=[checkpoint, early_stopping, tensorboard])
+            callbacks=[checkpoint, early_stopping, tensorboard],
+            verbose=2)
 
     def evaluate(self, x_df, per_sequence=False):
         """

@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-suppressMessages(library(ggplot2))
+suppressMessages(library(cowplot))
 
 
 ### Utilities ###
@@ -34,9 +34,9 @@ drop_rows_with_na = function(df) { df[complete.cases(df), ] }
 
 ### Plotting ###
 
-plot_likelihoods = function(df, numerical_col, out_path=NULL) {
+plot_likelihoods = function(df, numerical_col, out_path=NULL, x_trans='identity') {
     id_vars = c('test_set', 'model', numerical_col)
-    measure_vars = c('test_log_mean_pvae', 'test_log_pvae_sd')
+    measure_vars = c('test_log_mean_pvae', 'test_log_pvae_sd', 'test_median_log_pvae')
 
     df = df[df$model != 'olga', ]
     df = restrict_to_true_test(df)
@@ -44,17 +44,24 @@ plot_likelihoods = function(df, numerical_col, out_path=NULL) {
     df$ymin = df$test_log_mean_pvae - 0.5*df$test_log_pvae_sd
     df$ymax = df$test_log_mean_pvae + 0.5*df$test_log_pvae_sd
 
-    p = ggplot(df, aes_string(numerical_col, 'test_log_mean_pvae', color='model')) +
-        geom_line() +
-        geom_errorbar(aes(ymin=ymin, ymax=ymax), alpha=0.3) +
-        facet_wrap(vars(test_set), scales='free') +
-        scale_x_log10()
+    mean = ggplot(df, aes_string(numerical_col, 'test_log_mean_pvae', color='model')) +
+           geom_line() +
+           geom_errorbar(aes(ymin=ymin, ymax=ymax), alpha=0.3) +
+           facet_wrap(vars(test_set), scales='free') +
+           scale_x_continuous(trans=x_trans)
 
-    if(length(out_path)) ggsave(out_path, height=4, width=8)
+    medn = ggplot(df, aes_string(numerical_col, 'test_median_log_pvae', color='model')) +
+           geom_line() +
+           facet_wrap(vars(test_set), scales='free') +
+           scale_x_continuous(trans=x_trans)
+
+    p = plot_grid(mean, medn, labels = c("mean", "median"), nrow = 2, align = 'v')
+
+    if(length(out_path)) ggsave(out_path, height=6, width=8)
     p
 }
 
-plot_divergences = function(df, numerical_col, out_path=NULL) {
+plot_divergences = function(df, numerical_col, out_path=NULL, x_trans='identity') {
     id_vars = c('test_set', 'model', 'class', numerical_col)
     measure_vars = grep('sumdiv_', colnames(df), value=TRUE)
 
@@ -68,17 +75,19 @@ plot_divergences = function(df, numerical_col, out_path=NULL) {
         aes_string(numerical_col, 'value', color='model', linetype='class')
     ) + geom_line() +
         facet_grid(vars(divergence), vars(test_set), scales='free') +
-        scale_x_log10() +
+        scale_x_continuous(trans=x_trans) +
         scale_y_log10() +
         theme(strip.text.y = element_text(angle = 0))
 
-    if(length(out_path)) ggsave(out_path, height=8)
+    if(length(out_path)) ggsave(out_path, height=8, width=8)
     p
 }
 
-plot_fooling = function(df, numerical_col, out_path=NULL) {
+plot_fooling = function(df, numerical_col, out_path=NULL, x_trans='identity') {
+    colnames(df)[colnames(df) == 'auc_pgen'] <- 'graphical'
+    colnames(df)[colnames(df) == 'auc_pvae'] <- 'dnn'
     id_vars = c('test_set', 'model', numerical_col)
-    measure_vars = c('auc_pgen', 'auc_pvae')
+    measure_vars = c('dnn', 'graphical')
 
     df = restrict_to_true_test(df)
     df = df[c(id_vars, measure_vars)]
@@ -89,7 +98,7 @@ plot_fooling = function(df, numerical_col, out_path=NULL) {
         aes_string(numerical_col, 'value', linetype='AUC', color='model')
     ) + geom_line() +
         facet_wrap(vars(test_set), scales='free') +
-        scale_x_log10()
+        scale_x_continuous(trans=x_trans)
 
     if(length(out_path)) ggsave(out_path, height=4, width=7)
     p
