@@ -268,7 +268,7 @@ def preprocess(env, outdir, c):
         'python3 preprocess_adaptive.py $SOURCE $TARGET')[0]
 
 
-# # Nest: validation fraction.
+# Nest: validation fraction.
 # numerical_nest_add('val_frac', [0.99, 0.9, 0.75, 0.5, 0.01])
 # summarized_agg_names.append('val_frac')
 
@@ -309,23 +309,23 @@ summarized_agg_names.append('model')
 # numerical_nest_add('dense_nodes', [50, 75, 100, 125, 150])
 # summarized_agg_names.append('dense_nodes')
 
-# # Nest: the amino acid embedding dimension.
+# Nest: the amino acid embedding dimension.
 # numerical_nest_add('aa_embedding_dim', [10, 15, 20, 21])
 # summarized_agg_names.append('aa_embedding_dim')
 
-# # Nest: the V gene embedding dimension.
+# Nest: the V gene embedding dimension.
 # numerical_nest_add('v_gene_embedding_dim', [20, 30, 40])
 # summarized_agg_names.append('v_gene_embedding_dim')
 
-# # # Nest: the strength of the KL component of the VAE loss.
+# Nest: the strength of the KL component of the VAE loss.
 numerical_nest_add('beta', [0.5, 0.75, 1.])
 summarized_agg_names.append('beta')
 
-# # Nest: monitor for EarlyStopping.
+# Nest: monitor for EarlyStopping.
 # nest.add('stopping_monitor', ['loss', 'val_loss'])
 # summarized_agg_names.append('stopping_monitor')
 
-# # Nest: the strength of the KL component of the VAE loss.
+# Nest: the strength of the KL component of the VAE loss.
 # numerical_nest_add('patience', [5*x for x in range(7)])
 # summarized_agg_names.append('patience')
 
