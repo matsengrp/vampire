@@ -1,12 +1,13 @@
 """
-Using the thymic Q framework.
+Computing in the thymic Q framework.
 """
 
 import click
-
 import numpy as np
 import pandas as pd
 
+# These are our "lvj" columns, which are the most common indices for
+# probabilities and sequences in what follows.
 lvj = ['length', 'v_gene', 'j_gene']
 
 
@@ -18,6 +19,9 @@ def tamp(x, m):
 
 
 def normalize_column(df, col_name):
+    """
+    Normalize a column so that it has sum one.
+    """
     df[col_name] = df[col_name] / sum(df[col_name])
 
 
@@ -74,8 +78,13 @@ def p_lvj_of_Pgen_tsv(path, col_name='Pgen'):
     return df
 
 
-def merge_lvj_dfs(df1, df2):
-    merged = pd.merge(df1, df2, how='outer', left_index=True, right_index=True)
+def merge_lvj_dfs(df1, df2, how='outer'):
+    """
+    Merge on the lvj columns.
+
+    By default, uses the union of the keys (an "outer" join).
+    """
+    merged = pd.merge(df1, df2, how=how, left_index=True, right_index=True)
     merged.fillna(0, inplace=True)
     return merged
 
@@ -101,7 +110,9 @@ def calc_Ppost(q_csv, data_pgen_tsv, pseudocount_multiplier=0.5):
     df = read_olga_pgen_tsv(data_pgen_tsv)
     df['length'] = df['amino_acid'].apply(len)
     df.set_index(lvj, inplace=True)
-    df = merge_lvj_dfs(df, pd.read_csv(q_csv))
+    # Merging on left means that we only use only keys from the left data
+    # frame, i.e. the sequences for which we are interested in computing Ppost.
+    df = merge_lvj_dfs(df, pd.read_csv(q_csv, index_col=lvj), how='left')
     add_pseudocount(df, 'q', pseudocount_multiplier)
     df['Ppost'] = df['Pgen'] * df['q']
     # Drop length
@@ -129,7 +140,8 @@ def lvj_frequency(col_name, in_tsv, out_csv):
 
 @cli.command()
 @click.argument('train_pgen_tsv', type=click.File('r'))
-@click.argument('model_p_lvj_csv', type=click.File('r'))
+# Here we use a click.Path so we can pass a .bz2'd CSV.
+@click.argument('model_p_lvj_csv', type=click.Path(exists=True))
 @click.argument('out_csv', type=click.File('w'))
 def q(train_pgen_tsv, model_p_lvj_csv, out_csv):
     """
@@ -144,7 +156,7 @@ def q(train_pgen_tsv, model_p_lvj_csv, out_csv):
 @click.argument('out_csv', type=click.File('w'))
 def ppost(q_csv, data_pgen_tsv, out_csv):
     """
-    Calculate P_post given q_lvj and P_gen calculated for a data set.
+    Calculate Ppost given q_lvj and Pgen calculated for a data set.
     """
     calc_Ppost(q_csv, data_pgen_tsv).to_csv(out_csv)
 
