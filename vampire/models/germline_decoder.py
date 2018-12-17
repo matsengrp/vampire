@@ -17,7 +17,7 @@ from keras import objectives
 
 import vampire.common as common
 import vampire.xcr_vector_conversion as conversion
-from vampire.layers import EmbedViaMatrix, RightTensordot
+from vampire.custom_keras import EmbedViaMatrix, RightTensordot
 
 
 def build(params):

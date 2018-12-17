@@ -14,20 +14,7 @@ from keras import backend as K
 from keras import objectives
 
 import vampire.common as common
-from vampire.layers import EmbedViaMatrix
-
-
-class BetaSchedule(keras.callbacks.Callback):
-    def __init__(self, beta, max_beta, warmup_period):
-        self.beta = beta
-        self.max_beta = max_beta
-        self.warmup_period = warmup_period
-
-    def on_epoch_end(self, epoch, logs={}):
-        new_beta = self.max_beta
-        if self.warmup_period > 0 and epoch < self.warmup_period:
-            new_beta *= epoch / self.warmup_period
-        K.set_value(self.beta, new_beta)
+from vampire.custom_keras import BetaSchedule, EmbedViaMatrix
 
 
 def build(params):

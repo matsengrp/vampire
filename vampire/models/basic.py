@@ -14,7 +14,7 @@ from keras import backend as K
 from keras import objectives
 
 import vampire.common as common
-from vampire.layers import EmbedViaMatrix
+from vampire.custom_keras import EmbedViaMatrix
 
 
 def build(params):

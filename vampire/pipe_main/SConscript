@@ -293,13 +293,13 @@ def split(env, outdir, c):
 # In order to keep things happy when merging with OLGA results, don't comment
 # this out if you are only interested in one model. Instead, make a
 # single-model nest.
-# nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
-nest.add('model', ['basic-beta-schedule'])
+nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
+# nest.add('model', ['basic'])
 summarized_agg_names.append('model')
 
 # Nest: the dimension of the latent space.
-numerical_nest_add('warmup_period', [5*i for i in range(0,6)])
-summarized_agg_names.append('warmup_period')
+# numerical_nest_add('warmup_period', [5*i for i in range(0,6)])
+# summarized_agg_names.append('warmup_period')
 
 # Nest: the dimension of the latent space.
 # numerical_nest_add('latent_dim', [30, 35, 40])

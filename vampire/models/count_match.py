@@ -28,7 +28,7 @@ from keras import objectives
 
 import vampire.common as common
 import vampire.xcr_vector_conversion as conversion
-from vampire.layers import CDR3Length, ContiguousMatch, EmbedViaMatrix, RightTensordot
+from vampire.custom_keras import CDR3Length, ContiguousMatch, EmbedViaMatrix, RightTensordot
 
 from vampire.germline_cdr3_aa_tensor import max_germline_aas
 

@@ -147,12 +147,9 @@ class TCRVAE:
         Fit the vae with early stopping.
         """
         data = self.prepare_data(x_df)
-        checkpoint = ModelCheckpoint(best_weights_fname, save_best_only=True, mode='min')
-        early_stopping = EarlyStopping(
-            monitor=self.params['stopping_monitor'], patience=self.params['patience'], mode='min')
-        tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir + '_warmup')
 
         if self.params['warmup_period'] > 0:
+            tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir + '_warmup')
             self.vae.fit(
                 x=data,  # y=X for a VAE.
                 y=data,
@@ -161,6 +158,10 @@ class TCRVAE:
                 validation_split=validation_split,
                 callbacks=[tensorboard] + self.callbacks,
                 verbose=2)
+
+        checkpoint = ModelCheckpoint(best_weights_fname, save_best_only=True, mode='min')
+        early_stopping = EarlyStopping(
+            monitor=self.params['stopping_monitor'], patience=self.params['patience'], mode='min')
         tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir)
         self.vae.fit(
             x=data,  # y=X for a VAE.
