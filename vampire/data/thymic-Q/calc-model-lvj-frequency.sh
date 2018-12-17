@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eux
 
-NSEQS=1e7
+NSEQS=1e8
 OLGA_DEST=_ignore/olga-generated.tsv
 
 mkdir -p _ignore
