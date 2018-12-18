@@ -9,7 +9,7 @@ import numpy as np
 
 import keras
 from keras.models import Model
-from keras.layers import Activation, Dense, Lambda, Input, Reshape
+from keras.layers import Activation, BatchNormalization, Dense, Lambda, Input, Reshape
 from keras import backend as K
 from keras import objectives
 
@@ -57,8 +57,8 @@ def build(params):
     j_gene_embedding = Dense(params['j_gene_embedding_dim'], name='j_gene_embedding')(j_gene_input)
     merged_embedding = keras.layers.concatenate([cdr3_embedding_flat, v_gene_embedding, j_gene_embedding],
                                                 name='merged_embedding')
-    encoder_dense_1 = Dense(params['dense_nodes'], activation='elu', name='encoder_dense_1')(merged_embedding)
-    encoder_dense_2 = Dense(params['dense_nodes'], activation='elu', name='encoder_dense_2')(encoder_dense_1)
+    encoder_dense_1 = BatchNormalization()(Dense(params['dense_nodes'], activation='elu', name='encoder_dense_1')(merged_embedding))
+    encoder_dense_2 = BatchNormalization()(Dense(params['dense_nodes'], activation='elu', name='encoder_dense_2')(encoder_dense_1))
 
     # Latent layers:
     z_mean = Dense(params['latent_dim'], name='z_mean')(encoder_dense_2)
