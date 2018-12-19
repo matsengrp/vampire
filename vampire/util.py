@@ -52,8 +52,13 @@ def summarize(out, idx, idx_name, colnames, in_paths):
 
     index = pd.Index([idx], name=idx_name)
     if 'loss' in input_d:
-        loss_df = pd.read_csv(input_d['loss'], index_col=0)
-        df = pd.DataFrame(dict(zip(loss_df.index, loss_df['test'].transpose())), index=index)
+        loss_df = pd.read_csv(input_d['loss'], index_col=0).reset_index()
+        # The following 3 lines combine the data source and the metric into a
+        # single id like `train_j_gene_output_loss`.
+        loss_df = pd.melt(loss_df, id_vars='index')
+        loss_df['id'] = loss_df['variable'] + '_' + loss_df['index']
+        loss_df.set_index('id', inplace=True)
+        df = pd.DataFrame(dict(zip(loss_df.index, loss_df['value'].transpose())), index=index)
     else:
         df = pd.DataFrame(index=index)
 
