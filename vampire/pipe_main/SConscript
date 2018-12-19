@@ -47,7 +47,10 @@ DATA = {
     'healthy-seshadri': {
         'paths': glob.glob(join(seshadri_path, '[01]*TCRB.tsv'))
     },
-    '10-healthy-seshadri': {
+    'tb-seshadri': {
+        'paths': glob.glob(join(seshadri_path, 'TB*TCRB.tsv'))
+    },
+     '10-healthy-seshadri': {
         'paths': glob.glob(join(seshadri_path, '[01]*TCRB.tsv'))[:10]
     },
     'merged-healthy-seshadri': {
@@ -97,7 +100,7 @@ def base_dict():
     """
 
     d = {'nseqs': 500,
-         'val_frac': 0.1,
+         'val_frac': 0.5,
          }
 
     if localenv['mode'] == 'mini':
@@ -303,8 +306,8 @@ def split(env, outdir, c):
 # In order to keep things happy when merging with OLGA results, don't comment
 # this out if you are only interested in one model. Instead, make a
 # single-model nest.
-nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
-# nest.add('model', ['basic'])
+# nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
+nest.add('model', ['basic', 'basic_replicate', 'count_match', 'germline_decoder_length'])
 summarized_agg_names.append('model')
 
 # Nest: the dimension of the latent space.
@@ -415,20 +418,20 @@ def get_idx(c):
 
 
 @nest.add_target_with_env(localenv)
-def loss(env, outdir, c):
-    return env.Command(
-        join(outdir, 'loss.csv'),
-        [c['model_params'], c['trained']['weights'], c['split']['training'],
-            c['split']['validation'], c['test_set']],
-        'tcr-vae loss $SOURCES $TARGET')[0]
+# def loss(env, outdir, c):
+#     return env.Command(
+#         join(outdir, 'loss.csv'),
+#         [c['model_params'], c['trained']['weights'], c['split']['training'],
+#             c['split']['validation'], c['test_set']],
+#         'tcr-vae loss $SOURCES $TARGET')[0]
 
 
-@nest.add_target_with_env(localenv)
-def test_per_sequence_loss(env, outdir, c):
-    return env.Command(
-        join(outdir, common.strip_dirpath_extn(c['test_set'])+'.per-seq-loss.csv'),
-        [c['model_params'], c['trained']['weights'], c['test_set']],
-        'tcr-vae per-seq-loss $SOURCES $TARGET')[0]
+# @nest.add_target_with_env(localenv)
+# def test_per_sequence_loss(env, outdir, c):
+#     return env.Command(
+#         join(outdir, common.strip_dirpath_extn(c['test_set'])+'.per-seq-loss.csv'),
+#         [c['model_params'], c['trained']['weights'], c['test_set']],
+#         'tcr-vae per-seq-loss $SOURCES $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -480,7 +483,8 @@ def summarized(env, outdir, c):
     summarized = join(outdir, 'summarized.csv')
     # Adding things to the summarized_agg aggregate.
     c['summarized_agg'].append(summarized)
-    to_pass = ['loss', 'test_pvae', 'test_pgen', 'vae_generated_pgen', 'vae_generated_sumrep', 'vae_sumrep_divergences',
+    # 'loss',
+    to_pass = ['test_pvae', 'test_pgen', 'vae_generated_pgen', 'vae_generated_sumrep', 'vae_sumrep_divergences',
                'auc_pgen', 'auc_pvae']
     colnames = ','.join(to_pass)
     idx = get_idx(c)
