@@ -374,6 +374,15 @@ def trained(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
+def loss(env, outdir, c):
+    return env.Command(
+        join(outdir, 'loss.csv'),
+        [c['model_params'], c['trained']['weights'], c['split']['training'],
+            c['split']['validation']],
+        cluster_execution_string('tcr-vae loss {sources} {targets}'))[0]
+
+
+@nest.add_target_with_env(localenv)
 def vae_generated(env, outdir, c):
     return env.Command(
         join(outdir, 'generated.csv'),
@@ -428,15 +437,6 @@ def get_idx(c):
     Return a semicolon-separated list of where we are in the nest.
     """
     return ';'.join([str(c[k]) for k in summarized_agg_names])
-
-
-@nest.add_target_with_env(localenv)
-def loss(env, outdir, c):
-    return env.Command(
-        join(outdir, 'loss.csv'),
-        [c['model_params'], c['trained']['weights'], c['split']['training'],
-            c['split']['validation'], c['test_set']],
-        cluster_execution_string('tcr-vae loss {sources} {targets}'))[0]
 
 
 # @nest.add_target_with_env(localenv)
