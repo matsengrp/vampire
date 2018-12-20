@@ -18,6 +18,13 @@ def tamp(x, m):
     return m * np.arctan(x / m)
 
 
+def bound(x, m):
+    """
+    Cut off the values in x with a hard maximum m.
+    """
+    return np.minimum(x, m)
+
+
 def normalize_column(df, col_name):
     """
     Normalize a column so that it has sum one.
@@ -89,9 +96,9 @@ def merge_lvj_dfs(df1, df2, how='outer'):
     return merged
 
 
-def q_of_train_and_model_pgen(train_pgen_tsv, model_p_lvj_csv, tamp_m=1e5, pseudocount_multiplier=0.5):
+def q_of_train_and_model_pgen(train_pgen_tsv, model_p_lvj_csv, max_q=100, pseudocount_multiplier=0.5):
     """
-    See definition of tamp above to understand tamp_m.
+    Fit a q distribution, but truncating q at max_q.
     """
     # Merge the p_lvj from the data and that from the model:
     df = merge_lvj_dfs(
@@ -99,7 +106,7 @@ def q_of_train_and_model_pgen(train_pgen_tsv, model_p_lvj_csv, tamp_m=1e5, pseud
     # We need to do this merge so we can add a pseudocount:
     add_pseudocount(df, 'model_P_lvj', pseudocount_multiplier)
     normalize_column(df, 'model_P_lvj')
-    q = tamp(df['data_P_lvj'] / df['model_P_lvj'], tamp_m)
+    q = bound(df['data_P_lvj'] / df['model_P_lvj'], max_q)
     return pd.DataFrame({'q': q})
 
 
@@ -139,15 +146,16 @@ def lvj_frequency(col_name, in_tsv, out_csv):
 
 
 @cli.command()
+@click.option('--max-q', default=100, show_default=True, help="Limit q to be at most this value.")
 @click.argument('train_pgen_tsv', type=click.File('r'))
 # Here we use a click.Path so we can pass a .bz2'd CSV.
 @click.argument('model_p_lvj_csv', type=click.Path(exists=True))
 @click.argument('out_csv', type=click.File('w'))
-def q(train_pgen_tsv, model_p_lvj_csv, out_csv):
+def q(max_q, train_pgen_tsv, model_p_lvj_csv, out_csv):
     """
     Calculate q_lvj given training data and p_lvj obtained from the model.
     """
-    q_of_train_and_model_pgen(train_pgen_tsv, model_p_lvj_csv).to_csv(out_csv)
+    q_of_train_and_model_pgen(train_pgen_tsv, model_p_lvj_csv, max_q=max_q).to_csv(out_csv)
 
 
 @cli.command()
