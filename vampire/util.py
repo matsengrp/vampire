@@ -2,7 +2,9 @@
 Utilities, accessible via subcommands.
 """
 
+import os
 import re
+import shutil
 
 import click
 import common
@@ -52,8 +54,13 @@ def summarize(out, idx, idx_name, colnames, in_paths):
 
     index = pd.Index([idx], name=idx_name)
     if 'loss' in input_d:
-        loss_df = pd.read_csv(input_d['loss'], index_col=0)
-        df = pd.DataFrame(dict(zip(loss_df.index, loss_df['test'].transpose())), index=index)
+        loss_df = pd.read_csv(input_d['loss'], index_col=0).reset_index()
+        # The following 3 lines combine the data source and the metric into a
+        # single id like `train_j_gene_output_loss`.
+        loss_df = pd.melt(loss_df, id_vars='index')
+        loss_df['id'] = loss_df['variable'] + '_' + loss_df['index']
+        loss_df.set_index('id', inplace=True)
+        df = pd.DataFrame(dict(zip(loss_df.index, loss_df['value'].transpose())), index=index)
     else:
         df = pd.DataFrame(index=index)
 
@@ -75,6 +82,13 @@ def summarize(out, idx, idx_name, colnames, in_paths):
             # Yes, Vladimir, we are taking a standard deviation of something
             # that isn't normal. They look kinda gamma-ish after applying log.
             df['test_log_pvae_sd'] = np.std(log_pvae)
+        if name == 'validation_pvae':
+            log_pvae = pd.read_csv(path)['log_p_x']
+            df['validation_median_log_pvae'] = np.median(log_pvae)
+            df['validation_log_mean_pvae'] = np.log(np.mean(np.exp(log_pvae)))
+            # Yes, Vladimir, we are taking a standard deviation of something
+            # that isn't normal. They look kinda gamma-ish after applying log.
+            df['validation_log_pvae_sd'] = np.std(log_pvae)
         elif name == 'vae_generated_sumrep':
             slurp_cols(path, prefix='sumrep_')
         elif re.search('sumrep_divergences', name):
@@ -127,6 +141,20 @@ def stackrows(out, in_paths):
         return row
 
     pd.concat([read_row(path) for path in in_paths], sort=True).to_csv(out)
+
+
+@cli.command()
+@click.option('--dest-path', type=click.Path(writable=True), required=True)
+@click.argument('loss_paths', nargs=-1)
+def copy_best_weights(dest_path, loss_paths):
+    """
+    Find the best weights according to validation loss and copy them to the specified path.
+    """
+    loss_paths = sorted(loss_paths)
+    losses = [pd.read_csv(path, index_col=0).loc['loss', 'validation'] for path in loss_paths]
+    smallest_loss_path = loss_paths[np.argmin(losses)]
+    best_weights = os.path.join(os.path.dirname(smallest_loss_path), 'best_weights.h5')
+    shutil.copyfile(best_weights, dest_path)
 
 
 if __name__ == '__main__':
