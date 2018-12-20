@@ -1,10 +1,10 @@
+import keras
 from keras import backend as K
 from keras.callbacks import Callback
 from keras.engine.topology import Layer
-import numpy as np
 import tensorflow as tf
 
-### Callbacks ###
+# ### Callbacks ###
 
 
 class BetaWarmup(Callback):
@@ -20,7 +20,7 @@ class BetaWarmup(Callback):
         K.set_value(self.beta, new_beta)
 
 
-### Layers ###
+# ### Layers ###
 
 
 class EmbedViaMatrix(Layer):
@@ -36,6 +36,7 @@ class EmbedViaMatrix(Layer):
 
     def __init__(self, embedding_dim, **kwargs):
         self.embedding_dim = embedding_dim
+        self.kernel_initializer = keras.initializers.get('uniform')
         super(EmbedViaMatrix, self).__init__(**kwargs)
 
     def build(self, input_shape):

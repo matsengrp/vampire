@@ -25,6 +25,7 @@ import numpy as np
 import pandas as pd
 
 import keras
+import keras.backend as K
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 import scipy.special as special
@@ -91,7 +92,8 @@ class TCRVAE:
             batch_size=100,
             warmup_period=20,
             epochs=500,
-            patience=20)
+            patience=20,
+            pretrains=10)
 
     @classmethod
     def default(cls):
@@ -128,6 +130,12 @@ class TCRVAE:
         with open(fname, 'w') as fp:
             json.dump(self.params, fp)
 
+    def reinitialize_weights(self):
+        session = K.get_session()
+        for layer in self.vae.layers:
+            if hasattr(layer, 'kernel_initializer'):
+                layer.kernel.initializer.run(session=session)
+
     def get_data(self, fname, data_chunk_size=0):
         """
         Get data in the correct format from fname. If data_chunk_size is
@@ -148,12 +156,16 @@ class TCRVAE:
         """
         data = self.prepare_data(x_df)
 
-        # In our first fitting phase we don't apply EarlyStopping so that we get the number of specifed warmup epochs.
-        # Below we apply the fact that right now the only thing in self.callbacks is the BetaSchedule callback.
-        # If other callbacks appear we'll need to change this.
-        if self.params['warmup_period'] > 0:
-            tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir + '_warmup')
-            self.vae.fit(
+        best_val_loss = np.inf
+
+        for pretrain_idx in range(self.params['pretrains']):
+            self.reinitialize_weights()
+            # In our first fitting phase we don't apply EarlyStopping so that
+            # we get the number of specifed warmup epochs.
+            # Below we apply the fact that right now the only thing in self.callbacks is the BetaSchedule callback.
+            # If other callbacks appear we'll need to change this.
+            tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir + '_warmup_' + str(pretrain_idx))
+            history = self.vae.fit(
                 x=data,  # y=X for a VAE.
                 y=data,
                 epochs=1 + self.params['warmup_period'],
@@ -161,6 +173,12 @@ class TCRVAE:
                 validation_split=validation_split,
                 callbacks=[tensorboard] + self.callbacks,  # <- here re callbacks
                 verbose=2)
+            new_val_loss = history.history['val_loss'][-1]
+            if new_val_loss < best_val_loss:
+                best_val_loss = new_val_loss
+                self.vae.save_weights(best_weights_fname, overwrite=True)
+
+        self.vae.load_weights(best_weights_fname)
 
         checkpoint = ModelCheckpoint(best_weights_fname, save_best_only=True, mode='min')
         early_stopping = EarlyStopping(
