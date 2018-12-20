@@ -158,6 +158,7 @@ class TCRVAE:
 
         best_val_loss = np.inf
 
+        # We pretrain a given number of times and take the best run for the full train.
         for pretrain_idx in range(self.params['pretrains']):
             self.reinitialize_weights()
             # In our first fitting phase we don't apply EarlyStopping so that
