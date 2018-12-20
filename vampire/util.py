@@ -2,7 +2,9 @@
 Utilities, accessible via subcommands.
 """
 
+import os
 import re
+import shutil
 
 import click
 import common
@@ -139,6 +141,20 @@ def stackrows(out, in_paths):
         return row
 
     pd.concat([read_row(path) for path in in_paths], sort=True).to_csv(out)
+
+
+@cli.command()
+@click.option('--dest-path', type=click.Path(writable=True), required=True)
+@click.argument('loss_paths', nargs=-1)
+def copy_best_weights(dest_path, loss_paths):
+    """
+    Find the best weights according to validation loss and copy them to the specified path.
+    """
+    loss_paths = sorted(loss_paths)
+    losses = [pd.read_csv(path, index_col=0).loc['loss', 'validation'] for path in loss_paths]
+    smallest_loss_path = loss_paths[np.argmin(losses)]
+    best_weights = os.path.join(os.path.dirname(smallest_loss_path), 'best_weights.h5')
+    shutil.copyfile(best_weights, dest_path)
 
 
 if __name__ == '__main__':
