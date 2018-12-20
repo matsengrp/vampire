@@ -331,8 +331,8 @@ summarized_agg_names.append('model')
 # summarized_agg_names.append('v_gene_embedding_dim')
 
 # Nest: the strength of the KL component of the VAE loss.
-# numerical_nest_add('beta', [0.5, 0.75, 1.])
-# summarized_agg_names.append('beta')
+numerical_nest_add('beta', [0.5, 0.75, 1.])
+summarized_agg_names.append('beta')
 
 # Nest: monitor for EarlyStopping.
 # nest.add('stopping_monitor', ['loss', 'val_loss'])
@@ -341,9 +341,6 @@ summarized_agg_names.append('model')
 # Nest: the strength of the KL component of the VAE loss.
 # numerical_nest_add('patience', [5*x for x in range(7)])
 # summarized_agg_names.append('patience')
-
-# Aggregate: the replicate loss.
-nest.add_aggregate('replicate_loss_agg', list)
 
 
 @nest.add_target_with_env(localenv)
@@ -364,13 +361,9 @@ def model_params(env, outdir, c):
         f"echo '{json.dumps(params)}' > $TARGET")[0]
 
 
-# Nest: the replicate number
-numerical_nest_add('replicate', range(10))
-
-
-@nest.add_target_with_env(localenv, 'trained_replicate')
+@nest.add_target_with_env(localenv, 'trained')
 @ns.name_targets
-def trained_replicate(env, outdir, c):
+def trained(env, outdir, c):
     return 'weights', 'diagnostics', env.Command(
         [join(outdir, 'best_weights.h5'), join(outdir, 'diagnostics.csv')], [c['model_params'], c['split']['training']],
         cluster_execution_string('tcr-vae train {sources} {targets}'))
@@ -379,32 +372,19 @@ def trained_replicate(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def loss(env, outdir, c):
     loss = join(outdir, 'loss.csv')
-    c['replicate_loss_agg'].append(loss)
     return env.Command(
         loss,
-        [c['model_params'], c['trained_replicate']['weights'], c['split']['training'],
+        [c['model_params'], c['trained']['weights'], c['split']['training'],
             c['split']['validation']],
         cluster_execution_string('tcr-vae loss {sources} {targets}'))[0]
 
-
-# Exit the replicate nest...
-nest.pop('replicate')
-
-
-# ... and take the best weights across the replicates by validation loss.
-@nest.add_target_with_env(localenv)
-def trained(env, outdir, c):
-    return env.Command(
-        join(outdir, 'best_weights.h5'),
-        c['replicate_loss_agg'],
-        'python3 util.py copy-best-weights --dest-path $TARGET $SOURCES')[0]
 
 
 @nest.add_target_with_env(localenv)
 def vae_generated(env, outdir, c):
     return env.Command(
         join(outdir, 'generated.csv'),
-        [c['model_params'], c['trained']],
+        [c['model_params'], c['trained']['weights']],
         f"tcr-vae generate --nseqs {c['nseqs']} $SOURCES $TARGET")[0]
 
 
@@ -424,20 +404,20 @@ def vae_generated_sumrep(env, outdir, c):
         'R/single_rep_summaries.R $SOURCE $TARGET')[0]
 
 
-@nest.add_target_with_env(localenv)
-def validation_pvae(env, outdir, c):
-    pvae_call = f"tcr-vae pvae --limit-input-to {c['nseqs']}"
-    return env.Command(
-        join(outdir, common.strip_dirpath_extn(c['split']['validation'])+'.pvae.csv'),
-        [c['model_params'], c['trained'], c['split']['validation']],
-        cluster_execution_string(pvae_call + ' {sources} {targets}'))[0]
+# @nest.add_target_with_env(localenv)
+# def validation_pvae(env, outdir, c):
+#     pvae_call = f"tcr-vae pvae --limit-input-to {c['nseqs']}"
+#     return env.Command(
+#         join(outdir, common.strip_dirpath_extn(c['split']['validation'])+'.pvae.csv'),
+#         [c['model_params'], c['trained'], c['split']['validation']],
+#         cluster_execution_string(pvae_call + ' {sources} {targets}'))[0]
 
 
 @nest.add_target_with_env(localenv)
 def olga_generated_pvae(env, outdir, c):
     return env.Command(
         join(outdir, common.strip_dirpath_extn(c['olga_generated'])+'.pvae.csv'),
-        [c['model_params'], c['trained'], c['olga_generated']],
+        [c['model_params'], c['trained']['weights'], c['olga_generated']],
         cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
 
 
@@ -469,7 +449,7 @@ def get_idx(c):
 def test_pvae(env, outdir, c):
     return env.Command(
         join(outdir, common.strip_dirpath_extn(c['test_set'])+'.pvae.csv'),
-        [c['model_params'], c['trained'], c['test_set']],
+        [c['model_params'], c['trained']['weights'], c['test_set']],
         cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
 
 
@@ -514,8 +494,7 @@ def summarized(env, outdir, c):
     summarized = join(outdir, 'summarized.csv')
     # Adding things to the summarized_agg aggregate.
     c['summarized_agg'].append(summarized)
-    to_pass = ['validation_pvae', 'test_pvae', 'test_pgen',
-               'vae_generated_pgen', 'vae_generated_sumrep', 'vae_sumrep_divergences',
+    to_pass = ['loss', 'test_pvae', 'test_pgen', 'vae_generated_pgen', 'vae_generated_sumrep', 'vae_sumrep_divergences',
                'auc_pgen', 'auc_pvae']
     colnames = ','.join(to_pass)
     idx = get_idx(c)
