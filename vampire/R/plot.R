@@ -1,6 +1,7 @@
 #!/usr/bin/env Rscript
 
 suppressMessages(library(cowplot))
+suppressMessages(library(latex2exp))
 
 
 ### Utilities ###
@@ -104,3 +105,38 @@ plot_fooling = function(df, numerical_col, out_path=NULL, x_trans='identity') {
     p
 }
 
+# For comparing the distributions of probabilities estimated by OLGA and the
+# VAE.
+
+distribution_comparison = function(df, x_label) {
+    ggplot(df, aes(probability, color=source, fill=source)) +
+        geom_density(alpha=0.5) + scale_x_log10() +
+        xlab(TeX(x_label)) + theme(legend.position=c(0.2, 0.9))
+}
+
+pvae_distribution_comparison = function(data_path, sim_path) {
+    data = read.csv(data_path)
+    colnames(data) = c('probability')
+    data$source = 'data'
+    sim = read.csv(sim_path)
+    colnames(sim) = c('probability')
+    sim$source = 'OLGA'
+    df = rbind(sim, data)
+    df$probability = exp(df$probability)
+    distribution_comparison(df, 'P_{VAE}')
+}
+
+read_olga_pgen_csv = function(path) {
+    df = read.csv(path, header=FALSE)
+    data.frame(probability = df[,2])
+}
+
+pgen_distribution_comparison = function(data_path, sim_path) {
+    data = read_olga_pgen_csv(data_path)
+    data$source = 'data'
+    sim = read_olga_pgen_csv(sim_path)
+    sim$source = 'VAE'
+    df = rbind(sim, data)
+    df$probability
+    distribution_comparison(df, 'P_{OLGA}')
+}
