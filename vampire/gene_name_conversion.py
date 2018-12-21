@@ -1,7 +1,7 @@
 import click
 import pandas as pd
 
-import common
+import vampire.common as common
 
 translation_csv = 'adaptive-olga-translation.csv'
 
