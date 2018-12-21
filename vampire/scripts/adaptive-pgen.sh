@@ -5,10 +5,10 @@
 
 set -eux
 
-THREADS=10
-
-INFILE=$1
-OUTFILE=$2
+# The number of threads to use in the Pgen computation.
+THREADS=$1
+INFILE=$2
+OUTFILE=$3
 
 TMPDIR=$(mktemp -d)
 # Clean up after ourselves in all cases except `kill -9`.
