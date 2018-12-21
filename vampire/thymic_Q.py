@@ -96,7 +96,7 @@ def merge_lvj_dfs(df1, df2, how='outer'):
     return merged
 
 
-def q_of_train_and_model_pgen(train_pgen_tsv, model_p_lvj_csv, max_q=100, pseudocount_multiplier=0.5):
+def q_of_train_and_model_pgen(train_pgen_tsv, model_p_lvj_csv, max_q=None, pseudocount_multiplier=0.5):
     """
     Fit a q distribution, but truncating q at max_q.
     """
@@ -106,7 +106,9 @@ def q_of_train_and_model_pgen(train_pgen_tsv, model_p_lvj_csv, max_q=100, pseudo
     # We need to do this merge so we can add a pseudocount:
     add_pseudocount(df, 'model_P_lvj', pseudocount_multiplier)
     normalize_column(df, 'model_P_lvj')
-    q = bound(df['data_P_lvj'] / df['model_P_lvj'], max_q)
+    q = df['data_P_lvj'] / df['model_P_lvj']
+    if max_q:
+        q = bound(q, max_q)
     return pd.DataFrame({'q': q})
 
 
@@ -146,7 +148,7 @@ def lvj_frequency(col_name, in_tsv, out_csv):
 
 
 @cli.command()
-@click.option('--max-q', default=100, show_default=True, help="Limit q to be at most this value.")
+@click.option('--max-q', type=int, default=None, show_default=True, help="Limit q to be at most this value.")
 @click.argument('train_pgen_tsv', type=click.File('r'))
 # Here we use a click.Path so we can pass a .bz2'd CSV.
 @click.argument('model_p_lvj_csv', type=click.Path(exists=True))
