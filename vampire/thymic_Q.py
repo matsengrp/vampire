@@ -169,8 +169,8 @@ def sample_Ppost(q_csv, sample_size, max_q, max_iter=100, proposal_size=1e6):
             if c.return_code != 0:
                 raise Exception("olga-generate.sh failed!")
             df_sample = rejection_sample_Ppost(q_df, read_olga_tsv(sample_path), max_q)
-            print(f"Sampled {len(df_sample)} sequences.")
             out_df = out_df.append(df_sample)
+            print(f"Sampled {len(out_df)} of {sample_size}")
             if len(out_df) >= sample_size:
                 break
 
@@ -237,7 +237,7 @@ def sample(max_q, max_iter, proposal_size, q_csv, sample_size, out_csv):
     """
     Sample from the Ppost distribution via rejection sampling.
     """
-    sample_Ppost(q_csv, sample_size, max_q, max_iter=max_iter, proposal_size=proposal_size).to_csv(out_csv)
+    sample_Ppost(q_csv, sample_size, max_q, max_iter=max_iter, proposal_size=proposal_size).to_csv(out_csv, index=False)
 
 
 if __name__ == '__main__':
