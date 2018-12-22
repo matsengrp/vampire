@@ -232,12 +232,14 @@ def ppost(q_csv, data_pgen_tsv, out_csv):
     '--proposal-size', default=1000000, show_default=True, help="Number of samples to take for proposal distribution.")
 @click.argument('q_csv', type=click.File('r'))
 @click.argument('sample_size', type=int)
-@click.argument('out_csv', type=click.File('w'))
-def sample(max_q, max_iter, proposal_size, q_csv, sample_size, out_csv):
+@click.argument('out_tsv', type=click.File('w'))
+def sample(max_q, max_iter, proposal_size, q_csv, sample_size, out_tsv):
     """
     Sample from the Ppost distribution via rejection sampling.
     """
-    sample_Ppost(q_csv, sample_size, max_q, max_iter=max_iter, proposal_size=proposal_size).to_csv(out_csv, index=False)
+    sample_Ppost(
+        q_csv, sample_size, max_q, max_iter=max_iter, proposal_size=proposal_size).to_csv(
+            out_tsv, sep='\t', index=False)
 
 
 if __name__ == '__main__':

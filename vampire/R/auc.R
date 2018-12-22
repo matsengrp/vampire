@@ -20,8 +20,8 @@ if(args$pvae) {
     take_exp = TRUE
     col_name = 'auc_pvae'
 } else {
-    header = FALSE
-    idx = 2
+    header = TRUE
+    idx = 6
     take_exp = FALSE
     col_name = 'auc_pgen'
 }

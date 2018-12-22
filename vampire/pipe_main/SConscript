@@ -84,7 +84,9 @@ def default_params_by_mode():
     params = tcr_vae.TCRVAE.default_params()
 
     if localenv['mode'] == 'mini':
-        params['epochs'] = 100
+        params['pretrains'] = 2
+        params['warmup_period'] = 3
+        params['epochs'] = 10
 
     return params
 
@@ -101,6 +103,8 @@ def base_dict():
 
     d = {'nseqs': 500,
          'val_frac': 0.1,
+         'max_q': 100,
+         'threads': 4,
          }
 
     if localenv['mode'] == 'mini':
@@ -174,36 +178,6 @@ def git_sha(env, outdir, c):
         "git log --pretty=format:'%H' -n 1 > $TARGET")[0]
 
 
-@nest.add_target_with_env(localenv)
-def olga_generated_tsv(env, outdir, c):
-    """
-    Generate sequences using OLGA.
-    """
-    return env.Command(
-        join(outdir, 'olga-generated.tsv'),
-        [],
-        f"scripts/olga-generate.sh {c['nseqs']} $TARGET")[0]
-
-
-@nest.add_target_with_env(localenv)
-def olga_generated(env, outdir, c):
-    """
-    Convert OLGA TSV to a adaptive CSV.
-    """
-    return env.Command(
-        join(outdir, 'olga-generated.csv'),
-        c['olga_generated_tsv'],
-        'python3 gene_name_conversion.py olga2adaptive $SOURCE $TARGET')[0]
-
-
-@nest.add_target_with_env(localenv)
-def olga_generated_sumrep(env, outdir, c):
-    return env.Command(
-        common.strip_extn(c['olga_generated'])+'.sumrep.csv',
-        c['olga_generated'],
-        'R/single_rep_summaries.R $SOURCE $TARGET')[0]
-
-
 # Nest: initial processing of the test sets.
 nest.add('test_data', DATA[localenv['test_label']]['paths'], label_func=common.strip_dirpath_extn)
 
@@ -230,35 +204,25 @@ def test_head(env, outdir, c):
         c['preprocess_test'],
         f"cut -f 2-4 -d, $SOURCE | head -n {c['nseqs']+1} > $TARGET")[0]
 
+# TODO: put adaptive-pgen on the cluster
 
 @nest.add_target_with_env(localenv)
 def test_pgen(env, outdir, c):
-    test_pgen_path = common.strip_extn(c['test_head'])+'.pgen.csv'
+    test_pgen_path = common.strip_extn(c['test_head'])+'.pgen.tsv'
     c['test_set_info_agg'][(str(c['test_head']), 'test_pgen')] = test_pgen_path
     return env.Command(
         test_pgen_path,
         c['test_head'],
-        'scripts/olga-pgen.sh $SOURCE $TARGET')[0]
+        f"scripts/adaptive-pgen.sh {c['threads']} $SOURCE $TARGET")[0]
 
-
-@nest.add_target_with_env(localenv)
-def test_sumrep(env, outdir, c):
-    test_sumrep_path = common.strip_extn(c['test_head'])+'.sumrep.csv'
-    c['test_set_info_agg'][(str(c['test_head']), 'test_sumrep')] = test_sumrep_path
-    return env.Command(
-        test_sumrep_path,
-        c['test_head'],
-        'R/single_rep_summaries.R $SOURCE $TARGET')[0]
-
-
-@nest.add_target_with_env(localenv)
-def olga_sumrep_divergences(env, outdir, c):
-    olga_sumrep_divergences_path = common.strip_extn(c['test_head'])+'-olga.sumdiv.csv'
-    c['test_set_info_agg'][(str(c['test_head']), 'olga_sumrep_divergences')] = olga_sumrep_divergences_path
-    return env.Command(
-        olga_sumrep_divergences_path,
-        [c['test_head'], c['olga_generated']],
-        'R/rep_divergences.R $SOURCES $TARGET')[0]
+# @nest.add_target_with_env(localenv)
+# def test_sumrep(env, outdir, c):
+#     test_sumrep_path = common.strip_extn(c['test_head'])+'.sumrep.csv'
+#     c['test_set_info_agg'][(str(c['test_head']), 'test_sumrep')] = test_sumrep_path
+#     return env.Command(
+#         test_sumrep_path,
+#         c['test_head'],
+#         'R/single_rep_summaries.R $SOURCE $TARGET')[0]
 
 
 nest.pop('test_data')
@@ -300,6 +264,60 @@ def split(env, outdir, c):
         join(outdir, common.strip_dirpath_extn(in_path) + '.validation.csv')],
         in_path,
         f"python3 util.py split --test-size {c['val_frac']} $SOURCE $TARGETS")
+
+# TODO: put adaptive-pgen on the cluster
+
+@nest.add_target_with_env(localenv)
+def train_pgen(env, outdir, c):
+    """
+    Get Pgen for the training data.
+    """
+    return env.Command(
+        common.strip_extn(c['split']['training'])+'.pgen.tsv',
+        c['split']['training'],
+        f"adaptive-pgen.sh {c['threads']} $SOURCE $TARGET")[0]
+
+
+@nest.add_target_with_env(localenv)
+def q_csv(env, outdir, c):
+    """
+    Calculate values for the thymic Q.
+    """
+    return env.Command(
+        common.strip_extn(c['train_pgen'])+'.q.tsv',
+        c['train_pgen'],
+        f"python3 thymic_Q.py q --max-q {c['max_q']} $SOURCE data/thymic-Q/model-lvj-frequency.csv.bz2 $TARGET")[0]
+
+
+@nest.add_target_with_env(localenv)
+def olga_generated_tsv(env, outdir, c):
+    """
+    Generate sequences using OLGA + thymic Q.
+    """
+    return env.Command(
+        join(outdir, 'olga-generated.tsv'),
+        c['q_csv'],
+        f"python3 thymic_Q.py sample --max-q {c['max_q']} --proposal-size {10*c['nseqs']} "
+        f"--max-iter 10000 $SOURCE {c['nseqs']} $TARGET")[0]
+
+
+@nest.add_target_with_env(localenv)
+def olga_generated(env, outdir, c):
+    """
+    Convert OLGA TSV to a adaptive CSV.
+    """
+    return env.Command(
+        join(outdir, 'olga-generated.csv'),
+        c['olga_generated_tsv'],
+        'python3 gene_name_conversion.py olga2adaptive $SOURCE $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def olga_generated_sumrep(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['olga_generated'])+'.sumrep.csv',
+        c['olga_generated'],
+        'R/single_rep_summaries.R $SOURCE $TARGET')[0]
 
 
 # Nest: the model.
@@ -365,7 +383,8 @@ def model_params(env, outdir, c):
 @ns.name_targets
 def trained(env, outdir, c):
     return 'weights', 'diagnostics', env.Command(
-        [join(outdir, 'best_weights.h5'), join(outdir, 'diagnostics.csv')], [c['model_params'], c['split']['training']],
+        [join(outdir, 'best_weights.h5'), join(outdir, 'diagnostics.csv')],
+        [c['model_params'], c['split']['training']],
         cluster_execution_string('tcr-vae train {sources} {targets}'))
 
 
@@ -379,7 +398,6 @@ def loss(env, outdir, c):
         cluster_execution_string('tcr-vae loss {sources} {targets}'))[0]
 
 
-
 @nest.add_target_with_env(localenv)
 def vae_generated(env, outdir, c):
     return env.Command(
@@ -391,9 +409,17 @@ def vae_generated(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def vae_generated_pgen(env, outdir, c):
     return env.Command(
-        common.strip_extn(c['vae_generated'])+'.pgen.csv',
+        common.strip_extn(c['vae_generated'])+'.pgen.tsv',
         c['vae_generated'],
-        'scripts/olga-pgen.sh $SOURCE $TARGET')[0]
+        f"scripts/adaptive-pgen.sh {c['threads']} $SOURCE $TARGET")[0]
+
+
+@nest.add_target_with_env(localenv)
+def vae_generated_ppost(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['vae_generated'])+'.ppost.csv',
+        [c['q_csv'], c['vae_generated_pgen']],
+        f"python3 thymic_Q.py ppost $SOURCES $TARGET")[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -462,6 +488,16 @@ def vae_sumrep_divergences(env, outdir, c):
 
 
 # @nest.add_target_with_env(localenv)
+# def olga_sumrep_divergences(env, outdir, c):
+#     olga_sumrep_divergences_path = common.strip_extn(c['test_set'])+'-olga.sumdiv.csv'
+#     c['test_set_info_agg'][(str(c['test_set']), 'olga_sumrep_divergences')] = olga_sumrep_divergences_path
+#     return env.Command(
+#         olga_sumrep_divergences_path,
+#         [c['test_set'], c['olga_generated']],
+#         'R/rep_divergences.R $SOURCES $TARGET')[0]
+
+
+# @nest.add_target_with_env(localenv)
 # def regress_loss(env, outdir, c):
 #     loss_regression = join(outdir, 'loss_regression.csv'),
 #     c['loss_regression_agg'].append(loss_regression)
@@ -472,12 +508,21 @@ def vae_sumrep_divergences(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
-def auc_pgen(env, outdir, c):
+def test_ppost(env, outdir, c):
     c['test_pgen'] = c['test_set_info_agg'][(c['test_set'], 'test_pgen')]
-    # Below is not a typo:  we are using the location of test_pvae as a place to put our Pgen AUC.
+    # Below is not a typo:  we are using the location of test_pvae as a place to put our Ppost calculation.
     return env.Command(
-        join(os.path.dirname(str(c['test_pvae'])), 'pgen_auc.csv'),
-        [c['test_pgen'], c['vae_generated_pgen']],
+        join(os.path.dirname(str(c['test_pvae'])), 'ppost.csv'),
+        [c['q_csv'], c['test_pgen']],
+        'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def auc_ppost(env, outdir, c):
+    # Below is not a typo:  we are using the location of test_pvae as a place to put our Ppost AUC.
+    return env.Command(
+        join(os.path.dirname(str(c['test_pvae'])), 'ppost_auc.csv'),
+        [c['test_ppost'], c['vae_generated_ppost']],
         'R/auc.R $SOURCES $TARGET')[0]
 
 
@@ -494,8 +539,9 @@ def summarized(env, outdir, c):
     summarized = join(outdir, 'summarized.csv')
     # Adding things to the summarized_agg aggregate.
     c['summarized_agg'].append(summarized)
-    to_pass = ['loss', 'test_pvae', 'test_pgen', 'vae_generated_pgen', 'vae_generated_sumrep', 'vae_sumrep_divergences',
-               'auc_pgen', 'auc_pvae']
+    to_pass = ['loss', 'test_pvae', 'test_ppost',
+               'vae_generated_ppost', 'vae_generated_sumrep', 'vae_sumrep_divergences',
+               'auc_ppost', 'auc_pvae']
     colnames = ','.join(to_pass)
     idx = get_idx(c)
     return env.Command(
@@ -513,21 +559,21 @@ nest.pop(summarized_agg_names[1])
 nest.add('test_set', lambda c: c['test_set_agg'], label_func=common.strip_dirpath_extn)
 
 
-@nest.add_target_with_env(localenv)
-def olga_summarized(env, outdir, c):
-    summarized = join(outdir, 'olga-summarized.csv')
-    c['summarized_agg'].append(summarized)
-    colnames = 'olga_sumrep_divergences'
-    olga_sumrep_divergences_path = c['test_set_info_agg'][(c['test_set'], 'olga_sumrep_divergences')]
-    # The first entry is the training set. Olga doesn't have a training set, so it's empty.
-    # OLGA doesn't have any free parameters, so has a block of empty strings in the middle.
-    pre_idx = ['', 'olga'] + ['']*(len(summarized_agg_names)-3) + [c['test_set']]
-    idx = ';'.join(pre_idx)
-    return env.Command(
-        summarized,
-        [olga_sumrep_divergences_path],
-        f'python3 util.py summarize --out $TARGET --idx "{idx}" --idx-name "{idx_name}" --colnames {colnames} $SOURCES'
-    )[0]
+# @nest.add_target_with_env(localenv)
+# def olga_summarized(env, outdir, c):
+#     summarized = join(outdir, 'olga-summarized.csv')
+#     c['summarized_agg'].append(summarized)
+#     colnames = 'olga_sumrep_divergences'
+#     olga_sumrep_divergences_path = c['test_set_info_agg'][(c['test_set'], 'olga_sumrep_divergences')]
+#     # The first entry is the training set. Olga doesn't have a training set, so it's empty.
+#     # OLGA doesn't have any free parameters, so has a block of empty strings in the middle.
+#     pre_idx = ['', 'olga'] + ['']*(len(summarized_agg_names)-3) + [c['test_set']]
+#     idx = ';'.join(pre_idx)
+#     return env.Command(
+#         summarized,
+#         [olga_sumrep_divergences_path],
+#        f'python3 util.py summarize --out $TARGET --idx "{idx}" --idx-name "{idx_name}" --colnames {colnames} $SOURCES'
+#     )[0]
 
 
 nest.pop(summarized_agg_names[0])
