@@ -15,12 +15,10 @@ parser$add_argument('out_csv', help="Desired location for single-row output CSV.
 args = parser$parse_args()
 
 if(args$pvae) {
-    header=TRUE
     idx=1
     take_exp = TRUE
     col_name = 'auc_pvae'
 } else {
-    header = TRUE
     idx = 6
     take_exp = FALSE
     col_name = 'auc_pgen'
@@ -32,7 +30,7 @@ if(args$pvae) {
 # the cases identical.
 
 read_and_real = function(path, real) {
-    P = read.csv(path, header=header)[[idx]]
+    P = read.csv(path, header=TRUE)[[idx]]
     if(take_exp) {
         P = exp(P)
     }
