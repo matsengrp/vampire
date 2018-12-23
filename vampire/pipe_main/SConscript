@@ -508,12 +508,9 @@ def vae_sumrep_divergences(env, outdir, c):
 
 @nest.add_target_with_env(localenv)
 def olga_sumrep_divergences(env, outdir, c):
-    # Below is not a typo: see block comment above.
-    olga_sumrep_divergences_path = common.strip_extn(c['test_pvae'])+'-olga.sumdiv.csv'
-    c['test_set_info_agg'][(str(c['test_set']), 'olga_sumrep_divergences')] = olga_sumrep_divergences_path
     return env.Command(
         # Below is not a typo: see block comment above.
-        olga_sumrep_divergences_path,
+        common.strip_extn(c['test_pvae'])+'-olga.sumdiv.csv',
         [c['test_set'], c['olga_generated']],
         'R/rep_divergences.R $SOURCES $TARGET')[0]
 
@@ -562,27 +559,19 @@ def summarized(env, outdir, c):
     )[0]
 
 
-# It's slickest to have the OLGA summary here so that we have summarized_agg_names populated.
-# Pop all the way down to sample, so we can summarize OLGA.
-nest.pop(summarized_agg_names[1])
-
-# Now nest back up to loop through the test sets.
-nest.add('test_set', lambda c: c['test_set_agg'], label_func=common.strip_dirpath_extn)
-
-
 @nest.add_target_with_env(localenv)
 def olga_summarized(env, outdir, c):
     summarized = join(outdir, 'olga-summarized.csv')
     c['summarized_agg'].append(summarized)
     colnames = 'olga_sumrep_divergences'
-    olga_sumrep_divergences_path = c['test_set_info_agg'][(c['test_set'], 'olga_sumrep_divergences')]
-    # The first entry is the training set. Olga doesn't have a training set, so it's empty.
-    # OLGA doesn't have any free parameters, so has a block of empty strings in the middle.
-    pre_idx = ['', 'olga'] + ['']*(len(summarized_agg_names)-3) + [c['test_set']]
-    idx = ';'.join(pre_idx)
+    # Here we populate the OLGA indices with some things that are not relevant, such as VAE model parameters.
+    # This repeats unnecessarily, but it makes downstream plotting easier because we can treat all the models the same.
+    c_copy = dict(c)
+    c_copy['model'] = 'olga'
+    idx = get_idx(c_copy)
     return env.Command(
         summarized,
-        [olga_sumrep_divergences_path],
+        [c['olga_sumrep_divergences']],
         f'python3 util.py summarize --out $TARGET --idx "{idx}" --idx-name "{idx_name}" --colnames {colnames} $SOURCES'
     )[0]
 
