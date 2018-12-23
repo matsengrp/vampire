@@ -292,6 +292,39 @@ def q_csv(env, outdir, c):
         f"python3 thymic_Q.py q --max-q {c['max_q']} data/thymic-Q/model-lvj-frequency.csv.bz2 $SOURCE $TARGET")[0]
 
 
+# Nest: the dimension of the latent space.
+# numerical_nest_add('warmup_period', [5*i for i in range(0,6)])
+# summarized_agg_names.append('warmup_period')
+
+# Nest: the dimension of the latent space.
+# numerical_nest_add('latent_dim', [30, 35, 40])
+# summarized_agg_names.append('latent_dim')
+
+# Nest: the number of dense nodes.
+# numerical_nest_add('dense_nodes', [50, 75, 100, 125, 150])
+# summarized_agg_names.append('dense_nodes')
+
+# Nest: the amino acid embedding dimension.
+# numerical_nest_add('aa_embedding_dim', [10, 15, 20, 21])
+# summarized_agg_names.append('aa_embedding_dim')
+
+# Nest: the V gene embedding dimension.
+# numerical_nest_add('v_gene_embedding_dim', [20, 30, 40])
+# summarized_agg_names.append('v_gene_embedding_dim')
+
+# Nest: the strength of the KL component of the VAE loss.
+numerical_nest_add('beta', [0.5, 0.75, 1.])
+summarized_agg_names.append('beta')
+
+# Nest: monitor for EarlyStopping.
+# nest.add('stopping_monitor', ['loss', 'val_loss'])
+# summarized_agg_names.append('stopping_monitor')
+
+# Nest: EarlyStopping patience.
+# numerical_nest_add('patience', [5*x for x in range(7)])
+# summarized_agg_names.append('patience')
+
+
 @nest.add_target_with_env(localenv)
 def olga_generated_tsv(env, outdir, c):
     """
@@ -327,44 +360,13 @@ def olga_generated_sumrep(env, outdir, c):
 
 
 # Nest: the model.
+# This needs to appear in the innermost nest so that we can pop it and then do some OLGA work.
 # In order to keep things happy when merging with OLGA results, don't comment
 # this out if you are only interested in one model. Instead, make a
 # single-model nest.
 nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
 # nest.add('model', ['basic'])
 summarized_agg_names.append('model')
-
-# Nest: the dimension of the latent space.
-# numerical_nest_add('warmup_period', [5*i for i in range(0,6)])
-# summarized_agg_names.append('warmup_period')
-
-# Nest: the dimension of the latent space.
-# numerical_nest_add('latent_dim', [30, 35, 40])
-# summarized_agg_names.append('latent_dim')
-
-# Nest: the number of dense nodes.
-# numerical_nest_add('dense_nodes', [50, 75, 100, 125, 150])
-# summarized_agg_names.append('dense_nodes')
-
-# Nest: the amino acid embedding dimension.
-# numerical_nest_add('aa_embedding_dim', [10, 15, 20, 21])
-# summarized_agg_names.append('aa_embedding_dim')
-
-# Nest: the V gene embedding dimension.
-# numerical_nest_add('v_gene_embedding_dim', [20, 30, 40])
-# summarized_agg_names.append('v_gene_embedding_dim')
-
-# Nest: the strength of the KL component of the VAE loss.
-numerical_nest_add('beta', [0.5, 0.75, 1.])
-summarized_agg_names.append('beta')
-
-# Nest: monitor for EarlyStopping.
-# nest.add('stopping_monitor', ['loss', 'val_loss'])
-# summarized_agg_names.append('stopping_monitor')
-
-# Nest: the strength of the KL component of the VAE loss.
-# numerical_nest_add('patience', [5*x for x in range(7)])
-# summarized_agg_names.append('patience')
 
 
 @nest.add_target_with_env(localenv)
@@ -503,27 +505,15 @@ def vae_sumrep_divergences(env, outdir, c):
 #         f'R/regress_loss.R --idx "{get_idx(c)}" --idx-name "{idx_name}" $SOURCES $TARGET')[0]
 
 
-# For the next three targets, we are using the location of test_pvae as a place to put our OLGA-related calculation.
-# This is useful because up here in this directory we are stratified by Ppost training data.
-# It does unnecessarily repeat calculation for all the nests that concern the VAE.
-# To avoid this, we could have another nest in which we cycle through the test sets after training Q, but that would
-# be significantly more complex (and these computations aren't expensive.)
-
-@nest.add_target_with_env(localenv)
-def olga_sumrep_divergences(env, outdir, c):
-    return env.Command(
-        # Below is not a typo: see block comment above.
-        common.strip_extn(c['test_pvae'])+'-olga.sumdiv.csv',
-        [c['test_set'], c['olga_generated']],
-        'R/rep_divergences.R $SOURCES $TARGET')[0]
-
+# The next target doesn't need to quite so deep in the hierarchy: we could have
+# another loop over tests just at the sample level. But this is simpler and
+# ppost is cheap to compute.
 
 @nest.add_target_with_env(localenv)
 def test_ppost(env, outdir, c):
     c['test_pgen'] = c['test_set_info_agg'][(c['test_set'], 'test_pgen')]
     return env.Command(
-        # Below is not a typo: see block comment above.
-        join(os.path.dirname(str(c['test_pvae'])), 'ppost.csv'),
+        join(outdir, 'ppost.csv'),
         [c['q_csv'], c['test_pgen']],
         'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
 
@@ -531,8 +521,7 @@ def test_ppost(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def auc_ppost(env, outdir, c):
     return env.Command(
-        # Below is not a typo: see block comment above.
-        join(os.path.dirname(str(c['test_pvae'])), 'ppost_auc.csv'),
+        join(outdir, 'ppost_auc.csv'),
         [c['test_ppost'], c['vae_generated_ppost']],
         'R/auc.R $SOURCES $TARGET')[0]
 
@@ -540,7 +529,7 @@ def auc_ppost(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def auc_pvae(env, outdir, c):
     return env.Command(
-        join(os.path.dirname(str(c['test_pvae'])), 'pvae_auc.csv'),
+        join(outdir, 'pvae_auc.csv'),
         [c['test_pvae'], c['olga_generated_pvae']],
         'R/auc.R --pvae $SOURCES $TARGET')[0]
 
@@ -562,6 +551,20 @@ def summarized(env, outdir, c):
     )[0]
 
 
+# Now we pop out to model, so that we can do some OLGA stuff that doesn't depend on the VAE model.
+nest.pop('model')
+
+# Nest: evaluation on the test sets.
+nest.add('test_set', lambda c: c['test_set_agg'], label_func=common.strip_dirpath_extn)
+
+@nest.add_target_with_env(localenv)
+def olga_sumrep_divergences(env, outdir, c):
+    return env.Command(
+        join(outdir, 'olga.sumdiv.csv'),
+        [c['test_set'], c['olga_generated']],
+        'R/rep_divergences.R $SOURCES $TARGET')[0]
+
+
 @nest.add_target_with_env(localenv)
 def olga_summarized(env, outdir, c):
     summarized = join(outdir, 'olga-summarized.csv')
@@ -579,6 +582,7 @@ def olga_summarized(env, outdir, c):
     )[0]
 
 
+# Pop all the way back to the very beginning for a complete summary.
 nest.pop(summarized_agg_names[0])
 
 
