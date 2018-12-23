@@ -203,7 +203,6 @@ def test_head(env, outdir, c):
         c['preprocess_test'],
         f"cut -f 2-4 -d, $SOURCE | head -n {c['nseqs']+1} > $TARGET")[0]
 
-# TODO: put adaptive-pgen on the cluster
 
 @nest.add_target_with_env(localenv)
 def test_pgen(env, outdir, c):
@@ -212,7 +211,8 @@ def test_pgen(env, outdir, c):
     return env.Command(
         test_pgen_path,
         c['test_head'],
-        f"scripts/adaptive-pgen.sh $SOURCE $TARGET")[0]
+        cluster_execution_string('adaptive-pgen.sh {sources} {targets}'))[0]
+
 
 # @nest.add_target_with_env(localenv)
 # def test_sumrep(env, outdir, c):
@@ -264,7 +264,6 @@ def split(env, outdir, c):
         in_path,
         f"python3 util.py split --test-size {c['val_frac']} $SOURCE $TARGETS")
 
-# TODO: put adaptive-pgen on the cluster
 
 @nest.add_target_with_env(localenv)
 def train_pgen(env, outdir, c):
@@ -274,7 +273,7 @@ def train_pgen(env, outdir, c):
     return env.Command(
         common.strip_extn(c['split']['training'])+'.pgen.tsv',
         c['split']['training'],
-        f"adaptive-pgen.sh $SOURCE $TARGET")[0]
+        cluster_execution_string('adaptive-pgen.sh {sources} {targets}'))[0]
 
 
 @nest.add_target_with_env(localenv)
