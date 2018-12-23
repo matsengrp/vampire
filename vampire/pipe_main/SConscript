@@ -121,9 +121,12 @@ def cluster_execution_string(command, prefix_position=1):
 
     *The command string but where $SOURCES is replaced by {sources} and
     $TARGETS is replaced by {targets}.
+
+    prefix_position: from where in the command we should get the name of
+    the script. 0 for scripts and 1 for subcommands.
     """
     # If we have a subcommand structure, prefix_position=1 makes a nice script prefix.
-    script_prefix = command.split()[prefix_position]
+    script_prefix = common.strip_extn(command.split()[prefix_position])
     return (
         f"python3 execute.py --clusters='{localenv['clusters']}' --script-prefix={script_prefix} "
         f"'$SOURCES' '$TARGETS' '{command}'"
@@ -213,7 +216,7 @@ def test_pgen(env, outdir, c):
     return env.Command(
         test_pgen_path,
         c['test_head'],
-        cluster_execution_string('adaptive-pgen.sh {sources} {targets}'))[0]
+        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
 
 
 # @nest.add_target_with_env(localenv)
@@ -275,7 +278,7 @@ def train_pgen(env, outdir, c):
     return env.Command(
         common.strip_extn(c['split']['training'])+'.pgen.tsv',
         c['split']['training'],
-        cluster_execution_string('adaptive-pgen.sh {sources} {targets}'))[0]
+        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -414,7 +417,7 @@ def vae_generated_pgen(env, outdir, c):
     return env.Command(
         common.strip_extn(c['vae_generated'])+'.pgen.tsv',
         c['vae_generated'],
-        cluster_execution_string('adaptive-pgen.sh {sources} {targets}'))[0]
+        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
 
 
 @nest.add_target_with_env(localenv)
