@@ -99,6 +99,8 @@ def base_dict():
     which we evaluate Pvae for on the real data.
 
     val_frac: the fraction of sequences to take for validation.
+
+    max_q: the level for truncating q_{lvj} in the thymic Q calculation.
     """
 
     d = {'nseqs': 500,
@@ -284,7 +286,7 @@ def q_csv(env, outdir, c):
     return env.Command(
         common.strip_extn(c['train_pgen'])+'.q.tsv',
         c['train_pgen'],
-        f"python3 thymic_Q.py q --max-q {c['max_q']} $SOURCE data/thymic-Q/model-lvj-frequency.csv.bz2 $TARGET")[0]
+        f"python3 thymic_Q.py q --max-q {c['max_q']} data/thymic-Q/model-lvj-frequency.csv.bz2 $SOURCE $TARGET")[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -296,13 +298,13 @@ def olga_generated_tsv(env, outdir, c):
         join(outdir, 'olga-generated.tsv'),
         c['q_csv'],
         f"python3 thymic_Q.py sample --max-q {c['max_q']} --proposal-size {10*c['nseqs']} "
-        f"--max-iter 10000 $SOURCE {c['nseqs']} $TARGET")[0]
+        f"--max-iter 10000 {c['nseqs']} $SOURCE $TARGET")[0]
 
 
 @nest.add_target_with_env(localenv)
 def olga_generated(env, outdir, c):
     """
-    Convert OLGA TSV to a adaptive CSV.
+    Convert OLGA TSV to an Adaptive CSV.
     """
     return env.Command(
         join(outdir, 'olga-generated.csv'),
@@ -312,6 +314,9 @@ def olga_generated(env, outdir, c):
 
 @nest.add_target_with_env(localenv)
 def olga_generated_sumrep(env, outdir, c):
+    """
+    Run univariate sumrep on the OLGA-generated sequences.
+    """
     return env.Command(
         common.strip_extn(c['olga_generated'])+'.sumrep.csv',
         c['olga_generated'],
@@ -409,7 +414,7 @@ def vae_generated_pgen(env, outdir, c):
     return env.Command(
         common.strip_extn(c['vae_generated'])+'.pgen.tsv',
         c['vae_generated'],
-        f"scripts/adaptive-pgen.sh $SOURCE $TARGET")[0]
+        cluster_execution_string('adaptive-pgen.sh {sources} {targets}'))[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -417,7 +422,7 @@ def vae_generated_ppost(env, outdir, c):
     return env.Command(
         common.strip_extn(c['vae_generated'])+'.ppost.csv',
         [c['q_csv'], c['vae_generated_pgen']],
-        f"python3 thymic_Q.py ppost $SOURCES $TARGET")[0]
+        'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -485,16 +490,6 @@ def vae_sumrep_divergences(env, outdir, c):
         'R/rep_divergences.R $SOURCES $TARGET')[0]
 
 
-@nest.add_target_with_env(localenv)
-def olga_sumrep_divergences(env, outdir, c):
-    olga_sumrep_divergences_path = common.strip_extn(c['test_set'])+'-olga.sumdiv.csv'
-    c['test_set_info_agg'][(str(c['test_set']), 'olga_sumrep_divergences')] = olga_sumrep_divergences_path
-    return env.Command(
-        olga_sumrep_divergences_path,
-        [c['test_set'], c['olga_generated']],
-        'R/rep_divergences.R $SOURCES $TARGET')[0]
-
-
 # @nest.add_target_with_env(localenv)
 # def regress_loss(env, outdir, c):
 #     loss_regression = join(outdir, 'loss_regression.csv'),
@@ -505,11 +500,29 @@ def olga_sumrep_divergences(env, outdir, c):
 #         f'R/regress_loss.R --idx "{get_idx(c)}" --idx-name "{idx_name}" $SOURCES $TARGET')[0]
 
 
+# For the next three targets, we are using the location of test_pvae as a place to put our OLGA-related calculation.
+# This is useful because up here in this directory we are stratified by Ppost training data.
+# It does unnecessarily repeat calculation for all the nests that concern the VAE.
+# To avoid this, we could have another nest in which we cycle through the test sets after training Q, but that would
+# be significantly more complex (and these computations aren't expensive.)
+
+@nest.add_target_with_env(localenv)
+def olga_sumrep_divergences(env, outdir, c):
+    # Below is not a typo: see block comment above.
+    olga_sumrep_divergences_path = common.strip_extn(c['test_pvae'])+'-olga.sumdiv.csv'
+    c['test_set_info_agg'][(str(c['test_set']), 'olga_sumrep_divergences')] = olga_sumrep_divergences_path
+    return env.Command(
+        # Below is not a typo: see block comment above.
+        olga_sumrep_divergences_path,
+        [c['test_set'], c['olga_generated']],
+        'R/rep_divergences.R $SOURCES $TARGET')[0]
+
+
 @nest.add_target_with_env(localenv)
 def test_ppost(env, outdir, c):
     c['test_pgen'] = c['test_set_info_agg'][(c['test_set'], 'test_pgen')]
-    # Below is not a typo:  we are using the location of test_pvae as a place to put our Ppost calculation.
     return env.Command(
+        # Below is not a typo: see block comment above.
         join(os.path.dirname(str(c['test_pvae'])), 'ppost.csv'),
         [c['q_csv'], c['test_pgen']],
         'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
@@ -517,8 +530,8 @@ def test_ppost(env, outdir, c):
 
 @nest.add_target_with_env(localenv)
 def auc_ppost(env, outdir, c):
-    # Below is not a typo:  we are using the location of test_pvae as a place to put our Ppost AUC.
     return env.Command(
+        # Below is not a typo: see block comment above.
         join(os.path.dirname(str(c['test_pvae'])), 'ppost_auc.csv'),
         [c['test_ppost'], c['vae_generated_ppost']],
         'R/auc.R $SOURCES $TARGET')[0]
@@ -570,7 +583,7 @@ def olga_summarized(env, outdir, c):
     return env.Command(
         summarized,
         [olga_sumrep_divergences_path],
-       f'python3 util.py summarize --out $TARGET --idx "{idx}" --idx-name "{idx_name}" --colnames {colnames} $SOURCES'
+        f'python3 util.py summarize --out $TARGET --idx "{idx}" --idx-name "{idx_name}" --colnames {colnames} $SOURCES'
     )[0]
 
 

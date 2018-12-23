@@ -104,7 +104,7 @@ def merge_lvj_dfs(df1, df2, how='outer'):
     return merged
 
 
-def q_of_train_and_model_pgen(train_pgen_tsv, model_p_lvj_csv, max_q=None, pseudocount_multiplier=0.5):
+def q_of_train_and_model_pgen(model_p_lvj_csv, train_pgen_tsv, max_q=None, pseudocount_multiplier=0.5):
     """
     Fit a q distribution, but truncating q at max_q.
     """
@@ -159,7 +159,7 @@ def rejection_sample_Ppost(q_df, df_Pgen_sample, max_q):
     # c = delegator.run('/home/matsen/Downloads/miniconda3/envs/py36/bin/olga-generate.sh 100 ~/x.csv')
 
 
-def sample_Ppost(q_csv, sample_size, max_q, max_iter=100, proposal_size=1e6):
+def sample_Ppost(sample_size, q_csv, max_q, max_iter=100, proposal_size=1e6):
     q_df = pd.read_csv(q_csv, index_col=lvj)
     out_df = pd.DataFrame()
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -199,15 +199,15 @@ def lvj_frequency(col_name, in_tsv, out_csv):
 
 @cli.command()
 @click.option('--max-q', type=int, default=None, show_default=True, help="Limit q to be at most this value.")
-@click.argument('train_pgen_tsv', type=click.File('r'))
 # Here we use a click.Path so we can pass a .bz2'd CSV.
 @click.argument('model_p_lvj_csv', type=click.Path(exists=True))
+@click.argument('train_pgen_tsv', type=click.File('r'))
 @click.argument('out_csv', type=click.File('w'))
-def q(max_q, train_pgen_tsv, model_p_lvj_csv, out_csv):
+def q(max_q, model_p_lvj_csv, train_pgen_tsv, out_csv):
     """
     Calculate q_lvj given training data and p_lvj obtained from the model.
     """
-    q_of_train_and_model_pgen(train_pgen_tsv, model_p_lvj_csv, max_q=max_q).to_csv(out_csv)
+    q_of_train_and_model_pgen(model_p_lvj_csv, train_pgen_tsv, max_q=max_q).to_csv(out_csv)
 
 
 @cli.command()
@@ -230,15 +230,15 @@ def ppost(q_csv, data_pgen_tsv, out_csv):
     help="Maximum number of iterations to try to achieve the desired number of samples.")
 @click.option(
     '--proposal-size', default=1000000, show_default=True, help="Number of samples to take for proposal distribution.")
-@click.argument('q_csv', type=click.File('r'))
 @click.argument('sample_size', type=int)
+@click.argument('q_csv', type=click.File('r'))
 @click.argument('out_tsv', type=click.File('w'))
-def sample(max_q, max_iter, proposal_size, q_csv, sample_size, out_tsv):
+def sample(max_q, max_iter, proposal_size, sample_size, q_csv, out_tsv):
     """
     Sample from the Ppost distribution via rejection sampling.
     """
     sample_Ppost(
-        q_csv, sample_size, max_q, max_iter=max_iter, proposal_size=proposal_size).to_csv(
+        sample_size, q_csv, max_q, max_iter=max_iter, proposal_size=proposal_size).to_csv(
             out_tsv, sep='\t', index=False)
 
 
