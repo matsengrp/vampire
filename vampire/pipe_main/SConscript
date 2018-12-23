@@ -139,7 +139,6 @@ def cluster_execution_string(command, prefix_position=1):
     prefix_position: from where in the command we should get the name of
     the script. 0 for scripts and 1 for subcommands.
     """
-    # If we have a subcommand structure, prefix_position=1 makes a nice script prefix.
     script_prefix = common.strip_extn(command.split()[prefix_position])
     return (
         f"python3 execute.py --clusters='{localenv['clusters']}' --script-prefix={script_prefix} "

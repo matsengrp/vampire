@@ -156,10 +156,11 @@ def rejection_sample_Ppost(q_df, df_Pgen_sample, max_q):
     df = df.sample(frac=1)
     return df
 
-    # c = delegator.run('/home/matsen/Downloads/miniconda3/envs/py36/bin/olga-generate.sh 100 ~/x.csv')
-
 
 def sample_Ppost(sample_size, q_csv, max_q, max_iter=100, proposal_size=1e6):
+    """
+    Repeatedly sample from Pgen to calculate Ppost using rejection sampling.
+    """
     q_df = pd.read_csv(q_csv, index_col=lvj)
     out_df = pd.DataFrame()
     with tempfile.TemporaryDirectory() as tmpdir:
