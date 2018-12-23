@@ -70,25 +70,24 @@ def summarize(out, idx, idx_name, colnames, in_paths):
         prefix and suffix.
         """
         to_slurp = pd.read_csv(path)
-        assert(len(to_slurp) == 1)
+        assert len(to_slurp) == 1
         for col in to_slurp:
-            df[prefix+col+suffix] = to_slurp.loc[0, col]
+            df[prefix + col + suffix] = to_slurp.loc[0, col]
+
+    def add_pvae_summary(path, prefix):
+        log_pvae = pd.read_csv(path)['log_p_x']
+        df[prefix + '_median_log_pvae'] = np.median(log_pvae)
+        df[prefix + '_mean_log_pvae'] = np.mean(log_pvae)
+        df[prefix + '_log_mean_pvae'] = np.log(np.mean(np.exp(log_pvae)))
+        # Yes, Vladimir, we are taking a standard deviation of something
+        # that isn't normal. They look kinda gamma-ish after applying log.
+        df[prefix + '_log_pvae_sd'] = np.std(log_pvae)
 
     for name, path in input_d.items():
         if name == 'test_pvae':
-            log_pvae = pd.read_csv(path)['log_p_x']
-            df['test_median_log_pvae'] = np.median(log_pvae)
-            df['test_log_mean_pvae'] = np.log(np.mean(np.exp(log_pvae)))
-            # Yes, Vladimir, we are taking a standard deviation of something
-            # that isn't normal. They look kinda gamma-ish after applying log.
-            df['test_log_pvae_sd'] = np.std(log_pvae)
+            add_pvae_summary(path, 'test')
         if name == 'validation_pvae':
-            log_pvae = pd.read_csv(path)['log_p_x']
-            df['validation_median_log_pvae'] = np.median(log_pvae)
-            df['validation_log_mean_pvae'] = np.log(np.mean(np.exp(log_pvae)))
-            # Yes, Vladimir, we are taking a standard deviation of something
-            # that isn't normal. They look kinda gamma-ish after applying log.
-            df['validation_log_pvae_sd'] = np.std(log_pvae)
+            add_pvae_summary(path, 'validation')
         elif name == 'vae_generated_sumrep':
             slurp_cols(path, prefix='sumrep_')
         elif re.search('sumrep_divergences', name):
