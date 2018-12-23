@@ -4,6 +4,8 @@ import json
 import os
 import re
 
+import numpy as np
+
 import nestly
 import nestly.scons as ns
 import SCons.Script as sc
@@ -303,7 +305,7 @@ def q_csv(env, outdir, c):
 # summarized_agg_names.append('v_gene_embedding_dim')
 
 # Nest: the strength of the KL component of the VAE loss.
-numerical_nest_add('beta', [0.5, 0.75, 1.])
+numerical_nest_add('beta', np.linspace(0.5, 1, 5))
 summarized_agg_names.append('beta')
 
 # Nest: monitor for EarlyStopping.
