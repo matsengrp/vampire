@@ -11,6 +11,8 @@ import numpy as np
 import pandas as pd
 import random
 
+from vampire import gene_name_conversion as conversion
+
 
 def filter_and_drop_frame(df):
     """
@@ -44,6 +46,14 @@ def filter_on_TCRB(df):
     return df[df['v_gene'].str.contains('^TCRB') & df['j_gene'].str.contains('^TCRB')]
 
 
+def filter_on_olga(df):
+    """
+    Only take sequences with genes that are present in both the OLGA and the
+    Adaptive gene sets.
+    """
+    return conversion.filter_by_gene_names(df, conversion.adaptive_to_olga_dict())
+
+
 def apply_all_filters(df, max_len=30):
     """
     Apply all filters.
@@ -57,6 +67,8 @@ def apply_all_filters(df, max_len=30):
     click.echo(f"Requiring CDR3 to be <= {max_len} amino acids: {len(df)} rows")
     df = filter_on_TCRB(df)
     click.echo(f"Requiring resolved TCRB genes: {len(df)} rows")
+    df = filter_on_olga(df)
+    click.echo(f"Requiring genes that are also present in the OLGA set: {len(df)} rows")
     return df.reset_index(drop=True)
 
 
