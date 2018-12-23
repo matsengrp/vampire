@@ -5,18 +5,18 @@
 
 set -eux
 
-# The number of threads to use in the Pgen computation.
-THREADS=$1
-INFILE=$2
-OUTFILE=$3
+INFILE=$1
+OUTFILE=$2
 
 TMPDIR=$(mktemp -d)
 # Clean up after ourselves in all cases except `kill -9`.
 trap "rm -rf $TMPDIR" EXIT
-
 CONVERTED=$TMPDIR/converted.tsv
 PGEN=$TMPDIR/pgen.tsv
 SPLITDIR=$TMPDIR/split
+
+# Use all the cores.
+THREADS=$(nproc)
 
 mkdir -p $SPLITDIR
 gene-name-conversion adaptive2olga $INFILE $CONVERTED
