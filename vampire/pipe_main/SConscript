@@ -1,8 +1,9 @@
 from os.path import join
 import glob
 import json
-import os
 import re
+
+import numpy as np
 
 import nestly
 import nestly.scons as ns
@@ -16,6 +17,10 @@ localenv = env.Clone()  # noqa
 
 
 # ### Paths and data sets ###
+
+# This is where we define the paths to the data sets we use.
+# There's also the opportunity to add a 'params' dictionary that can modify the base
+# dictionary for the nest.
 
 data_path = '/fh/fast/matsen_e/data/'
 seshadri_path = join(data_path, 'seshadri/data/Adaptive/clinical_cohort/')
@@ -54,7 +59,11 @@ DATA = {
         'paths': glob.glob(join(seshadri_path, '[01]*TCRB.tsv'))[:10]
     },
     'merged-healthy-seshadri': {
-        'paths': ['/home/matsen/re/vampire/vampire/_ignore/all-seshadri-01-TCRB.tsv']
+        'paths': ['/home/matsen/re/vampire/vampire/_ignore/all-seshadri-01-TCRB.tsv'],
+        'base': {
+            # Only use a random half of this data set.
+            'val_frac': 0.5
+        }
     }
 }
 
@@ -84,7 +93,9 @@ def default_params_by_mode():
     params = tcr_vae.TCRVAE.default_params()
 
     if localenv['mode'] == 'mini':
-        params['epochs'] = 100
+        params['pretrains'] = 2
+        params['warmup_period'] = 3
+        params['epochs'] = 10
 
     return params
 
@@ -97,14 +108,22 @@ def base_dict():
     which we evaluate Pvae for on the real data.
 
     val_frac: the fraction of sequences to take for validation.
+
+    max_q: the level for truncating q_{lvj} in the thymic Q calculation.
     """
 
     d = {'nseqs': 500,
          'val_frac': 0.1,
+         'max_q': 100,
          }
 
     if localenv['mode'] == 'mini':
         d['nseqs'] = 100
+
+    data = DATA[localenv['data_label']]
+    if 'base' in data:
+        for k, v in data['base'].items():
+            d[k] = v
 
     return d
 
@@ -116,9 +135,11 @@ def cluster_execution_string(command, prefix_position=1):
 
     *The command string but where $SOURCES is replaced by {sources} and
     $TARGETS is replaced by {targets}.
+
+    prefix_position: from where in the command we should get the name of
+    the script. 0 for scripts and 1 for subcommands.
     """
-    # If we have a subcommand structure, prefix_position=1 makes a nice script prefix.
-    script_prefix = command.split()[prefix_position]
+    script_prefix = common.strip_extn(command.split()[prefix_position])
     return (
         f"python3 execute.py --clusters='{localenv['clusters']}' --script-prefix={script_prefix} "
         f"'$SOURCES' '$TARGETS' '{command}'"
@@ -174,36 +195,6 @@ def git_sha(env, outdir, c):
         "git log --pretty=format:'%H' -n 1 > $TARGET")[0]
 
 
-@nest.add_target_with_env(localenv)
-def olga_generated_tsv(env, outdir, c):
-    """
-    Generate sequences using OLGA.
-    """
-    return env.Command(
-        join(outdir, 'olga-generated.tsv'),
-        [],
-        f"scripts/olga-generate.sh {c['nseqs']} $TARGET")[0]
-
-
-@nest.add_target_with_env(localenv)
-def olga_generated(env, outdir, c):
-    """
-    Convert OLGA TSV to a adaptive CSV.
-    """
-    return env.Command(
-        join(outdir, 'olga-generated.csv'),
-        c['olga_generated_tsv'],
-        'python3 gene_name_conversion.py olga2adaptive $SOURCE $TARGET')[0]
-
-
-@nest.add_target_with_env(localenv)
-def olga_generated_sumrep(env, outdir, c):
-    return env.Command(
-        common.strip_extn(c['olga_generated'])+'.sumrep.csv',
-        c['olga_generated'],
-        'R/single_rep_summaries.R $SOURCE $TARGET')[0]
-
-
 # Nest: initial processing of the test sets.
 nest.add('test_data', DATA[localenv['test_label']]['paths'], label_func=common.strip_dirpath_extn)
 
@@ -233,32 +224,12 @@ def test_head(env, outdir, c):
 
 @nest.add_target_with_env(localenv)
 def test_pgen(env, outdir, c):
-    test_pgen_path = common.strip_extn(c['test_head'])+'.pgen.csv'
+    test_pgen_path = common.strip_extn(c['test_head'])+'.pgen.tsv'
     c['test_set_info_agg'][(str(c['test_head']), 'test_pgen')] = test_pgen_path
     return env.Command(
         test_pgen_path,
         c['test_head'],
-        'scripts/olga-pgen.sh $SOURCE $TARGET')[0]
-
-
-@nest.add_target_with_env(localenv)
-def test_sumrep(env, outdir, c):
-    test_sumrep_path = common.strip_extn(c['test_head'])+'.sumrep.csv'
-    c['test_set_info_agg'][(str(c['test_head']), 'test_sumrep')] = test_sumrep_path
-    return env.Command(
-        test_sumrep_path,
-        c['test_head'],
-        'R/single_rep_summaries.R $SOURCE $TARGET')[0]
-
-
-@nest.add_target_with_env(localenv)
-def olga_sumrep_divergences(env, outdir, c):
-    olga_sumrep_divergences_path = common.strip_extn(c['test_head'])+'-olga.sumdiv.csv'
-    c['test_set_info_agg'][(str(c['test_head']), 'olga_sumrep_divergences')] = olga_sumrep_divergences_path
-    return env.Command(
-        olga_sumrep_divergences_path,
-        [c['test_head'], c['olga_generated']],
-        'R/rep_divergences.R $SOURCES $TARGET')[0]
+        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
 
 
 nest.pop('test_data')
@@ -302,13 +273,27 @@ def split(env, outdir, c):
         f"python3 util.py split --test-size {c['val_frac']} $SOURCE $TARGETS")
 
 
-# Nest: the model.
-# In order to keep things happy when merging with OLGA results, don't comment
-# this out if you are only interested in one model. Instead, make a
-# single-model nest.
-nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
-# nest.add('model', ['basic'])
-summarized_agg_names.append('model')
+@nest.add_target_with_env(localenv)
+def train_pgen(env, outdir, c):
+    """
+    Get Pgen for the training data.
+    """
+    return env.Command(
+        common.strip_extn(c['split']['training'])+'.pgen.tsv',
+        c['split']['training'],
+        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
+
+
+@nest.add_target_with_env(localenv)
+def q_csv(env, outdir, c):
+    """
+    Calculate values for the thymic Q.
+    """
+    return env.Command(
+        common.strip_extn(c['train_pgen'])+'.q.tsv',
+        c['train_pgen'],
+        f"python3 thymic_Q.py q --max-q {c['max_q']} data/thymic-Q/model-lvj-frequency.csv.bz2 $SOURCE $TARGET")[0]
+
 
 # Nest: the dimension of the latent space.
 # numerical_nest_add('warmup_period', [5*i for i in range(0,6)])
@@ -331,16 +316,49 @@ summarized_agg_names.append('model')
 # summarized_agg_names.append('v_gene_embedding_dim')
 
 # Nest: the strength of the KL component of the VAE loss.
-numerical_nest_add('beta', [0.5, 0.75, 1.])
+numerical_nest_add('beta', np.linspace(0.5, 1, 5))
 summarized_agg_names.append('beta')
 
 # Nest: monitor for EarlyStopping.
 # nest.add('stopping_monitor', ['loss', 'val_loss'])
 # summarized_agg_names.append('stopping_monitor')
 
-# Nest: the strength of the KL component of the VAE loss.
+# Nest: EarlyStopping patience.
 # numerical_nest_add('patience', [5*x for x in range(7)])
 # summarized_agg_names.append('patience')
+
+
+@nest.add_target_with_env(localenv)
+def olga_generated_tsv(env, outdir, c):
+    """
+    Generate sequences using OLGA + thymic Q.
+    """
+    return env.Command(
+        join(outdir, 'olga-generated.tsv'),
+        c['q_csv'],
+        f"python3 thymic_Q.py sample --max-q {c['max_q']} --proposal-size {10*c['nseqs']} "
+        f"--max-iter 10000 {c['nseqs']} $SOURCE $TARGET")[0]
+
+
+@nest.add_target_with_env(localenv)
+def olga_generated(env, outdir, c):
+    """
+    Convert OLGA TSV to an Adaptive CSV.
+    """
+    return env.Command(
+        join(outdir, 'olga-generated.csv'),
+        c['olga_generated_tsv'],
+        'python3 gene_name_conversion.py olga2adaptive $SOURCE $TARGET')[0]
+
+
+# Nest: the model.
+# This needs to appear in the innermost nest so that we can pop it and then do some OLGA work.
+# In order to keep things happy when merging with OLGA results, don't comment
+# this out if you are only interested in one model. Instead, make a
+# single-model nest.
+# nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
+nest.add('model', ['basic', 'count_match', 'germline_decoder'])
+summarized_agg_names.append('model')
 
 
 @nest.add_target_with_env(localenv)
@@ -365,7 +383,8 @@ def model_params(env, outdir, c):
 @ns.name_targets
 def trained(env, outdir, c):
     return 'weights', 'diagnostics', env.Command(
-        [join(outdir, 'best_weights.h5'), join(outdir, 'diagnostics.csv')], [c['model_params'], c['split']['training']],
+        [join(outdir, 'best_weights.h5'), join(outdir, 'diagnostics.csv')],
+        [c['model_params'], c['split']['training']],
         cluster_execution_string('tcr-vae train {sources} {targets}'))
 
 
@@ -379,7 +398,6 @@ def loss(env, outdir, c):
         cluster_execution_string('tcr-vae loss {sources} {targets}'))[0]
 
 
-
 @nest.add_target_with_env(localenv)
 def vae_generated(env, outdir, c):
     return env.Command(
@@ -391,9 +409,17 @@ def vae_generated(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def vae_generated_pgen(env, outdir, c):
     return env.Command(
-        common.strip_extn(c['vae_generated'])+'.pgen.csv',
+        common.strip_extn(c['vae_generated'])+'.pgen.tsv',
         c['vae_generated'],
-        'scripts/olga-pgen.sh $SOURCE $TARGET')[0]
+        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
+
+
+@nest.add_target_with_env(localenv)
+def vae_generated_ppost(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['vae_generated'])+'.ppost.csv',
+        [c['q_csv'], c['vae_generated_pgen']],
+        'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -402,15 +428,6 @@ def vae_generated_sumrep(env, outdir, c):
         common.strip_extn(c['vae_generated'])+'.sumrep.csv',
         c['vae_generated'],
         'R/single_rep_summaries.R $SOURCE $TARGET')[0]
-
-
-# @nest.add_target_with_env(localenv)
-# def validation_pvae(env, outdir, c):
-#     pvae_call = f"tcr-vae pvae --limit-input-to {c['nseqs']}"
-#     return env.Command(
-#         join(outdir, common.strip_dirpath_extn(c['split']['validation'])+'.pvae.csv'),
-#         [c['model_params'], c['trained'], c['split']['validation']],
-#         cluster_execution_string(pvae_call + ' {sources} {targets}'))[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -471,20 +488,31 @@ def vae_sumrep_divergences(env, outdir, c):
 #         f'R/regress_loss.R --idx "{get_idx(c)}" --idx-name "{idx_name}" $SOURCES $TARGET')[0]
 
 
+# The next target doesn't need to quite so deep in the hierarchy: we could have
+# another loop over tests just at the sample level. But this is simpler and
+# ppost is cheap to compute.
+
 @nest.add_target_with_env(localenv)
-def auc_pgen(env, outdir, c):
+def test_ppost(env, outdir, c):
     c['test_pgen'] = c['test_set_info_agg'][(c['test_set'], 'test_pgen')]
-    # Below is not a typo:  we are using the location of test_pvae as a place to put our Pgen AUC.
     return env.Command(
-        join(os.path.dirname(str(c['test_pvae'])), 'pgen_auc.csv'),
-        [c['test_pgen'], c['vae_generated_pgen']],
+        join(outdir, 'ppost.csv'),
+        [c['q_csv'], c['test_pgen']],
+        'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def auc_ppost(env, outdir, c):
+    return env.Command(
+        join(outdir, 'ppost_auc.csv'),
+        [c['test_ppost'], c['vae_generated_ppost']],
         'R/auc.R $SOURCES $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
 def auc_pvae(env, outdir, c):
     return env.Command(
-        join(os.path.dirname(str(c['test_pvae'])), 'pvae_auc.csv'),
+        join(outdir, 'pvae_auc.csv'),
         [c['test_pvae'], c['olga_generated_pvae']],
         'R/auc.R --pvae $SOURCES $TARGET')[0]
 
@@ -494,8 +522,9 @@ def summarized(env, outdir, c):
     summarized = join(outdir, 'summarized.csv')
     # Adding things to the summarized_agg aggregate.
     c['summarized_agg'].append(summarized)
-    to_pass = ['loss', 'test_pvae', 'test_pgen', 'vae_generated_pgen', 'vae_generated_sumrep', 'vae_sumrep_divergences',
-               'auc_pgen', 'auc_pvae']
+    to_pass = ['loss', 'test_pvae', 'test_ppost',
+               'vae_generated_ppost', 'vae_generated_sumrep', 'vae_sumrep_divergences',
+               'auc_ppost', 'auc_pvae']
     colnames = ','.join(to_pass)
     idx = get_idx(c)
     return env.Command(
@@ -505,12 +534,19 @@ def summarized(env, outdir, c):
     )[0]
 
 
-# It's slickest to have the OLGA summary here so that we have summarized_agg_names populated.
-# Pop all the way down to sample, so we can summarize OLGA.
-nest.pop(summarized_agg_names[1])
+# Now we pop out to model, so that we can do some OLGA stuff that doesn't depend on the VAE model.
+nest.pop('model')
 
-# Now nest back up to loop through the test sets.
+# Nest: loop back over the test sets so we can calculate things for OLGA.
 nest.add('test_set', lambda c: c['test_set_agg'], label_func=common.strip_dirpath_extn)
+
+
+@nest.add_target_with_env(localenv)
+def olga_sumrep_divergences(env, outdir, c):
+    return env.Command(
+        join(outdir, 'olga.sumdiv.csv'),
+        [c['test_set'], c['olga_generated']],
+        'R/rep_divergences.R $SOURCES $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -518,18 +554,19 @@ def olga_summarized(env, outdir, c):
     summarized = join(outdir, 'olga-summarized.csv')
     c['summarized_agg'].append(summarized)
     colnames = 'olga_sumrep_divergences'
-    olga_sumrep_divergences_path = c['test_set_info_agg'][(c['test_set'], 'olga_sumrep_divergences')]
-    # The first entry is the training set. Olga doesn't have a training set, so it's empty.
-    # OLGA doesn't have any free parameters, so has a block of empty strings in the middle.
-    pre_idx = ['', 'olga'] + ['']*(len(summarized_agg_names)-3) + [c['test_set']]
-    idx = ';'.join(pre_idx)
+    # Here we populate the OLGA indices with some things that are not relevant, such as VAE model parameters.
+    # This repeats unnecessarily, but it makes downstream plotting easier because we can treat all the models the same.
+    c_copy = dict(c)
+    c_copy['model'] = 'olga'
+    idx = get_idx(c_copy)
     return env.Command(
         summarized,
-        [olga_sumrep_divergences_path],
+        [c['olga_sumrep_divergences']],
         f'python3 util.py summarize --out $TARGET --idx "{idx}" --idx-name "{idx_name}" --colnames {colnames} $SOURCES'
     )[0]
 
 
+# Pop all the way back to the very beginning for a complete summary.
 nest.pop(summarized_agg_names[0])
 
 

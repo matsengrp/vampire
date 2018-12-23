@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eu
 
-# INFILE should be a CSV with CDR3 amino acid sequence, V, and J genes.
+# INFILE should be a TSV with CDR3 amino acid sequence, V, and J genes.
 
 INFILE=$1
 OUTFILE=$2

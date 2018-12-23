@@ -1,3 +1,4 @@
+import glob
 from setuptools import setup
 
 setup(
@@ -9,6 +10,8 @@ setup(
     author_email='ematsen@gmail.com',
     packages=['vampire'],
     package_data={'vampire': ['data/*']},
+    scripts=glob.glob('vampire/scripts/*.sh'),
     entry_points={'console_scripts': [
         'tcr-vae=vampire.tcr_vae:cli',
+        'gene-name-conversion=vampire.gene_name_conversion:cli',
     ]})

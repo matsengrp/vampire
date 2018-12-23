@@ -1,5 +1,6 @@
 biopython
 click
+delegator.py
 flake8
 keras
 matplotlib

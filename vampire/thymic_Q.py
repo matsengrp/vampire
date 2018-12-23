@@ -3,8 +3,11 @@ Computing in the thymic Q framework.
 """
 
 import click
+import delegator
 import numpy as np
+import os
 import pandas as pd
+import tempfile
 
 # These are our "lvj" columns, which are the most common indices for
 # probabilities and sequences in what follows.
@@ -85,6 +88,11 @@ def p_lvj_of_Pgen_tsv(path, col_name='Pgen'):
     return df
 
 
+def set_lvj_index(df):
+    df['length'] = df['amino_acid'].apply(len)
+    df.set_index(lvj, inplace=True)
+
+
 def merge_lvj_dfs(df1, df2, how='outer'):
     """
     Merge on the lvj columns.
@@ -96,7 +104,7 @@ def merge_lvj_dfs(df1, df2, how='outer'):
     return merged
 
 
-def q_of_train_and_model_pgen(train_pgen_tsv, model_p_lvj_csv, max_q=100, pseudocount_multiplier=0.5):
+def q_of_train_and_model_pgen(model_p_lvj_csv, train_pgen_tsv, max_q=None, pseudocount_multiplier=0.5):
     """
     Fit a q distribution, but truncating q at max_q.
     """
@@ -106,7 +114,9 @@ def q_of_train_and_model_pgen(train_pgen_tsv, model_p_lvj_csv, max_q=100, pseudo
     # We need to do this merge so we can add a pseudocount:
     add_pseudocount(df, 'model_P_lvj', pseudocount_multiplier)
     normalize_column(df, 'model_P_lvj')
-    q = bound(df['data_P_lvj'] / df['model_P_lvj'], max_q)
+    q = df['data_P_lvj'] / df['model_P_lvj']
+    if max_q:
+        q = bound(q, max_q)
     return pd.DataFrame({'q': q})
 
 
@@ -115,8 +125,7 @@ def calc_Ppost(q_csv, data_pgen_tsv, pseudocount_multiplier=0.5):
     Multiply Pgen by the corresponding q_lvj to get Ppost.
     """
     df = read_olga_pgen_tsv(data_pgen_tsv)
-    df['length'] = df['amino_acid'].apply(len)
-    df.set_index(lvj, inplace=True)
+    set_lvj_index(df)
     # Merging on left means that we only use only keys from the left data
     # frame, i.e. the sequences for which we are interested in computing Ppost.
     df = merge_lvj_dfs(df, pd.read_csv(q_csv, index_col=lvj), how='left')
@@ -127,6 +136,50 @@ def calc_Ppost(q_csv, data_pgen_tsv, pseudocount_multiplier=0.5):
     df.reset_index(inplace=True)
     df.set_index(['amino_acid', 'v_gene', 'j_gene'], inplace=True)
     return df
+
+
+def rejection_sample_Ppost(q_df, df_Pgen_sample, max_q):
+    """
+    Given a df_Pgen_sample that's sampled from Pgen, and a df of q's, perform
+    rejection to obtain a sample from Ppost.
+
+    max_q is the maximum theoretical q.
+    """
+    df = df_Pgen_sample
+    set_lvj_index(df)
+    df = merge_lvj_dfs(df, q_df, how='left')
+    df['cutoff'] = df['q'] / 100
+    df['random'] = np.random.uniform(size=len(df))
+    df = df.loc[df['random'] < df['cutoff'], 'amino_acid']
+    df = df.reset_index()[['amino_acid', 'v_gene', 'j_gene']]
+    # Randomize the order of the sequences (they got sorted in the process of merging with Q.
+    df = df.sample(frac=1)
+    return df
+
+
+def sample_Ppost(sample_size, q_csv, max_q, max_iter=100, proposal_size=1e6):
+    """
+    Repeatedly sample from Pgen to calculate Ppost using rejection sampling.
+    """
+    q_df = pd.read_csv(q_csv, index_col=lvj)
+    out_df = pd.DataFrame()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        for iter_idx in range(max_iter):
+            sample_path = os.path.join(tmpdir, str(iter_idx))
+            c = delegator.run(' '.join(['olga-generate.sh', str(proposal_size), sample_path]))
+            if c.return_code != 0:
+                raise Exception("olga-generate.sh failed!")
+            df_sample = rejection_sample_Ppost(q_df, read_olga_tsv(sample_path), max_q)
+            out_df = out_df.append(df_sample)
+            print(f"Sampled {len(out_df)} of {sample_size}")
+            if len(out_df) >= sample_size:
+                break
+
+    if len(out_df) < sample_size:
+        raise Exception("Did not obtain desired number of samples in the specified number of iterations.")
+
+    out_df = out_df.head(sample_size)
+    return out_df
 
 
 @click.group()
@@ -146,16 +199,16 @@ def lvj_frequency(col_name, in_tsv, out_csv):
 
 
 @cli.command()
-@click.option('--max-q', default=100, show_default=True, help="Limit q to be at most this value.")
-@click.argument('train_pgen_tsv', type=click.File('r'))
+@click.option('--max-q', type=int, default=None, show_default=True, help="Limit q to be at most this value.")
 # Here we use a click.Path so we can pass a .bz2'd CSV.
 @click.argument('model_p_lvj_csv', type=click.Path(exists=True))
+@click.argument('train_pgen_tsv', type=click.File('r'))
 @click.argument('out_csv', type=click.File('w'))
-def q(max_q, train_pgen_tsv, model_p_lvj_csv, out_csv):
+def q(max_q, model_p_lvj_csv, train_pgen_tsv, out_csv):
     """
     Calculate q_lvj given training data and p_lvj obtained from the model.
     """
-    q_of_train_and_model_pgen(train_pgen_tsv, model_p_lvj_csv, max_q=max_q).to_csv(out_csv)
+    q_of_train_and_model_pgen(model_p_lvj_csv, train_pgen_tsv, max_q=max_q).to_csv(out_csv)
 
 
 @cli.command()
@@ -167,6 +220,27 @@ def ppost(q_csv, data_pgen_tsv, out_csv):
     Calculate Ppost given q_lvj and Pgen calculated for a data set.
     """
     calc_Ppost(q_csv, data_pgen_tsv).to_csv(out_csv)
+
+
+@cli.command()
+@click.option('--max-q', default=100, show_default=True, help="Limit q to be at most this value.")
+@click.option(
+    '--max-iter',
+    default=100,
+    show_default=True,
+    help="Maximum number of iterations to try to achieve the desired number of samples.")
+@click.option(
+    '--proposal-size', default=1000000, show_default=True, help="Number of samples to take for proposal distribution.")
+@click.argument('sample_size', type=int)
+@click.argument('q_csv', type=click.File('r'))
+@click.argument('out_tsv', type=click.File('w'))
+def sample(max_q, max_iter, proposal_size, sample_size, q_csv, out_tsv):
+    """
+    Sample from the Ppost distribution via rejection sampling.
+    """
+    sample_Ppost(
+        sample_size, q_csv, max_q, max_iter=max_iter, proposal_size=proposal_size).to_csv(
+            out_tsv, sep='\t', index=False)
 
 
 if __name__ == '__main__':

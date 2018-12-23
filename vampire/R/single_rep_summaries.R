@@ -1,4 +1,28 @@
 #!/usr/bin/env Rscript
+
+# I'm not currently using this script, because I'm interested in sumdiv and
+# these summaries aren't actually all that informative.
+# But, if you want to use them the following targets may be helpful:
+
+# @nest.add_target_with_env(localenv)
+# def test_sumrep(env, outdir, c):
+#     test_sumrep_path = common.strip_extn(c['test_head'])+'.sumrep.csv'
+#     c['test_set_info_agg'][(str(c['test_head']), 'test_sumrep')] = test_sumrep_path
+#     return env.Command(
+#         test_sumrep_path,
+#         c['test_head'],
+#         'R/single_rep_summaries.R $SOURCE $TARGET')[0]
+
+# @nest.add_target_with_env(localenv)
+# def olga_generated_sumrep(env, outdir, c):
+#     """
+#     Run univariate sumrep on the OLGA-generated sequences.
+#     """
+#     return env.Command(
+#         common.strip_extn(c['olga_generated'])+'.sumrep.csv',
+#         c['olga_generated'],
+#         'R/single_rep_summaries.R $SOURCE $TARGET')[0]
+
 suppressMessages(library(argparse))
 suppressMessages(library(devtools))
 

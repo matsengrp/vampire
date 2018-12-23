@@ -90,10 +90,10 @@ class TCRVAE:
             # Training parameters.
             stopping_monitor='val_loss',
             batch_size=100,
+            pretrains=10,
             warmup_period=20,
             epochs=500,
-            patience=20,
-            pretrains=10)
+            patience=20)
 
     @classmethod
     def default(cls):
