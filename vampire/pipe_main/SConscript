@@ -285,6 +285,13 @@ def train_pgen(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
+def training_head(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['split']['training'])+f".{c['nseqs']}.csv",
+        c['split']['training'],
+        f"head -n {c['nseqs']+1} $SOURCE > $TARGET")[0]
+
+@nest.add_target_with_env(localenv)
 def validation_head(env, outdir, c):
     return env.Command(
         common.strip_extn(c['split']['validation'])+f".{c['nseqs']}.csv",
@@ -404,6 +411,30 @@ def loss(env, outdir, c):
         [c['model_params'], c['trained']['weights'], c['split']['training'],
             c['split']['validation']],
         cluster_execution_string('tcr-vae loss {sources} {targets}'))[0]
+
+
+@nest.add_target_with_env(localenv)
+def training_pvae(env, outdir, c):
+    return env.Command(
+        join(outdir, common.strip_dirpath_extn(c['training_head'])+'.pvae.csv'),
+        [c['model_params'], c['trained']['weights'], c['training_head']],
+        cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
+
+
+@nest.add_target_with_env(localenv)
+def training_pgen(env, outdir, c):
+    return env.Command(
+        join(outdir, common.strip_dirpath_extn(c['training_head'])+'.pgen.csv'),
+        c['training_head'],
+        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
+
+
+@nest.add_target_with_env(localenv)
+def training_ppost(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['training_pgen'])+'.ppost.csv',
+        [c['q_csv'], c['training_pgen']],
+        'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
