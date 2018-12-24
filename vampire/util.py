@@ -74,7 +74,9 @@ def summarize(out, idx, idx_name, colnames, in_paths):
         for col in to_slurp:
             df[prefix + col + suffix] = to_slurp.loc[0, col]
 
-    def add_pvae_summary(path, prefix):
+    def add_pvae_summary(path, name):
+        prefix, statistic = name.split('_')
+        assert statistic == 'pvae'
         log_pvae = pd.read_csv(path)['log_p_x']
         df[prefix + '_median_log_pvae'] = np.median(log_pvae)
         df[prefix + '_mean_log_pvae'] = np.mean(log_pvae)
@@ -84,10 +86,8 @@ def summarize(out, idx, idx_name, colnames, in_paths):
         df[prefix + '_log_pvae_sd'] = np.std(log_pvae)
 
     for name, path in input_d.items():
-        if name == 'test_pvae':
-            add_pvae_summary(path, 'test')
-        if name == 'validation_pvae':
-            add_pvae_summary(path, 'validation')
+        if name in ['training_pvae', 'validation_pvae', 'test_pvae']:
+            add_pvae_summary(path, name)
         elif re.search('sumrep_divergences', name):
             slurp_cols(path, prefix='sumdiv_')
         elif re.search('auc_', name):

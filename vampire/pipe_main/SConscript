@@ -571,9 +571,10 @@ def summarized(env, outdir, c):
     summarized = join(outdir, 'summarized.csv')
     # Adding things to the summarized_agg aggregate.
     c['summarized_agg'].append(summarized)
-    to_pass = ['loss', 'test_pvae', 'test_ppost',
-               'vae_generated_ppost', 'vae_sumrep_divergences',
-               'auc_ppost', 'auc_pvae']
+    to_pass = ['loss',
+               'training_pvae', 'validation_pvae', 'test_pvae',
+               'training_ppost', 'validation_ppost', 'test_ppost',
+               'vae_sumrep_divergences', 'auc_ppost', 'auc_pvae']
     colnames = ','.join(to_pass)
     idx = get_idx(c)
     return env.Command(
