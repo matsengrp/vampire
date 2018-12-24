@@ -274,7 +274,7 @@ def split(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
-def train_pgen(env, outdir, c):
+def training_pgen(env, outdir, c):
     """
     Get Pgen for the training data.
     """
@@ -285,11 +285,12 @@ def train_pgen(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
-def training_head(env, outdir, c):
+def training_pgen_head(env, outdir, c):
     return env.Command(
-        common.strip_extn(c['split']['training'])+f".{c['nseqs']}.csv",
-        c['split']['training'],
+        common.strip_extn(c['training_pgen'])+f".{c['nseqs']}.csv",
+        c['training_pgen'],
         f"head -n {c['nseqs']+1} $SOURCE > $TARGET")[0]
+
 
 @nest.add_target_with_env(localenv)
 def validation_head(env, outdir, c):
@@ -305,8 +306,8 @@ def q_csv(env, outdir, c):
     Calculate values for the thymic Q.
     """
     return env.Command(
-        common.strip_extn(c['train_pgen'])+'.q.tsv',
-        c['train_pgen'],
+        common.strip_extn(c['training_pgen'])+'.q.tsv',
+        c['training_pgen'],
         f"python3 thymic_Q.py q --max-q {c['max_q']} data/thymic-Q/model-lvj-frequency.csv.bz2 $SOURCE $TARGET")[0]
 
 
@@ -415,25 +416,18 @@ def loss(env, outdir, c):
 
 @nest.add_target_with_env(localenv)
 def training_pvae(env, outdir, c):
+    pvae_call = f"tcr-vae pvae --limit-input-to {c['nseqs']}"
     return env.Command(
-        join(outdir, common.strip_dirpath_extn(c['training_head'])+'.pvae.csv'),
-        [c['model_params'], c['trained']['weights'], c['training_head']],
-        cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
-
-
-@nest.add_target_with_env(localenv)
-def training_pgen(env, outdir, c):
-    return env.Command(
-        join(outdir, common.strip_dirpath_extn(c['training_head'])+'.pgen.csv'),
-        c['training_head'],
-        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
+        join(outdir, common.strip_dirpath_extn(c['split']['training'])+f".{c['nseqs']}.pvae.csv"),
+        [c['model_params'], c['trained']['weights'], c['split']['training']],
+        cluster_execution_string(pvae_call + ' {sources} {targets}'))[0]
 
 
 @nest.add_target_with_env(localenv)
 def training_ppost(env, outdir, c):
     return env.Command(
-        common.strip_extn(c['training_pgen'])+'.ppost.csv',
-        [c['q_csv'], c['training_pgen']],
+        common.strip_extn(c['training_pgen_head'])+'.ppost.csv',
+        [c['q_csv'], c['training_pgen_head']],
         'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
 
 
