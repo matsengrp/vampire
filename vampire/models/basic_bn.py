@@ -10,6 +10,7 @@ import numpy as np
 import keras
 from keras.models import Model
 from keras.layers import Activation, Dense, Lambda, Input, Reshape
+from keras.layers import BatchNormalization as BN
 from keras import backend as K
 from keras import objectives
 
@@ -57,8 +58,10 @@ def build(params):
     j_gene_embedding = Dense(params['j_gene_embedding_dim'], name='j_gene_embedding')(j_gene_input)
     merged_embedding = keras.layers.concatenate([cdr3_embedding_flat, v_gene_embedding, j_gene_embedding],
                                                 name='merged_embedding')
-    encoder_dense_1 = Dense(params['dense_nodes'], activation='elu', name='encoder_dense_1')(merged_embedding)
-    encoder_dense_2 = Dense(params['dense_nodes'], activation='elu', name='encoder_dense_2')(encoder_dense_1)
+    encoder_dense_1 = BN(name='bn_encoder_1')(Dense(params['dense_nodes'], activation='elu',
+                                                    name='encoder_dense_1')(merged_embedding))
+    encoder_dense_2 = BN(name='bn_encoder_2')(Dense(params['dense_nodes'], activation='elu',
+                                                    name='encoder_dense_2')(encoder_dense_1))
 
     # Latent layers:
     z_mean = Dense(params['latent_dim'], name='z_mean')(encoder_dense_2)
@@ -67,24 +70,26 @@ def build(params):
     # Decoding layers:
     z_l = Lambda(sampling, output_shape=(params['latent_dim'], ), name='z')
     decoder_dense_1_l = Dense(params['dense_nodes'], activation='elu', name='decoder_dense_1')
+    bn_decoder_1_l = BN(name='bn_decoder_1')
     decoder_dense_2_l = Dense(params['dense_nodes'], activation='elu', name='decoder_dense_2')
+    bn_decoder_2_l = BN(name='bn_decoder_2')
     cdr3_post_dense_flat_l = Dense(np.array(cdr3_input_shape).prod(), activation='linear', name='cdr3_post_dense_flat')
     cdr3_post_dense_l = Reshape(cdr3_input_shape, name='cdr3_post_dense')
     cdr3_output_l = Activation(activation='softmax', name='cdr3_output')
     v_gene_output_l = Dense(params['n_v_genes'], activation='softmax', name='v_gene_output')
     j_gene_output_l = Dense(params['n_j_genes'], activation='softmax', name='j_gene_output')
 
-    cdr3_output = cdr3_output_l(
-        cdr3_post_dense_l(cdr3_post_dense_flat_l(decoder_dense_2_l(decoder_dense_1_l(z_l([z_mean, z_log_var]))))))
-    v_gene_output = v_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_l([z_mean, z_log_var]))))
-    j_gene_output = j_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_l([z_mean, z_log_var]))))
+    post_decoder_dense = bn_decoder_2_l(decoder_dense_2_l(bn_decoder_1_l(decoder_dense_1_l(z_l([z_mean, z_log_var])))))
+    cdr3_output = cdr3_output_l(cdr3_post_dense_l(cdr3_post_dense_flat_l(post_decoder_dense)))
+    v_gene_output = v_gene_output_l(post_decoder_dense)
+    j_gene_output = j_gene_output_l(post_decoder_dense)
 
     # Define the decoder components separately so we can have it as its own model.
     z_mean_input = Input(shape=(params['latent_dim'], ))
-    decoder_cdr3_output = cdr3_output_l(
-        cdr3_post_dense_l(cdr3_post_dense_flat_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))))
-    decoder_v_gene_output = v_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))
-    decoder_j_gene_output = j_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))
+    decoder_post_decoder_dense = bn_decoder_2_l(decoder_dense_2_l(bn_decoder_1_l(decoder_dense_1_l(z_mean_input))))
+    decoder_cdr3_output = cdr3_output_l(cdr3_post_dense_l(cdr3_post_dense_flat_l(decoder_post_decoder_dense)))
+    decoder_v_gene_output = v_gene_output_l(decoder_post_decoder_dense)
+    decoder_j_gene_output = j_gene_output_l(decoder_post_decoder_dense)
 
     encoder = Model([cdr3_input, v_gene_input, j_gene_input], [z_mean, z_log_var])
     decoder = Model(z_mean_input, [decoder_cdr3_output, decoder_v_gene_output, decoder_j_gene_output])
