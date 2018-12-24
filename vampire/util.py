@@ -88,8 +88,6 @@ def summarize(out, idx, idx_name, colnames, in_paths):
             add_pvae_summary(path, 'test')
         if name == 'validation_pvae':
             add_pvae_summary(path, 'validation')
-        elif name == 'vae_generated_sumrep':
-            slurp_cols(path, prefix='sumrep_')
         elif re.search('sumrep_divergences', name):
             slurp_cols(path, prefix='sumdiv_')
         elif re.search('auc_', name):

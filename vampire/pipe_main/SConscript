@@ -455,14 +455,6 @@ def vae_generated_ppost(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
-def vae_generated_sumrep(env, outdir, c):
-    return env.Command(
-        common.strip_extn(c['vae_generated'])+'.sumrep.csv',
-        c['vae_generated'],
-        'R/single_rep_summaries.R $SOURCE $TARGET')[0]
-
-
-@nest.add_target_with_env(localenv)
 def olga_generated_pvae(env, outdir, c):
     return env.Command(
         join(outdir, common.strip_dirpath_extn(c['olga_generated'])+'.pvae.csv'),
@@ -555,7 +547,7 @@ def summarized(env, outdir, c):
     # Adding things to the summarized_agg aggregate.
     c['summarized_agg'].append(summarized)
     to_pass = ['loss', 'test_pvae', 'test_ppost',
-               'vae_generated_ppost', 'vae_generated_sumrep', 'vae_sumrep_divergences',
+               'vae_generated_ppost', 'vae_sumrep_divergences',
                'auc_ppost', 'auc_pvae']
     colnames = ','.join(to_pass)
     idx = get_idx(c)
