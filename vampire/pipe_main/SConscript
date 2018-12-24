@@ -285,6 +285,14 @@ def train_pgen(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
+def validation_head(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['split']['validation'])+f".{c['nseqs']}.csv",
+        c['split']['validation'],
+        f"head -n {c['nseqs']+1} $SOURCE > $TARGET")[0]
+
+
+@nest.add_target_with_env(localenv)
 def q_csv(env, outdir, c):
     """
     Calculate values for the thymic Q.
@@ -400,11 +408,26 @@ def loss(env, outdir, c):
 
 @nest.add_target_with_env(localenv)
 def validation_pvae(env, outdir, c):
-    pvae_call = f"tcr-vae pvae --limit-input-to {c['nseqs']}"
     return env.Command(
-        join(outdir, common.strip_dirpath_extn(c['split']['validation'])+'.pvae.csv'),
+        join(outdir, common.strip_dirpath_extn(c['validation_head'])+'.pvae.csv'),
         [c['model_params'], c['trained']['weights'], c['split']['validation']],
-        cluster_execution_string(pvae_call + ' {sources} {targets}'))[0]
+        cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
+
+
+@nest.add_target_with_env(localenv)
+def validation_pgen(env, outdir, c):
+    return env.Command(
+        join(outdir, common.strip_dirpath_extn(c['validation_head'])+'.pgen.csv'),
+        c['validation_head'],
+        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
+
+
+@nest.add_target_with_env(localenv)
+def validation_ppost(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['validation_pgen'])+'.ppost.csv',
+        [c['q_csv'], c['validation_pgen']],
+        'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
