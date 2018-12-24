@@ -357,7 +357,7 @@ def olga_generated(env, outdir, c):
 # this out if you are only interested in one model. Instead, make a
 # single-model nest.
 # nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
-nest.add('model', ['basic', 'count_match', 'germline_decoder'])
+nest.add('model', ['basic', 'basic_bn_3', 'basic_bn', 'count_match', 'germline_decoder'])
 summarized_agg_names.append('model')
 
 
