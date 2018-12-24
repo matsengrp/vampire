@@ -311,6 +311,14 @@ def q_csv(env, outdir, c):
         f"python3 thymic_Q.py q --max-q {c['max_q']} data/thymic-Q/model-lvj-frequency.csv.bz2 $SOURCE $TARGET")[0]
 
 
+@nest.add_target_with_env(localenv)
+def training_ppost(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['training_pgen_head'])+'.ppost.csv',
+        [c['q_csv'], c['training_pgen_head']],
+        'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
+
+
 # Nest: the dimension of the latent space.
 # numerical_nest_add('warmup_period', [5*i for i in range(0,6)])
 # summarized_agg_names.append('warmup_period')
@@ -421,14 +429,6 @@ def training_pvae(env, outdir, c):
         join(outdir, common.strip_dirpath_extn(c['split']['training'])+f".{c['nseqs']}.pvae.csv"),
         [c['model_params'], c['trained']['weights'], c['split']['training']],
         cluster_execution_string(pvae_call + ' {sources} {targets}'))[0]
-
-
-@nest.add_target_with_env(localenv)
-def training_ppost(env, outdir, c):
-    return env.Command(
-        common.strip_extn(c['training_pgen_head'])+'.ppost.csv',
-        [c['q_csv'], c['training_pgen_head']],
-        'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
