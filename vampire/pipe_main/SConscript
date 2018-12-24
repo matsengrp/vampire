@@ -410,7 +410,7 @@ def loss(env, outdir, c):
 def validation_pvae(env, outdir, c):
     return env.Command(
         join(outdir, common.strip_dirpath_extn(c['validation_head'])+'.pvae.csv'),
-        [c['model_params'], c['trained']['weights'], c['split']['validation']],
+        [c['model_params'], c['trained']['weights'], c['validation_head']],
         cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
 
 
