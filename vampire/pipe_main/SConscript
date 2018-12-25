@@ -206,7 +206,7 @@ def preprocess_test(env, outdir, c):
     """
     in_path = c['test_data']
     return env.Command(
-        join(outdir, 'test-data.csv'),
+        join(outdir, common.strip_dirpath_extn(in_path) + '.for-test.csv'),
         in_path,
         'python3 preprocess_adaptive.py $SOURCE $TARGET')[0]
 
