@@ -583,7 +583,7 @@ def summarized(env, outdir, c):
     )[0]
 
 
-# Now we pop out to model, so that we can do some OLGA stuff that doesn't depend on the VAE model.
+# Now we pop out past model, so that we can do some OLGA stuff that doesn't depend on the VAE model.
 nest.pop('model')
 
 # Nest: loop back over the test sets so we can calculate things for OLGA.
