@@ -213,7 +213,7 @@ def preprocess_test(env, outdir, c):
 
 @nest.add_target_with_env(localenv)
 def test_head(env, outdir, c):
-    test_head_path = join(outdir, 'test-head.csv')
+    test_head_path = join(outdir, common.strip_dirpath_extn(c['preprocess_test'])+f'.head.csv')
     # Remove a pesky and meaningless leading `./` that was making trouble later.
     c['test_set_agg'].append(re.sub('^\./', '', test_head_path))
     return env.Command(
