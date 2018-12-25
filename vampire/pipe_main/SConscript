@@ -335,6 +335,21 @@ def validation_ppost(env, outdir, c):
         'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
 
 
+# Nest: loop back over the test sets so we can calculate things for OLGA.
+nest.add('test_set', lambda c: c['test_set_agg'], label_func=common.strip_dirpath_extn)
+
+@nest.add_target_with_env(localenv)
+def test_ppost(env, outdir, c):
+    c['test_pgen'] = c['test_set_info_agg'][(c['test_set'], 'test_pgen')]
+    test_ppost_path = join(outdir, 'ppost.csv')
+    c['test_set_info_agg'][(c['test_set'], 'test_ppost')] = test_ppost_path
+    return env.Command(
+        test_ppost_path,
+        [c['q_csv'], c['test_pgen']],
+        'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
+
+nest.pop('test_set')
+
 # Nest: the dimension of the latent space.
 # numerical_nest_add('warmup_period', [5*i for i in range(0,6)])
 # summarized_agg_names.append('warmup_period')
@@ -537,21 +552,9 @@ def vae_sumrep_divergences(env, outdir, c):
 #         f'R/regress_loss.R --idx "{get_idx(c)}" --idx-name "{idx_name}" $SOURCES $TARGET')[0]
 
 
-# The next target doesn't need to quite so deep in the hierarchy: we could have
-# another loop over tests just at the sample level. But this is simpler and
-# ppost is cheap to compute.
-
-@nest.add_target_with_env(localenv)
-def test_ppost(env, outdir, c):
-    c['test_pgen'] = c['test_set_info_agg'][(c['test_set'], 'test_pgen')]
-    return env.Command(
-        join(outdir, 'ppost.csv'),
-        [c['q_csv'], c['test_pgen']],
-        'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
-
-
 @nest.add_target_with_env(localenv)
 def auc_ppost(env, outdir, c):
+    c['test_ppost'] = c['test_set_info_agg'][(c['test_set'], 'test_ppost')]
     return env.Command(
         join(outdir, 'ppost_auc.csv'),
         [c['test_ppost'], c['vae_generated_ppost']],
@@ -589,18 +592,6 @@ nest.pop('model')
 # Nest: loop back over the test sets so we can calculate things for OLGA.
 nest.add('test_set', lambda c: c['test_set_agg'], label_func=common.strip_dirpath_extn)
 
-# Here we re-calculate test_ppost, which is cheap.
-
-
-@nest.add_target_with_env(localenv)
-def test_ppost(env, outdir, c):
-    c['test_pgen'] = c['test_set_info_agg'][(c['test_set'], 'test_pgen')]
-    return env.Command(
-        join(outdir, 'ppost.csv'),
-        [c['q_csv'], c['test_pgen']],
-        'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
-
-
 @nest.add_target_with_env(localenv)
 def olga_sumrep_divergences(env, outdir, c):
     return env.Command(
@@ -613,6 +604,7 @@ def olga_sumrep_divergences(env, outdir, c):
 def olga_summarized(env, outdir, c):
     summarized = join(outdir, 'olga-summarized.csv')
     c['summarized_agg'].append(summarized)
+    c['test_ppost'] = c['test_set_info_agg'][(c['test_set'], 'test_ppost')]
     to_pass = ['training_ppost', 'validation_ppost', 'test_ppost', 'olga_sumrep_divergences']
     colnames = ','.join(to_pass)
     # Here we populate the OLGA indices with some things that are not relevant, such as VAE model parameters.
