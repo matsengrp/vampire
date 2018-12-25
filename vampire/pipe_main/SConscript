@@ -206,14 +206,14 @@ def preprocess_test(env, outdir, c):
     """
     in_path = c['test_data']
     return env.Command(
-        join(outdir, common.strip_dirpath_extn(in_path) + '.for-test.csv'),
+        join(outdir, 'test-data.csv'),
         in_path,
         'python3 preprocess_adaptive.py $SOURCE $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
 def test_head(env, outdir, c):
-    test_head_path = join(outdir, common.strip_dirpath_extn(c['preprocess_test'])+f".{c['nseqs']}.csv")
+    test_head_path = join(outdir, 'test-head.csv')
     # Remove a pesky and meaningless leading `./` that was making trouble later.
     c['test_set_agg'].append(re.sub('^\./', '', test_head_path))
     return env.Command(
@@ -224,7 +224,7 @@ def test_head(env, outdir, c):
 
 @nest.add_target_with_env(localenv)
 def test_pgen(env, outdir, c):
-    test_pgen_path = common.strip_extn(c['test_head'])+'.pgen.tsv'
+    test_pgen_path = join(outdir, 'test-head.pgen.tsv')
     c['test_set_info_agg'][(str(c['test_head']), 'test_pgen')] = test_pgen_path
     return env.Command(
         test_pgen_path,
@@ -247,7 +247,7 @@ def preprocess(env, outdir, c):
     """
     in_path = c['sample']
     return env.Command(
-        join(outdir, common.strip_dirpath_extn(in_path) + '.processed.csv'),
+        join(outdir, 'sample.processed.csv'),
         in_path,
         'python3 preprocess_adaptive.py $SOURCE $TARGET')[0]
 
@@ -266,9 +266,8 @@ def split(env, outdir, c):
     `test-size`.
     """
     in_path = c['preprocess']
-    return 'training', 'validation', env.Command([
-        join(outdir, common.strip_dirpath_extn(in_path) + '.training.csv'),
-        join(outdir, common.strip_dirpath_extn(in_path) + '.validation.csv')],
+    return 'training', 'validation', env.Command(
+        [join(outdir, 'training.csv'), join(outdir, 'validation.csv')],
         in_path,
         f"python3 util.py split --test-size {c['val_frac']} $SOURCE $TARGETS")
 
@@ -279,7 +278,7 @@ def training_pgen(env, outdir, c):
     Get Pgen for the training data.
     """
     return env.Command(
-        common.strip_extn(c['split']['training'])+'.pgen.tsv',
+        join(outdir, 'training.pgen.tsv'),
         c['split']['training'],
         cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
 
@@ -306,7 +305,7 @@ def q_csv(env, outdir, c):
     Calculate values for the thymic Q.
     """
     return env.Command(
-        common.strip_extn(c['training_pgen'])+'.q.tsv',
+        join(outdir, 'q.tsv'),
         c['training_pgen'],
         f"python3 thymic_Q.py q --max-q {c['max_q']} data/thymic-Q/model-lvj-frequency.csv.bz2 $SOURCE $TARGET")[0]
 
@@ -373,7 +372,7 @@ nest.pop('test_set')
 # summarized_agg_names.append('v_gene_embedding_dim')
 
 # Nest: the strength of the KL component of the VAE loss.
-numerical_nest_add('beta', np.linspace(0.5, 1, 5))
+numerical_nest_add('beta', np.linspace(0.75, 1, 3))
 summarized_agg_names.append('beta')
 
 # Nest: monitor for EarlyStopping.
@@ -475,7 +474,7 @@ def validation_pvae(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def vae_generated(env, outdir, c):
     return env.Command(
-        join(outdir, 'generated.csv'),
+        join(outdir, 'vae-generated.csv'),
         [c['model_params'], c['trained']['weights']],
         f"tcr-vae generate --nseqs {c['nseqs']} $SOURCES $TARGET")[0]
 
@@ -483,7 +482,7 @@ def vae_generated(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def vae_generated_pgen(env, outdir, c):
     return env.Command(
-        common.strip_extn(c['vae_generated'])+'.pgen.tsv',
+        join(outdir, 'vae-generated.pgen.tsv'),
         c['vae_generated'],
         cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
 
@@ -491,7 +490,7 @@ def vae_generated_pgen(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def vae_generated_ppost(env, outdir, c):
     return env.Command(
-        common.strip_extn(c['vae_generated'])+'.ppost.csv',
+        join(outdir, 'vae-generated.ppost.tsv'),
         [c['q_csv'], c['vae_generated_pgen']],
         'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
 
@@ -499,7 +498,7 @@ def vae_generated_ppost(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def olga_generated_pvae(env, outdir, c):
     return env.Command(
-        join(outdir, common.strip_dirpath_extn(c['olga_generated'])+'.pvae.csv'),
+        join(outdir, 'olga-generated.pvae.csv'),
         [c['model_params'], c['trained']['weights'], c['olga_generated']],
         cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
 
@@ -531,7 +530,7 @@ def get_idx(c):
 @nest.add_target_with_env(localenv)
 def test_pvae(env, outdir, c):
     return env.Command(
-        join(outdir, common.strip_dirpath_extn(c['test_set'])+'.pvae.csv'),
+        join(outdir, 'test.pvae.csv'),
         [c['model_params'], c['trained']['weights'], c['test_set']],
         cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
 
@@ -539,7 +538,7 @@ def test_pvae(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def vae_sumrep_divergences(env, outdir, c):
     return env.Command(
-        common.strip_extn(c['vae_generated'])+'.'+common.strip_dirpath_extn(c['test_set'])+'.sumdiv.csv',
+        join(outdir, 'vae.sumdiv.csv'),
         [c['test_set'], c['vae_generated']],
         'R/rep_divergences.R $SOURCES $TARGET')[0]
 
@@ -558,7 +557,7 @@ def vae_sumrep_divergences(env, outdir, c):
 def auc_ppost(env, outdir, c):
     c['test_ppost'] = c['test_set_info_agg'][(c['test_set'], 'test_ppost')]
     return env.Command(
-        join(outdir, 'ppost_auc.csv'),
+        join(outdir, 'ppost-auc.csv'),
         [c['test_ppost'], c['vae_generated_ppost']],
         'R/auc.R $SOURCES $TARGET')[0]
 
@@ -566,7 +565,7 @@ def auc_ppost(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def auc_pvae(env, outdir, c):
     return env.Command(
-        join(outdir, 'pvae_auc.csv'),
+        join(outdir, 'pvae-auc.csv'),
         [c['test_pvae'], c['olga_generated_pvae']],
         'R/auc.R --pvae $SOURCES $TARGET')[0]
 
