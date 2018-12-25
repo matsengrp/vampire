@@ -338,6 +338,7 @@ def validation_ppost(env, outdir, c):
 # Nest: loop back over the test sets so we can calculate things for OLGA.
 nest.add('test_set', lambda c: c['test_set_agg'], label_func=common.strip_dirpath_extn)
 
+
 @nest.add_target_with_env(localenv)
 def test_ppost(env, outdir, c):
     c['test_pgen'] = c['test_set_info_agg'][(c['test_set'], 'test_pgen')]
@@ -347,6 +348,7 @@ def test_ppost(env, outdir, c):
         test_ppost_path,
         [c['q_csv'], c['test_pgen']],
         'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
+
 
 nest.pop('test_set')
 
@@ -591,6 +593,7 @@ nest.pop('model')
 
 # Nest: loop back over the test sets so we can calculate things for OLGA.
 nest.add('test_set', lambda c: c['test_set_agg'], label_func=common.strip_dirpath_extn)
+
 
 @nest.add_target_with_env(localenv)
 def olga_sumrep_divergences(env, outdir, c):
