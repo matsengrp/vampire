@@ -82,12 +82,13 @@ def summarize(out, idx, idx_name, colnames, in_paths):
         prefix, statistic = name.split('_')
         if statistic == 'pvae':
             header = 'log_p_x'
+            log_statistic = pd.read_csv(path)[header]
         elif statistic == 'ppost':
             header = 'Ppost'
+            log_statistic = np.log(pd.read_csv(path)[header])
         else:
             raise Exception(f"Unknown statistic '{statistic}'")
 
-        log_statistic = pd.read_csv(path)[header]
         df['_'.join([prefix, 'median_log', statistic])] = np.median(log_statistic)
         df['_'.join([prefix, 'mean_log', statistic])] = np.mean(log_statistic)
 
