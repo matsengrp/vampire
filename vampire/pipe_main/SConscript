@@ -314,7 +314,7 @@ def q_csv(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def training_ppost(env, outdir, c):
     return env.Command(
-        common.strip_extn(c['training_pgen_head'])+'.ppost.csv',
+        join(outdir, common.strip_dirpath_extn(c['training_pgen_head'])+'.ppost.csv'),
         [c['q_csv'], c['training_pgen_head']],
         'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
 
