@@ -15,15 +15,6 @@ restrict_to_true_test = function(df) {
     df[df$sample != df$trimmed_test_set_name, ]
 }
 
-# Do a little gymnastics to fill in fake values for OLGA (which is missing numerical_col)
-# so that it will draw a line when relevant.
-fake_extra_entries = function(df, numerical_col) {
-    to_duplicate = df[is.na(df[,numerical_col]), ]
-    to_duplicate[ , numerical_col] = max(df[,numerical_col], na.rm=TRUE)
-    df[is.na(df[,numerical_col]), numerical_col] = min(df[,numerical_col], na.rm=TRUE)
-    rbind(df, to_duplicate)
-}
-
 add_model_class = function(df) {
     df$class = 'dnn'
     df[df$model == 'olga', ]$class = 'graphical'
@@ -37,21 +28,18 @@ drop_rows_with_na = function(df) { df[complete.cases(df), ] }
 
 plot_likelihoods = function(df, numerical_col, out_path=NULL, x_trans='identity') {
     id_vars = c('test_set', 'model', numerical_col)
-    measure_vars = c('test_log_mean_pvae', 'test_log_pvae_sd', 'test_median_log_pvae')
+    measure_vars = c('test_mean_log_p', 'test_median_log_p')
 
     df = df[df$model != 'olga', ]
     df = restrict_to_true_test(df)
     df = df[c(id_vars, measure_vars)]
-    df$ymin = df$test_log_mean_pvae - 0.5*df$test_log_pvae_sd
-    df$ymax = df$test_log_mean_pvae + 0.5*df$test_log_pvae_sd
 
-    mean = ggplot(df, aes_string(numerical_col, 'test_log_mean_pvae', color='model')) +
+    mean = ggplot(df, aes_string(numerical_col, 'test_mean_log_p', color='model')) +
            geom_line() +
-           geom_errorbar(aes(ymin=ymin, ymax=ymax), alpha=0.3) +
            facet_wrap(vars(test_set), scales='free') +
            scale_x_continuous(trans=x_trans)
 
-    medn = ggplot(df, aes_string(numerical_col, 'test_median_log_pvae', color='model')) +
+    medn = ggplot(df, aes_string(numerical_col, 'test_median_log_p', color='model')) +
            geom_line() +
            facet_wrap(vars(test_set), scales='free') +
            scale_x_continuous(trans=x_trans)
@@ -67,7 +55,6 @@ plot_divergences = function(df, numerical_col, out_path=NULL, x_trans='identity'
     measure_vars = grep('sumdiv_', colnames(df), value=TRUE)
 
     df = restrict_to_true_test(df)
-    df = fake_extra_entries(df, numerical_col)
     df = add_model_class(df)
     df = df[c(id_vars, measure_vars)]
 
@@ -80,7 +67,7 @@ plot_divergences = function(df, numerical_col, out_path=NULL, x_trans='identity'
         scale_y_log10() +
         theme(strip.text.y = element_text(angle = 0))
 
-    if(length(out_path)) ggsave(out_path, height=8, width=8)
+    if(length(out_path)) ggsave(out_path, height=8, width=16)
     p
 }
 

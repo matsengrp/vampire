@@ -129,7 +129,9 @@ def calc_Ppost(q_csv, data_pgen_tsv, pseudocount_multiplier=0.5):
     # Merging on left means that we only use only keys from the left data
     # frame, i.e. the sequences for which we are interested in computing Ppost.
     df = merge_lvj_dfs(df, pd.read_csv(q_csv, index_col=lvj), how='left')
+    # Add a pseudocount to Pgen and q to prevent infs in whole-data log likelihoods.
     add_pseudocount(df, 'q', pseudocount_multiplier)
+    add_pseudocount(df, 'Pgen', pseudocount_multiplier)
     df['Ppost'] = df['Pgen'] * df['q']
     # Drop length
     df.reset_index(level=0, drop=True, inplace=True)

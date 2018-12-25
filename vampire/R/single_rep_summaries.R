@@ -14,6 +14,13 @@
 #         'R/single_rep_summaries.R $SOURCE $TARGET')[0]
 
 # @nest.add_target_with_env(localenv)
+# def vae_generated_sumrep(env, outdir, c):
+#     return env.Command(
+#         common.strip_extn(c['vae_generated'])+'.sumrep.csv',
+#         c['vae_generated'],
+#         'R/single_rep_summaries.R $SOURCE $TARGET')[0]
+
+# @nest.add_target_with_env(localenv)
 # def olga_generated_sumrep(env, outdir, c):
 #     """
 #     Run univariate sumrep on the OLGA-generated sequences.
@@ -22,6 +29,12 @@
 #         common.strip_extn(c['olga_generated'])+'.sumrep.csv',
 #         c['olga_generated'],
 #         'R/single_rep_summaries.R $SOURCE $TARGET')[0]
+
+# And in util.py summarize:
+
+#         elif name == 'vae_generated_sumrep':
+#             slurp_cols(path, prefix='sumrep_')
+
 
 suppressMessages(library(argparse))
 suppressMessages(library(devtools))

@@ -74,22 +74,27 @@ def summarize(out, idx, idx_name, colnames, in_paths):
         for col in to_slurp:
             df[prefix + col + suffix] = to_slurp.loc[0, col]
 
-    def add_pvae_summary(path, prefix):
-        log_pvae = pd.read_csv(path)['log_p_x']
-        df[prefix + '_median_log_pvae'] = np.median(log_pvae)
-        df[prefix + '_mean_log_pvae'] = np.mean(log_pvae)
-        df[prefix + '_log_mean_pvae'] = np.log(np.mean(np.exp(log_pvae)))
-        # Yes, Vladimir, we are taking a standard deviation of something
-        # that isn't normal. They look kinda gamma-ish after applying log.
-        df[prefix + '_log_pvae_sd'] = np.std(log_pvae)
+    def add_p_summary(path, name):
+        """
+        Add a summary of something like `validation_pvae` where `validation` is
+        the prefix and `pvae` is the statistic.
+        """
+        prefix, statistic = name.split('_')
+        if statistic == 'pvae':
+            log_statistic = pd.read_csv(path)['log_p_x']
+        elif statistic == 'ppost':
+            log_statistic = np.log(pd.read_csv(path)['Ppost'])
+        else:
+            raise Exception(f"Unknown statistic '{statistic}'")
+
+        df[prefix + '_median_log_p'] = np.median(log_statistic)
+        df[prefix + '_mean_log_p'] = np.mean(log_statistic)
 
     for name, path in input_d.items():
-        if name == 'test_pvae':
-            add_pvae_summary(path, 'test')
-        if name == 'validation_pvae':
-            add_pvae_summary(path, 'validation')
-        elif name == 'vae_generated_sumrep':
-            slurp_cols(path, prefix='sumrep_')
+        if name in [
+                'training_pvae', 'validation_pvae', 'test_pvae', 'training_ppost', 'validation_ppost', 'test_ppost'
+        ]:
+            add_p_summary(path, name)
         elif re.search('sumrep_divergences', name):
             slurp_cols(path, prefix='sumdiv_')
         elif re.search('auc_', name):
