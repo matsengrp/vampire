@@ -81,16 +81,14 @@ def summarize(out, idx, idx_name, colnames, in_paths):
         """
         prefix, statistic = name.split('_')
         if statistic == 'pvae':
-            header = 'log_p_x'
-            log_statistic = pd.read_csv(path)[header]
+            log_statistic = pd.read_csv(path)['log_p_x']
         elif statistic == 'ppost':
-            header = 'Ppost'
-            log_statistic = np.log(pd.read_csv(path)[header])
+            log_statistic = np.log(pd.read_csv(path)['Ppost'])
         else:
             raise Exception(f"Unknown statistic '{statistic}'")
 
-        df['_'.join([prefix, 'median_log', statistic])] = np.median(log_statistic)
-        df['_'.join([prefix, 'mean_log', statistic])] = np.mean(log_statistic)
+        df[prefix + '_median_log_p'] = np.median(log_statistic)
+        df[prefix + '_mean_log_p'] = np.mean(log_statistic)
 
     for name, path in input_d.items():
         if name in [
