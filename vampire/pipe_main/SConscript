@@ -319,6 +319,22 @@ def training_ppost(env, outdir, c):
         'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
 
 
+@nest.add_target_with_env(localenv)
+def validation_pgen(env, outdir, c):
+    return env.Command(
+        join(outdir, common.strip_dirpath_extn(c['validation_head'])+'.pgen.csv'),
+        c['validation_head'],
+        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
+
+
+@nest.add_target_with_env(localenv)
+def validation_ppost(env, outdir, c):
+    return env.Command(
+        common.strip_extn(c['validation_pgen'])+'.ppost.csv',
+        [c['q_csv'], c['validation_pgen']],
+        'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
+
+
 # Nest: the dimension of the latent space.
 # numerical_nest_add('warmup_period', [5*i for i in range(0,6)])
 # summarized_agg_names.append('warmup_period')
@@ -440,22 +456,6 @@ def validation_pvae(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
-def validation_pgen(env, outdir, c):
-    return env.Command(
-        join(outdir, common.strip_dirpath_extn(c['validation_head'])+'.pgen.csv'),
-        c['validation_head'],
-        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
-
-
-@nest.add_target_with_env(localenv)
-def validation_ppost(env, outdir, c):
-    return env.Command(
-        common.strip_extn(c['validation_pgen'])+'.ppost.csv',
-        [c['q_csv'], c['validation_pgen']],
-        'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
-
-
-@nest.add_target_with_env(localenv)
 def vae_generated(env, outdir, c):
     return env.Command(
         join(outdir, 'generated.csv'),
@@ -573,7 +573,6 @@ def summarized(env, outdir, c):
     c['summarized_agg'].append(summarized)
     to_pass = ['loss',
                'training_pvae', 'validation_pvae', 'test_pvae',
-               'training_ppost', 'validation_ppost', 'test_ppost',
                'vae_sumrep_divergences', 'auc_ppost', 'auc_pvae']
     colnames = ','.join(to_pass)
     idx = get_idx(c)
@@ -590,6 +589,16 @@ nest.pop('model')
 # Nest: loop back over the test sets so we can calculate things for OLGA.
 nest.add('test_set', lambda c: c['test_set_agg'], label_func=common.strip_dirpath_extn)
 
+# Here we re-calculate test_ppost, which is cheap.
+
+@nest.add_target_with_env(localenv)
+def test_ppost(env, outdir, c):
+    c['test_pgen'] = c['test_set_info_agg'][(c['test_set'], 'test_pgen')]
+    return env.Command(
+        join(outdir, 'ppost.csv'),
+        [c['q_csv'], c['test_pgen']],
+        'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
+
 
 @nest.add_target_with_env(localenv)
 def olga_sumrep_divergences(env, outdir, c):
@@ -603,7 +612,8 @@ def olga_sumrep_divergences(env, outdir, c):
 def olga_summarized(env, outdir, c):
     summarized = join(outdir, 'olga-summarized.csv')
     c['summarized_agg'].append(summarized)
-    colnames = 'olga_sumrep_divergences'
+    to_pass = ['training_ppost', 'validation_ppost', 'test_ppost', 'olga_sumrep_divergences']
+    colnames = ','.join(to_pass)
     # Here we populate the OLGA indices with some things that are not relevant, such as VAE model parameters.
     # This repeats unnecessarily, but it makes downstream plotting easier because we can treat all the models the same.
     c_copy = dict(c)
@@ -611,7 +621,7 @@ def olga_summarized(env, outdir, c):
     idx = get_idx(c_copy)
     return env.Command(
         summarized,
-        [c['olga_sumrep_divergences']],
+        [c[k] for k in to_pass],
         f'python3 util.py summarize --out $TARGET --idx "{idx}" --idx-name "{idx_name}" --colnames {colnames} $SOURCES'
     )[0]
 
