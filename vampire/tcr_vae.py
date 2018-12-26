@@ -76,8 +76,8 @@ class TCRVAE:
             # Models:
             model='basic',
             # Model parameters.
-            latent_dim=35,
-            dense_nodes=100,
+            latent_dim=20,
+            dense_nodes=75,
             aa_embedding_dim=21,
             v_gene_embedding_dim=30,
             j_gene_embedding_dim=13,
