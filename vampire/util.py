@@ -219,7 +219,7 @@ def split_repertoires(ncols, out_prefix, test_size, in_paths):
 
     with open(out_prefix + '.train.tsv', 'w') as fp:
         for path in train_paths:
-            df = pd.read_csv(path, sep='\t')
+            df = pd.read_csv(path, sep='\t', usecols=range(ncols))
             if columns:
                 # This is not our first file to write.
                 # Make sure that colnames match.
