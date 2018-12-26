@@ -161,5 +161,30 @@ def copy_best_weights(dest_path, loss_paths):
     shutil.copyfile(best_weights, dest_path)
 
 
+@cli.command()
+@click.argument('l_csv_path', type=click.File('r'))
+@click.argument('r_csv_path', type=click.File('r'))
+@click.argument('out_csv', type=click.File('w'))
+def present(l_csv_path, r_csv_path, out_csv):
+    """
+    Write out a TCR dataframe identical to that in `l_csv_path` (perhaps with reordered columns)
+    but with an extra column `present` indicating if that TCR is present in r_csv_path.
+    """
+    avj_columns = ['amino_acid', 'v_gene', 'j_gene']
+
+    def read_df(path):
+        df = pd.read_csv(path)
+        df.set_index(avj_columns, inplace=True)
+        return df
+
+    l_df = read_df(l_csv_path)
+    r_df = read_df(r_csv_path)
+
+    intersection = pd.merge(l_df, r_df, left_index=True, right_index=True, how='inner')
+    l_df['present'] = 0
+    l_df.loc[intersection.index, 'present'] = 1
+    return l_df.to_csv(out_csv)
+
+
 if __name__ == '__main__':
     cli()
