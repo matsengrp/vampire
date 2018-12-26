@@ -15,13 +15,13 @@ parser$add_argument('out_csv', help="Desired location for single-row output CSV.
 args = parser$parse_args()
 
 if(args$pvae) {
-    idx=1
+    idx = 'log_p_x'
     take_exp = TRUE
     col_name = 'auc_pvae'
 } else {
-    idx = 6
+    idx = 'Ppost'
     take_exp = FALSE
-    col_name = 'auc_pgen'
+    col_name = 'auc_ppost'
 }
 
 
@@ -43,13 +43,14 @@ df = rbind(
 )
 
 we_plot = (length(args$plot) > 0)
-r = roc(df$real, df$P, plot=we_plot)
+r = roc(df$real, df$P)
 out_df = data.frame(r$auc)
 colnames(out_df) = col_name
 write.csv(out_df, args$out_csv, row.names=FALSE)
 
 if(we_plot) {
     pdf(args$plot)
-    plot(r)
+    title = paste('AUC =', r$auc)
+    plot.roc(r, cex.lab=1.5, cex.axis=1.5, cex.main=1.5, cex.sub=1.5, main=title)
     dev.off()
 }
