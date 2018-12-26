@@ -183,7 +183,7 @@ def present(l_csv_path, r_csv_path, out_csv):
     intersection = pd.merge(l_df, r_df, left_index=True, right_index=True, how='inner')
     l_df['present'] = 0
     l_df.loc[intersection.index, 'present'] = 1
-    return l_df.to_csv(out_csv)
+    l_df.to_csv(out_csv)
 
 
 if __name__ == '__main__':
