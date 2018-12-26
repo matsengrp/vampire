@@ -191,9 +191,9 @@ def sharedwith(l_csv_path, r_csv_path, out_csv):
 
 
 @cli.command()
-@click.option('--ncols', default=17, help="Only take the first this many columns.", required=True)
+@click.option('--ncols', default=17, show_default=True, help="Only take the first this many columns.")
 @click.option('--out-prefix', metavar='PRE', type=click.Path(writable=True), help="Output prefix.", required=True)
-@click.option('--test-size', default=1 / 3, help="Proportion of sample to hold out for testing.")
+@click.option('--test-size', default=1 / 3, show_default=True, help="Proportion of sample to hold out for testing.")
 @click.argument('in_paths', nargs=-1)
 def split_repertoires(ncols, out_prefix, test_size, in_paths):
     """
