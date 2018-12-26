@@ -2,9 +2,11 @@
 Utilities, accessible via subcommands.
 """
 
+import datetime
 import os
 import re
 import shutil
+import sys
 
 import click
 import common
@@ -186,6 +188,48 @@ def sharedwith(l_csv_path, r_csv_path, out_csv):
     click.echo(
         f"{sum(l_df['present'])} of {len(l_df)} sequences in {l_csv_path.name} are shared with {r_csv_path.name}")
     l_df.to_csv(out_csv)
+
+
+@cli.command()
+@click.option('--ncols', default=17, show_default=True, help="Only take the first this many columns.")
+@click.option('--out-prefix', metavar='PRE', type=click.Path(writable=True), help="Output prefix.", required=True)
+@click.option('--test-size', default=1 / 3, show_default=True, help="Proportion of sample to hold out for testing.")
+@click.argument('in_paths', nargs=-1)
+def split_repertoires(ncols, out_prefix, test_size, in_paths):
+    """
+    Do a test-train split on the level of repertoires. Writes out
+
+    PRE.train.tsv: a TSV with all of the sequences from the test set,
+    PRE.test.txt: a text file with the test paths (one per line),
+    PRE.log: information about this train-test split.
+    """
+    train_paths, test_paths = train_test_split(in_paths, test_size=test_size)
+
+    with open(out_prefix + '.log', 'w') as fp:
+        fp.write(' '.join(sys.argv) + '\n')
+        fp.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M") + '\n')
+        fp.write("train paths: " + str(train_paths) + '\n')
+        fp.write("test paths: " + str(test_paths) + '\n')
+
+    with open(out_prefix + '.test.txt', 'w') as fp:
+        for path in test_paths:
+            fp.write(os.path.abspath(path) + '\n')
+
+    columns = None
+
+    with open(out_prefix + '.train.tsv', 'w') as fp:
+        for path in train_paths:
+            df = pd.read_csv(path, sep='\t', usecols=range(ncols))
+            if columns:
+                # This is not our first file to write.
+                # Make sure that colnames match.
+                if columns != list(df.columns):
+                    raise Exception("Column doesn't match!")
+                df.to_csv(fp, sep='\t', header=False, index=False)
+            else:
+                # This is our first file to write.
+                columns = list(df.columns)
+                df.to_csv(fp, sep='\t', index=False)
 
 
 if __name__ == '__main__':

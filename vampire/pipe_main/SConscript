@@ -24,6 +24,13 @@ localenv = env.Clone()  # noqa
 
 data_path = '/fh/fast/matsen_e/data/'
 seshadri_path = join(data_path, 'seshadri/data/Adaptive/clinical_cohort/')
+ignore_path = '/home/matsen/re/vampire/vampire/_ignore/'
+
+
+def paths_of_file(path):
+    with open(path) as fp:
+        return [s.strip() for s in fp.readlines()]
+
 
 DATA = {
     'dryrun': {
@@ -59,12 +66,22 @@ DATA = {
         'paths': glob.glob(join(seshadri_path, '[01]*TCRB.tsv'))[:10]
     },
     'merged-healthy-seshadri': {
-        'paths': ['/home/matsen/re/vampire/vampire/_ignore/all-seshadri-01-TCRB.tsv'],
+        'paths': [join(ignore_path, 'all-seshadri-01-TCRB.tsv')],
         'base': {
-            # Only use a random half of this data set.
-            'val_frac': 0.5
+            # Only use a random quarter of this data set.
+            'val_frac': 0.75
         }
-    }
+    },
+    'xmas-train': {
+        'paths': [join(ignore_path, 'seshadri-split-2018-12-26.train.tsv')],
+        'base': {
+            # Only use a random quarter of this data set.
+            'val_frac': 0.75
+        }
+    },
+    'xmas-test': {
+        'paths': paths_of_file(join(ignore_path, 'seshadri-split-2018-12-26.test.txt')),
+    },
 }
 
 
@@ -254,7 +271,8 @@ def preprocess(env, outdir, c):
 
 # Nest: validation fraction.
 # numerical_nest_add('val_frac', [0.99, 0.9, 0.75, 0.5, 0.01])
-# summarized_agg_names.append('val_frac')
+numerical_nest_add('val_frac', [0.99])
+summarized_agg_names.append('val_frac')
 
 
 @nest.add_target_with_env(localenv, 'split')
@@ -372,8 +390,8 @@ nest.pop('test_set')
 # summarized_agg_names.append('v_gene_embedding_dim')
 
 # Nest: the strength of the KL component of the VAE loss.
-numerical_nest_add('beta', np.linspace(0.75, 1, 3))
-summarized_agg_names.append('beta')
+# numerical_nest_add('beta', np.linspace(0.75, 1, 3))
+# summarized_agg_names.append('beta')
 
 # Nest: monitor for EarlyStopping.
 # nest.add('stopping_monitor', ['loss', 'val_loss'])
@@ -413,7 +431,7 @@ def olga_generated(env, outdir, c):
 # this out if you are only interested in one model. Instead, make a
 # single-model nest.
 # nest.add('model', apply_mode([common.strip_dirpath_extn(m) for m in glob.glob('../models/*.py')]))
-nest.add('model', ['basic', 'count_match', 'germline_decoder'])
+nest.add('model', ['basic', 'count_match'])
 summarized_agg_names.append('model')
 
 
