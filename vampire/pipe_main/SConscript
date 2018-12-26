@@ -72,14 +72,14 @@ DATA = {
             'val_frac': 0.75
         }
     },
-    'xmas-split-train': {
+    'xmas-train': {
         'paths': [join(ignore_path, 'seshadri-split-2018-12-26.train.tsv')],
         'base': {
             # Only use a random quarter of this data set.
             'val_frac': 0.75
         }
     },
-    'xmas-split-test': {
+    'xmas-test': {
         'paths': paths_of_file(join(ignore_path, 'seshadri-split-2018-12-26.test.txt')),
     },
 }
@@ -271,7 +271,8 @@ def preprocess(env, outdir, c):
 
 # Nest: validation fraction.
 # numerical_nest_add('val_frac', [0.99, 0.9, 0.75, 0.5, 0.01])
-# summarized_agg_names.append('val_frac')
+numerical_nest_add('val_frac', [0.99])
+summarized_agg_names.append('val_frac')
 
 
 @nest.add_target_with_env(localenv, 'split')
@@ -389,8 +390,8 @@ nest.pop('test_set')
 # summarized_agg_names.append('v_gene_embedding_dim')
 
 # Nest: the strength of the KL component of the VAE loss.
-numerical_nest_add('beta', np.linspace(0.75, 1, 3))
-summarized_agg_names.append('beta')
+# numerical_nest_add('beta', np.linspace(0.75, 1, 3))
+# summarized_agg_names.append('beta')
 
 # Nest: monitor for EarlyStopping.
 # nest.add('stopping_monitor', ['loss', 'val_loss'])
