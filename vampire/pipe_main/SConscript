@@ -1,9 +1,10 @@
 from os.path import join
 import glob
 import json
+import os
 import re
 
-import numpy as np
+import numpy as np  # noqa
 
 import nestly
 import nestly.scons as ns
@@ -27,9 +28,15 @@ seshadri_path = join(data_path, 'seshadri/data/Adaptive/clinical_cohort/')
 ignore_path = '/home/matsen/re/vampire/vampire/_ignore/'
 
 
-def paths_of_file(path):
-    with open(path) as fp:
-        return [s.strip() for s in fp.readlines()]
+def lines_of_file(path):
+    """
+    Return the lines in the file at path if it exists, otherwise an empty list.
+    """
+    if os.path.exists(path):
+        with open(path) as fp:
+            return [s.strip() for s in fp.readlines()]
+    else:
+        return []
 
 
 DATA = {
@@ -80,7 +87,7 @@ DATA = {
         }
     },
     'xmas-test': {
-        'paths': paths_of_file(join(ignore_path, 'seshadri-split-2018-12-26.test.txt')),
+        'paths': lines_of_file(join(ignore_path, 'seshadri-split-2018-12-26.test.txt')),
     },
 }
 
