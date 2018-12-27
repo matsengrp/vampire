@@ -14,7 +14,7 @@ def cli(command):
     """
 
     max_n_retries = 10
-    timeout = 300
+    timeout = 60
 
     retry = 0
     click.echo(f"Running `{command}`.")
@@ -27,19 +27,21 @@ def cli(command):
             click.echo("SCons has completed.")
             break
         except pexpect.TIMEOUT:
+            click.echo("pexpect timed out.")
             pass
         except pexpect.EOF:
             click.echo("Process stopped without SCons completing.")
 
         while True:
-            c = delegator.run('squeue -u matsen -M beagle | tail -n +3 | wc -l')
+            c = delegator.run('squeue -u matsen -M koshu | tail -n +3 | wc -l')
             jobs_remaining = int(c.out)
             if jobs_remaining == 0:
                 break
-            click.echo("{jobs_remaining} jobs still running.")
-            time.sleep(60)
+            click.echo(f"{jobs_remaining} jobs still running.")
+            time.sleep(10)
 
         if main_command.exitstatus != 0:
+            click.echo("Exiting with an error.")
             sys.exit(main_command.exitstatus)
 
         if retry < max_n_retries:
