@@ -18,7 +18,7 @@ def cli(command):
 
     click.echo(f"Running `{command}`.")
 
-    while(True):
+    while True:
 
         try:
             main_command = delegator.run(command)
@@ -30,16 +30,12 @@ def cli(command):
 
         # Once we've timed out, check to see if it seems like things are still active.
 
-        c = delegator.run('ps -eo user,comm,pcpu | grep matsen | grep python')
-        python_total_cpu = sum([float(s.split()[-1]) for s in c.out.strip().split('\n')])
-        if python_total_cpu > 1:
-            click.echo("Python still active.")
-            time.sleep(sleep_time)
-            continue
+        jobs_remaining = 1
 
-        c = delegator.run('squeue -u matsen -M beagle | tail -n +3 | wc -l')
-        if int(c.out) > 0:
-            click.echo("Jobs still running.")
+        while jobs_remaining > 0:
+            c = delegator.run('squeue -u matsen -M beagle | tail -n +3 | wc -l')
+            jobs_remaining = int(c.out)
+            click.echo("{jobs_remaining} jobs still running.")
             time.sleep(sleep_time)
             continue
 
@@ -47,11 +43,8 @@ def cli(command):
         click.echo(main_command.out.rstrip().split('\n')[-1])
 
         if retry < max_n_retries:
-            click.echo(f"Restarting...")
-            main_command.kill()
-            main_command = delegator.run(command, block=False)
             retry = retry+1
-
+            click.echo(f"Restarting for retry {retry} of {max_n_retries}...")
 
 
 if __name__ == '__main__':
