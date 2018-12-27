@@ -19,10 +19,14 @@ def cli(command):
     retry = 0
     click.echo(f"Running `{command}`.")
 
+    main_command = None
+
     while True:
 
-        try:
+        if not main_command:
             main_command = pexpect.spawn(command, logfile=sys.stdout.buffer)
+
+        try:
             main_command.expect("scons: done building targets", timeout=timeout)
             click.echo("SCons has completed.")
             break
@@ -32,13 +36,11 @@ def cli(command):
         except pexpect.EOF:
             click.echo("Process stopped without SCons completing.")
 
-        while True:
-            c = delegator.run('squeue -u matsen -M koshu | tail -n +3 | wc -l')
-            jobs_remaining = int(c.out)
-            if jobs_remaining == 0:
-                break
-            click.echo(f"{jobs_remaining} jobs still running.")
-            time.sleep(10)
+        c = delegator.run('squeue -u matsen -M koshu | tail -n +3 | wc -l')
+        jobs_remaining = int(c.out)
+        if jobs_remaining != 0:
+            click.echo(f"{jobs_remaining} jobs still running. Re-expecting.")
+            continue
 
         if main_command.exitstatus != 0:
             click.echo("Exiting with an error.")
@@ -47,6 +49,9 @@ def cli(command):
         if retry < max_n_retries:
             retry = retry + 1
             click.echo(f"Things seem stuck. Restarting for retry {retry} of {max_n_retries}...")
+            if not main_command.terminate():
+                main_command.terminate(force=True)
+            main_command = None
 
 
 if __name__ == '__main__':
