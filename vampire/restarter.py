@@ -7,8 +7,9 @@ import pexpect
 
 
 @click.command()
+@click.option('--clusters', default='beagle', help="Which cluster to submit to.")
 @click.argument('command')
-def cli(command):
+def cli(clusters, command):
     """
     This includes doing filters as well as deduplicating on vjcdr3s.
     """
@@ -17,6 +18,7 @@ def cli(command):
     timeout = 60
 
     retry = 0
+    command += f' --clusters={clusters}'
     click.echo(f"Running `{command}`.")
 
     main_command = None
@@ -36,7 +38,7 @@ def cli(command):
         except pexpect.EOF:
             click.echo("Process stopped without SCons completing.")
 
-        c = delegator.run('squeue -u matsen -M koshu | tail -n +3 | wc -l')
+        c = delegator.run(f'squeue -u matsen -M {clusters} | tail -n +3 | wc -l')
         jobs_remaining = int(c.out)
         if jobs_remaining != 0:
             click.echo(f"{jobs_remaining} jobs still running. Re-expecting.")
