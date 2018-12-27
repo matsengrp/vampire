@@ -38,7 +38,7 @@ def cli(clusters, command):
             click.echo("Process stopped without SCons completing.")
 
         c = delegator.run(f'squeue -u matsen -M {clusters} | tail -n +3')
-        jobs_remaining = c.out.strip().split('\n')
+        jobs_remaining = c.out.rstrip().split('\n')
         if len(jobs_remaining) > 0:
             print('\n'.join(jobs_remaining))
             click.echo("Re-expecting.")
