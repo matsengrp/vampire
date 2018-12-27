@@ -96,6 +96,8 @@ def dedup_on_vjcdr3(df):
     """
     Given a data frame of sequences, sample one
     representative per vjcdr3 uniformly.
+
+    Note: not used in the current preprocessing step.
     """
     dup_dict = collect_vjcdr3_duplicates(df)
     c = collections.Counter([len(v) for (_, v) in dup_dict.items()])
@@ -125,7 +127,7 @@ def preprocess_tsv(in_tsv, out_csv):
 
     This includes doing filters as well as deduplicating on vjcdr3s.
     """
-    df = dedup_on_vjcdr3(apply_all_filters(read_adaptive_tsv(in_tsv)))
+    df = apply_all_filters(read_adaptive_tsv(in_tsv))
     df.to_csv(out_csv, index=False)
 
 

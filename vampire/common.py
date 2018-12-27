@@ -53,6 +53,13 @@ def repeat_row(a, which_entry, n_repeats):
     return np.repeat(a, repeater_array, axis=0)
 
 
+def logspace(start, stop, num, decimals=3):
+    """
+    num evenly spaced numbers between start and stop, rounded to the given number of decimals.
+    """
+    return np.logspace(np.log10(start), np.log10(stop), num).round(decimals)
+
+
 # ### Path functions ###
 
 
