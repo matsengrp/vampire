@@ -37,10 +37,11 @@ def cli(clusters, command):
         except pexpect.EOF:
             click.echo("Process stopped without SCons completing.")
 
-        c = delegator.run(f'squeue -u matsen -M {clusters} | tail -n +3 | wc -l')
-        jobs_remaining = int(c.out)
-        if jobs_remaining != 0:
-            click.echo(f"{jobs_remaining} jobs still running. Re-expecting.")
+        c = delegator.run(f'squeue -u matsen -M {clusters} | tail -n +3')
+        jobs_remaining = c.out.strip().split('\n')
+        if len(jobs_remaining) > 0:
+            print('\n'.join(jobs_remaining))
+            click.echo("Re-expecting.")
             continue
 
         if main_command.exitstatus != 0:
