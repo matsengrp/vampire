@@ -33,7 +33,6 @@ def cli(clusters, command):
             click.echo("SCons has completed.")
             break
         except pexpect.TIMEOUT:
-            click.echo("pexpect timed out.")
             pass
         except pexpect.EOF:
             click.echo("Process stopped without SCons completing.")
