@@ -194,7 +194,7 @@ nest.add_aggregate('test_set_info_agg', dict)
 # The summarized_agg gathers everything we want to summarize and then stack at the end.
 nest.add_aggregate('summarized_agg', list)
 summarized_agg_names = []
-nest.add_aggregate('loss_regression_agg', list)
+# nest.add_aggregate('loss_regression_agg', list)
 
 
 @nest.add_target_with_env(localenv)
@@ -468,14 +468,14 @@ def trained(env, outdir, c):
         cluster_execution_string('tcr-vae train {sources} {targets}'))
 
 
-@nest.add_target_with_env(localenv)
-def loss(env, outdir, c):
-    loss = join(outdir, 'loss.csv')
-    return env.Command(
-        loss,
-        [c['model_params'], c['trained']['weights'], c['split']['training'],
-            c['split']['validation']],
-        cluster_execution_string('tcr-vae loss {sources} {targets}'))[0]
+# @nest.add_target_with_env(localenv)
+# def loss(env, outdir, c):
+#     loss = join(outdir, 'loss.csv')
+#     return env.Command(
+#         loss,
+#         [c['model_params'], c['trained']['weights'], c['split']['training'],
+#             c['split']['validation']],
+#         cluster_execution_string('tcr-vae loss {sources} {targets}'))[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -599,8 +599,7 @@ def summarized(env, outdir, c):
     summarized = join(outdir, 'summarized.csv')
     # Adding things to the summarized_agg aggregate.
     c['summarized_agg'].append(summarized)
-    to_pass = ['loss',
-               'training_pvae', 'validation_pvae', 'test_pvae',
+    to_pass = ['training_pvae', 'validation_pvae', 'test_pvae',
                'vae_sumrep_divergences', 'auc_ppost', 'auc_pvae']
     colnames = ','.join(to_pass)
     idx = get_idx(c)
