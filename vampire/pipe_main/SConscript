@@ -276,8 +276,8 @@ def preprocess(env, outdir, c):
 
 
 # Nest: validation fraction.
-numerical_nest_add('val_frac', common.logspace(0.99, 0.75, 6))
-summarized_agg_names.append('val_frac')
+# numerical_nest_add('val_frac', common.logspace(0.99, 0.75, 6))
+# summarized_agg_names.append('val_frac')
 
 
 @nest.add_target_with_env(localenv, 'split')
