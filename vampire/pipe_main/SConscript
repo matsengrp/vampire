@@ -236,7 +236,7 @@ def preprocess_test(env, outdir, c):
 
 @nest.add_target_with_env(localenv)
 def test_head(env, outdir, c):
-    test_head_path = join(outdir, common.strip_dirpath_extn(c['preprocess_test'])+f'.head.csv')
+    test_head_path = join(outdir, common.strip_dirpath_extn(c['preprocess_test'])+'.head.csv')
     # Remove a pesky and meaningless leading `./` that was making trouble later.
     c['test_set_agg'].append(re.sub('^\./', '', test_head_path))
     return env.Command(
@@ -481,7 +481,7 @@ def trained(env, outdir, c):
 def training_pvae(env, outdir, c):
     pvae_call = f"tcr-vae pvae --limit-input-to {c['nseqs']}"
     return env.Command(
-        join(outdir, common.strip_dirpath_extn(c['split']['training'])+f".head.pvae.csv"),
+        join(outdir, common.strip_dirpath_extn(c['split']['training'])+'.head.pvae.csv'),
         [c['model_params'], c['trained']['weights'], c['split']['training']],
         cluster_execution_string(pvae_call + ' {sources} {targets}'))[0]
 
