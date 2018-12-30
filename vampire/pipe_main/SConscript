@@ -88,6 +88,18 @@ DATA = {
     'xmas-test': {
         'paths': lines_of_file(join(ignore_path, 'seshadri-split-2018-12-26.test.txt')),
     },
+    'xmas-train-2': {
+        'paths': [join(ignore_path, 'seshadri-split-2018-12-30.train.tsv')],
+        'base': {
+            'val_frac': 0.88
+        }
+    },
+    'xmas-test-2': {
+        'paths': lines_of_file(join(ignore_path, 'seshadri-split-2018-12-30.test.txt')),
+    },
+    'xmas-test-extras': {
+        'paths': lines_of_file(join(ignore_path, 'seshadri-split-2018-12-26.test-with-extras.txt')),
+    },
 }
 
 
@@ -395,7 +407,7 @@ nest.pop('test_set')
 # summarized_agg_names.append('v_gene_embedding_dim')
 
 # Nest: the strength of the KL component of the VAE loss.
-numerical_nest_add('beta', np.linspace(0.75, 1, 3))
+numerical_nest_add('beta', np.linspace(0.75, 1, 5))
 summarized_agg_names.append('beta')
 
 # Nest: monitor for EarlyStopping.
