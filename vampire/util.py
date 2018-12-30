@@ -3,6 +3,7 @@ Utilities, accessible via subcommands.
 """
 
 import datetime
+import json
 import os
 import re
 import shutil
@@ -205,11 +206,15 @@ def split_repertoires(ncols, out_prefix, test_size, in_paths):
     """
     train_paths, test_paths = train_test_split(in_paths, test_size=test_size)
 
-    with open(out_prefix + '.log', 'w') as fp:
-        fp.write(' '.join(sys.argv) + '\n')
-        fp.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M") + '\n')
-        fp.write("train paths: " + str(train_paths) + '\n')
-        fp.write("test paths: " + str(test_paths) + '\n')
+    info = {
+        'call': ' '.join(sys.argv),
+        'date': datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+        'train_paths': train_paths,
+        'test_paths': test_paths,
+    }
+
+    with open(out_prefix + '.json', 'w') as fp:
+        fp.write(json.dumps(info, indent=4))
 
     with open(out_prefix + '.test.txt', 'w') as fp:
         for path in test_paths:
