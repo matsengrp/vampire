@@ -513,7 +513,7 @@ def vae_generated_pgen(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def vae_generated_ppost(env, outdir, c):
     return env.Command(
-        join(outdir, 'vae-generated.ppost.tsv'),
+        join(outdir, 'vae-generated.ppost.csv'),
         [c['q_csv'], c['vae_generated_pgen']],
         'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
 
