@@ -88,6 +88,9 @@ DATA = {
     'xmas-test': {
         'paths': lines_of_file(join(ignore_path, 'seshadri-split-2018-12-26.test.txt')),
     },
+    'xmas-test-extras': {
+        'paths': lines_of_file(join(ignore_path, 'seshadri-split-2018-12-26.test-with-extras.txt')),
+    },
     'xmas-train-2': {
         'paths': [join(ignore_path, 'seshadri-split-2018-12-30.train.tsv')],
         'base': {
@@ -97,8 +100,8 @@ DATA = {
     'xmas-test-2': {
         'paths': lines_of_file(join(ignore_path, 'seshadri-split-2018-12-30.test.txt')),
     },
-    'xmas-test-extras': {
-        'paths': lines_of_file(join(ignore_path, 'seshadri-split-2018-12-26.test-with-extras.txt')),
+    'xmas-test-2-extras': {
+        'paths': lines_of_file(join(ignore_path, 'seshadri-split-2018-12-30.test-with-extras.txt')),
     },
 }
 
