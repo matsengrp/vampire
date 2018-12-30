@@ -309,7 +309,7 @@ def training_pgen(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def training_pgen_head(env, outdir, c):
     return env.Command(
-        common.strip_extn(c['training_pgen'])+f".{c['nseqs']}.csv",
+        common.strip_extn(c['training_pgen'])+'.head.csv',
         c['training_pgen'],
         f"head -n {c['nseqs']+1} $SOURCE > $TARGET")[0]
 
@@ -317,7 +317,7 @@ def training_pgen_head(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def validation_head(env, outdir, c):
     return env.Command(
-        common.strip_extn(c['split']['validation'])+f".{c['nseqs']}.csv",
+        common.strip_extn(c['split']['validation'])+'.head.csv',
         c['split']['validation'],
         f"head -n {c['nseqs']+1} $SOURCE > $TARGET")[0]
 
@@ -481,7 +481,7 @@ def trained(env, outdir, c):
 def training_pvae(env, outdir, c):
     pvae_call = f"tcr-vae pvae --limit-input-to {c['nseqs']}"
     return env.Command(
-        join(outdir, common.strip_dirpath_extn(c['split']['training'])+f".{c['nseqs']}.pvae.csv"),
+        join(outdir, common.strip_dirpath_extn(c['split']['training'])+f".head.pvae.csv"),
         [c['model_params'], c['trained']['weights'], c['split']['training']],
         cluster_execution_string(pvae_call + ' {sources} {targets}'))[0]
 
