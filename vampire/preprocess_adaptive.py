@@ -13,6 +13,15 @@ import random
 
 from vampire import gene_name_conversion as conversion
 
+# Sometimes Adaptive uses one set of column names, and sometimes another.
+HEADER_TRANSLATION_DICT = {
+    'nucleotide': 'rearrangement',
+    'sequenceStatus': 'frame_type',
+    'aminoAcid': 'amino_acid',
+    'vGeneName': 'v_gene',
+    'jGeneName': 'j_gene'
+}
+
 
 def filter_and_drop_frame(df):
     """
@@ -108,12 +117,30 @@ def dedup_on_vjcdr3(df):
     return df.loc[indices].reset_index(drop=True)
 
 
-def read_adaptive_tsv(f):
+def read_adaptive_tsv(path):
     """
     Read an Adaptive TSV file and extract the columns we use, namely
     rearrangement, amino_acid, frame_type, v_gene,and j_gene.
+
+    I have seen two flavors of the Adaptive header names, one of which uses
+    snake_case and the other that uses camelCase.
     """
-    return pd.read_csv(f, delimiter='\t', usecols=[0, 1, 2, 10, 16])
+
+    test_bite = pd.read_csv(path, delimiter='\t', nrows=1)
+
+    camel_columns = set(HEADER_TRANSLATION_DICT.keys())
+    snake_columns = set(HEADER_TRANSLATION_DICT.values())
+
+    if camel_columns.issubset(set(test_bite.columns)):
+        take_columns = camel_columns
+    elif snake_columns.issubset(set(test_bite.columns)):
+        take_columns = snake_columns
+    else:
+        raise Exception("Unknown column names!")
+
+    df = pd.read_csv(path, delimiter='\t', usecols=take_columns)
+    df.rename(columns=HEADER_TRANSLATION_DICT, inplace=True)
+    return df
 
 
 @click.command()

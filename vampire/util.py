@@ -14,6 +14,8 @@ import common
 import numpy as np
 import pandas as pd
 
+from vampire import preprocess_adaptive
+
 from sklearn.model_selection import train_test_split
 
 
@@ -192,11 +194,10 @@ def sharedwith(l_csv_path, r_csv_path, out_csv):
 
 
 @cli.command()
-@click.option('--ncols', default=17, show_default=True, help="Only take the first this many columns.")
 @click.option('--out-prefix', metavar='PRE', type=click.Path(writable=True), help="Output prefix.", required=True)
 @click.option('--test-size', default=1 / 3, show_default=True, help="Proportion of sample to hold out for testing.")
 @click.argument('in_paths', nargs=-1)
-def split_repertoires(ncols, out_prefix, test_size, in_paths):
+def split_repertoires(out_prefix, test_size, in_paths):
     """
     Do a test-train split on the level of repertoires. Writes out
 
@@ -220,20 +221,16 @@ def split_repertoires(ncols, out_prefix, test_size, in_paths):
         for path in test_paths:
             fp.write(os.path.abspath(path) + '\n')
 
-    columns = None
+    header_written = False
 
     with open(out_prefix + '.train.tsv', 'w') as fp:
         for path in train_paths:
-            df = pd.read_csv(path, sep='\t', usecols=range(ncols))
-            if columns:
-                # This is not our first file to write.
-                # Make sure that colnames match.
-                if columns != list(df.columns):
-                    raise Exception("Column doesn't match!")
+            df = preprocess_adaptive.read_adaptive_tsv(path)
+            if header_written:
                 df.to_csv(fp, sep='\t', header=False, index=False)
             else:
                 # This is our first file to write.
-                columns = list(df.columns)
+                header_written = True
                 df.to_csv(fp, sep='\t', index=False)
 
 
