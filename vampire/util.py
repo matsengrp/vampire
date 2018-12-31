@@ -203,7 +203,10 @@ def split_repertoires(out_prefix, test_size, in_paths):
 
     PRE.train.tsv: a TSV with all of the sequences from the test set,
     PRE.test.txt: a text file with the test paths (one per line),
+    PRE.test-extras.txt: a text file with the test paths and some train paths (one per line),
     PRE.log: information about this train-test split.
+
+    test-extras includes as many train sets as there are test sets (if that many exists).
     """
     train_paths, test_paths = train_test_split(in_paths, test_size=test_size)
 
@@ -219,6 +222,12 @@ def split_repertoires(out_prefix, test_size, in_paths):
 
     with open(out_prefix + '.test.txt', 'w') as fp:
         for path in test_paths:
+            fp.write(os.path.abspath(path) + '\n')
+
+    with open(out_prefix + '.test-extras.txt', 'w') as fp:
+        for path in test_paths:
+            fp.write(os.path.abspath(path) + '\n')
+        for path in train_paths[:len(test_paths)]:
             fp.write(os.path.abspath(path) + '\n')
 
     header_written = False
