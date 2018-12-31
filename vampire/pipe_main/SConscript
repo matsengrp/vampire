@@ -103,6 +103,18 @@ DATA = {
     'xmas-test-2-extras': {
         'paths': lines_of_file(join(ignore_path, 'seshadri-split-2018-12-30.test-with-extras.txt')),
     },
+    'deneuter-train': {
+        'paths': [join(ignore_path, 'deneuter-2018-12-31.train.tsv')],
+        'base': {
+            'val_frac': 0.90
+        }
+    },
+    'deneuter-test': {
+        'paths': lines_of_file(join(ignore_path, 'deneuter-2018-12-31.test.txt')),
+    },
+    'deneuter-test-extras': {
+        'paths': lines_of_file(join(ignore_path, 'deneuter-2018-12-31.test-extras.txt')),
+    },
 }
 
 
