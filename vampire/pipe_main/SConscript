@@ -391,7 +391,7 @@ nest.add('test_set', lambda c: c['test_set_agg'], label_func=common.strip_dirpat
 @nest.add_target_with_env(localenv)
 def test_ppost(env, outdir, c):
     c['test_pgen'] = c['test_set_info_agg'][(c['test_set'], 'test_pgen')]
-    test_ppost_path = join(outdir, common.strip_extn(c['test_set'])+'.ppost.csv'),
+    test_ppost_path = join(outdir, 'ppost.csv'),
     c['test_set_info_agg'][(c['test_set'], 'test_ppost')] = test_ppost_path
     return env.Command(
         test_ppost_path,
@@ -455,6 +455,22 @@ def olga_generated(env, outdir, c):
         join(outdir, 'olga-generated.csv'),
         c['olga_generated_tsv'],
         'python3 gene_name_conversion.py olga2adaptive $SOURCE $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def olga_generated_pgen(env, outdir, c):
+    return env.Command(
+        join(outdir, 'olga-generated.pgen.tsv'),
+        c['olga_generated'],
+        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
+
+
+@nest.add_target_with_env(localenv)
+def olga_generated_ppost(env, outdir, c):
+    return env.Command(
+        join(outdir, 'olga-generated.ppost.csv'),
+        [c['q_csv'], c['olga_generated_pgen']],
+        'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
 
 
 # Nest: the model.
