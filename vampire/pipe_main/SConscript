@@ -546,6 +546,14 @@ def vae_generated_ppost(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
+def vae_generated_pvae(env, outdir, c):
+    return env.Command(
+        join(outdir, 'vae-generated.pvae.csv'),
+        [c['model_params'], c['trained']['weights'], c['vae_generated']],
+        cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
+
+
+@nest.add_target_with_env(localenv)
 def olga_generated_pvae(env, outdir, c):
     return env.Command(
         join(outdir, 'olga-generated.pvae.csv'),
