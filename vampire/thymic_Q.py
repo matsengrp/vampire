@@ -2,12 +2,13 @@
 Computing in the thymic Q framework.
 """
 
+import os
+import tempfile
+
 import click
 import delegator
 import numpy as np
-import os
 import pandas as pd
-import tempfile
 
 # These are our "lvj" columns, which are the most common indices for
 # probabilities and sequences in what follows.
