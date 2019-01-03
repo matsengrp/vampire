@@ -14,13 +14,6 @@ import tempfile
 lvj = ['length', 'v_gene', 'j_gene']
 
 
-def tamp(x, m):
-    """
-    "Tamp down" the values in x with a "pseudo-maximum" m.
-    """
-    return m * np.arctan(x / m)
-
-
 def bound(x, m):
     """
     Cut off the values in x with a hard maximum m.
@@ -47,6 +40,10 @@ def add_pseudocount(df, col_name, pseudocount_multiplier):
 
 
 def read_olga_tsv(path):
+    """
+    Read in a TSV in the format liked by OLGA. Four columns means that there is
+    DNA data-- if so, drop it.
+    """
     df = pd.read_csv(path, sep='\t', header=None)
     if len(df.columns) == 4:
         df = df.iloc[:, 1:]
@@ -56,6 +53,9 @@ def read_olga_tsv(path):
 
 
 def read_olga_pgen_tsv(path):
+    """
+    Read in a TSV output by OLGA's Pgen calculation.
+    """
     df = pd.read_csv(path, sep='\t', header=None)
     assert len(df.columns) == 4
     df.columns = 'amino_acid v_gene j_gene Pgen'.split()
@@ -63,6 +63,10 @@ def read_olga_pgen_tsv(path):
 
 
 def lvj_frequency_of_olga_tsv(path, col_name):
+    """
+    Read in an OLGA TSV and calculate the frequency of the lvj triples
+    contained in it.
+    """
     df = read_olga_tsv(path)
     df['length'] = df['amino_acid'].apply(len)
     df = df.loc[:, lvj]
@@ -89,13 +93,16 @@ def p_lvj_of_Pgen_tsv(path, col_name='Pgen'):
 
 
 def set_lvj_index(df):
+    """
+    Make an lvj index in place from the length, v_gene, and j_gene.
+    """
     df['length'] = df['amino_acid'].apply(len)
     df.set_index(lvj, inplace=True)
 
 
 def merge_lvj_dfs(df1, df2, how='outer'):
     """
-    Merge on the lvj columns.
+    Merge lvj indices.
 
     By default, uses the union of the keys (an "outer" join).
     """
@@ -178,7 +185,7 @@ def sample_Ppost(sample_size, q_csv, max_q, max_iter=100, proposal_size=1e6):
                 break
 
     if len(out_df) < sample_size:
-        raise Exception("Did not obtain desired number of samples in the specified number of iterations.")
+        raise Exception("Did not obtain desired number of samples in the specified maximumn number of iterations.")
 
     out_df = out_df.head(sample_size)
     return out_df
@@ -195,7 +202,7 @@ def cli():
 @click.argument('out_csv', type=click.File('w'))
 def lvj_frequency(col_name, in_tsv, out_csv):
     """
-    Calculate frequency of LVJ combinations in a given OLGA TSV.
+    Calculate frequency of lvj combinations in a given OLGA TSV.
     """
     lvj_frequency_of_olga_tsv(in_tsv, col_name).to_csv(out_csv)
 
