@@ -48,7 +48,7 @@ To use it, do
 git submodule update --init --recursive
 ```
 
-There is a script `vampire/R/install_sumrep.sh` which should serve as a starting point for your installation adventure.
+There is a script `vampire/R/install_packages.sh` which should serve as a starting point for your installation adventure.
 
 
 
