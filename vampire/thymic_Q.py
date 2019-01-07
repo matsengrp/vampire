@@ -103,7 +103,7 @@ def set_lvj_index(df):
 
 def merge_lvj_dfs(df1, df2, how='outer'):
     """
-    Merge lvj indices.
+    Merge two data frames on lvj indices.
 
     By default, uses the union of the keys (an "outer" join).
     """
@@ -141,33 +141,46 @@ def calc_Ppost(q_csv, data_pgen_tsv, pseudocount_multiplier=0.5):
     add_pseudocount(df, 'q', pseudocount_multiplier)
     add_pseudocount(df, 'Pgen', pseudocount_multiplier)
     df['Ppost'] = df['Pgen'] * df['q']
-    # Drop length
+    # Drop length from the index.
     df.reset_index(level=0, drop=True, inplace=True)
+    # Turn the index columns into normal columns.
     df.reset_index(inplace=True)
+    # Only keep our usual 3 columns.
     df.set_index(['amino_acid', 'v_gene', 'j_gene'], inplace=True)
     return df
 
 
-def rejection_sample_Ppost(q_df, df_Pgen_sample, max_q):
+def rejection_sample_Ppost(q_df, df_Pgen_sample):
     """
     Given a df_Pgen_sample that's sampled from Pgen, and a df of q's, perform
     rejection to obtain a sample from Ppost.
 
-    max_q is the maximum theoretical q.
+    Specifically, q is Ppost/Pgen, and so if we are proposing from Pgen, the
+    maximum of q (i.e. q_max) is the bound on the likelihood ratio. Then each
+    proposal x is accepted with probability (Ppost(x)/Pgen(x))/max_q, i.e.
+    q(x)/max_q.
     """
     df = df_Pgen_sample
     set_lvj_index(df)
+    # This merge is how we get the q value corresponding to each sequence x.
     df = merge_lvj_dfs(df, q_df, how='left')
-    df['cutoff'] = df['q'] / 100
+    max_q = np.max(df['q'])
+    df['acceptance_prob'] = df['q'] / max_q
     df['random'] = np.random.uniform(size=len(df))
-    df = df.loc[df['random'] < df['cutoff'], 'amino_acid']
+    # We subselect the rows that should be accepted, and keep only the
+    # amino_acid column (the v_gene and j_gene columns are kept as part of the
+    # index).
+    df = df.loc[df['random'] < df['acceptance_prob'], 'amino_acid']
+    # Turn the index columns into normal columns, just keeping our usual 3
+    # columns.
     df = df.reset_index()[['amino_acid', 'v_gene', 'j_gene']]
-    # Randomize the order of the sequences (they got sorted in the process of merging with Q.
+    # Randomize the order of the sequences (they got sorted in the process of
+    # merging with Q).
     df = df.sample(frac=1)
     return df
 
 
-def sample_Ppost(sample_size, q_csv, max_q, max_iter=100, proposal_size=1e6):
+def sample_Ppost(sample_size, q_csv, max_iter=100, proposal_size=1e6):
     """
     Repeatedly sample from Pgen to calculate Ppost using rejection sampling.
     """
@@ -179,7 +192,7 @@ def sample_Ppost(sample_size, q_csv, max_q, max_iter=100, proposal_size=1e6):
             c = delegator.run(' '.join(['olga-generate.sh', str(proposal_size), sample_path]))
             if c.return_code != 0:
                 raise Exception("olga-generate.sh failed!")
-            df_sample = rejection_sample_Ppost(q_df, read_olga_tsv(sample_path), max_q)
+            df_sample = rejection_sample_Ppost(q_df, read_olga_tsv(sample_path))
             out_df = out_df.append(df_sample)
             print(f"Sampled {len(out_df)} of {sample_size}")
             if len(out_df) >= sample_size:
@@ -233,7 +246,6 @@ def ppost(q_csv, data_pgen_tsv, out_csv):
 
 
 @cli.command()
-@click.option('--max-q', default=100, show_default=True, help="Limit q to be at most this value.")
 @click.option(
     '--max-iter',
     default=100,
@@ -244,12 +256,12 @@ def ppost(q_csv, data_pgen_tsv, out_csv):
 @click.argument('sample_size', type=int)
 @click.argument('q_csv', type=click.File('r'))
 @click.argument('out_tsv', type=click.File('w'))
-def sample(max_q, max_iter, proposal_size, sample_size, q_csv, out_tsv):
+def sample(max_iter, proposal_size, sample_size, q_csv, out_tsv):
     """
     Sample from the Ppost distribution via rejection sampling.
     """
     sample_Ppost(
-        sample_size, q_csv, max_q, max_iter=max_iter, proposal_size=proposal_size).to_csv(
+        sample_size, q_csv, max_iter=max_iter, proposal_size=proposal_size).to_csv(
             out_tsv, sep='\t', index=False)
 
 

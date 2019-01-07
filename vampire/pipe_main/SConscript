@@ -442,7 +442,7 @@ def olga_generated_tsv(env, outdir, c):
     return env.Command(
         join(outdir, 'olga-generated.tsv'),
         c['q_csv'],
-        f"python3 thymic_Q.py sample --max-q {c['max_q']} --proposal-size {10*c['nseqs']} "
+        f"python3 thymic_Q.py sample --proposal-size {10*c['nseqs']} "
         f"--max-iter 10000 {c['nseqs']} $SOURCE $TARGET")[0]
 
 
