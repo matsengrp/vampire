@@ -323,22 +323,33 @@ def split(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
-def training_pgen(env, outdir, c):
+def training_olga_tsv(env, outdir, c):
     """
     Get Pgen for the training data.
     """
     return env.Command(
-        join(outdir, 'training.pgen.tsv'),
+        join(outdir, 'training.olga.tsv'),
         c['split']['training'],
-        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
+        'gene-name-conversion adaptive2olga $SOURCE $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
-def training_pgen_head(env, outdir, c):
+def training_head(env, outdir, c):
     return env.Command(
-        common.strip_extn(c['training_pgen'])+'.head.csv',
-        c['training_pgen'],
+        common.strip_extn(c['split']['training'])+'.head.csv',
+        c['split']['training'],
         f"head -n {c['nseqs']+1} $SOURCE > $TARGET")[0]
+
+
+@nest.add_target_with_env(localenv)
+def training_head_pgen(env, outdir, c):
+    """
+    Get Pgen for some of the training data.
+    """
+    return env.Command(
+        join(outdir, 'training.head.pgen.tsv'),
+        c['training_head'],
+        'adaptive-pgen.sh $SOURCE $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -356,15 +367,15 @@ def q_csv(env, outdir, c):
     """
     return env.Command(
         join(outdir, 'q.tsv'),
-        c['training_pgen'],
+        c['training_olga_tsv'],
         f"python3 thymic_Q.py q --max-q {c['max_q']} data/thymic-Q/model-lvj-frequency.csv.bz2 $SOURCE $TARGET")[0]
 
 
 @nest.add_target_with_env(localenv)
 def training_ppost(env, outdir, c):
     return env.Command(
-        join(outdir, common.strip_dirpath_extn(c['training_pgen_head'])+'.ppost.csv'),
-        [c['q_csv'], c['training_pgen_head']],
+        join(outdir, common.strip_dirpath_extn(c['training_head_pgen'])+'.ppost.csv'),
+        [c['q_csv'], c['training_head_pgen']],
         'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
 
 
@@ -627,22 +638,22 @@ def vae_sumrep_divergences(env, outdir, c):
 #         f'R/regress_loss.R --idx "{get_idx(c)}" --idx-name "{idx_name}" $SOURCES $TARGET')[0]
 
 
-@nest.add_target_with_env(localenv)
-def auc_ppost(env, outdir, c):
-    c['test_ppost'] = c['test_set_info_agg'][(c['test_set'], 'test_ppost')]
-    return env.Command(
-        join(outdir, 'ppost-auc.csv'),
-        [c['test_ppost'], c['vae_generated_ppost']],
-        'R/auc.R $SOURCES $TARGET')[0]
+# @nest.add_target_with_env(localenv)
+# def auc_ppost(env, outdir, c):
+#     c['test_ppost'] = c['test_set_info_agg'][(c['test_set'], 'test_ppost')]
+#     return env.Command(
+#         join(outdir, 'ppost-auc.csv'),
+#         [c['test_ppost'], c['vae_generated_ppost']],
+#         'R/auc.R $SOURCES $TARGET')[0]
 
 
-@nest.add_target_with_env(localenv)
-def auc_pvae(env, outdir, c):
-    return env.Command(
-        join(outdir, 'pvae-auc.csv'),
-        [c['test_pvae'], c['olga_generated_pvae']],
-        'R/auc.R --pvae $SOURCES $TARGET')[0]
-
+# @nest.add_target_with_env(localenv)
+# def auc_pvae(env, outdir, c):
+#     return env.Command(
+#         join(outdir, 'pvae-auc.csv'),
+#         [c['test_pvae'], c['olga_generated_pvae']],
+#         'R/auc.R --pvae $SOURCES $TARGET')[0]
+#
 
 @nest.add_target_with_env(localenv)
 def summarized(env, outdir, c):
@@ -650,7 +661,7 @@ def summarized(env, outdir, c):
     # Adding things to the summarized_agg aggregate.
     c['summarized_agg'].append(summarized)
     to_pass = ['training_pvae', 'validation_pvae', 'test_pvae',
-               'vae_sumrep_divergences', 'auc_ppost', 'auc_pvae']
+               'vae_sumrep_divergences']
     colnames = ','.join(to_pass)
     idx = get_idx(c)
     return env.Command(

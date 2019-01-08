@@ -77,22 +77,6 @@ def lvj_frequency_of_olga_tsv(path, col_name):
     return df
 
 
-def p_lvj_of_Pgen_tsv(path, col_name='Pgen'):
-    """
-    Read a Pgen TSV and get a p_lvj by summing over sequences with the same lvj triple.
-
-    col_name: the name given to the Pgen column.
-    """
-    df = read_olga_pgen_tsv(path)
-    df['length'] = df['amino_acid'].apply(len)
-    idx = 'length,v_gene,j_gene,Pgen'.split(',')
-    df = df.loc[:, idx]
-    df = df.groupby(idx[:-1]).sum()
-    df.rename(columns={'Pgen': col_name}, inplace=True)
-    normalize_column(df, col_name)
-    return df
-
-
 def set_lvj_index(df):
     """
     Make an lvj index in place from the length, v_gene, and j_gene.
@@ -112,13 +96,13 @@ def merge_lvj_dfs(df1, df2, how='outer'):
     return merged
 
 
-def q_of_train_and_model_pgen(model_p_lvj_csv, train_pgen_tsv, max_q=None, pseudocount_multiplier=0.5):
+def q_of_train_and_model_pgen(model_p_lvj_csv, train_tsv, max_q=None, pseudocount_multiplier=0.5):
     """
     Fit a q distribution, but truncating q at max_q.
     """
     # Merge the p_lvj from the data and that from the model:
     df = merge_lvj_dfs(
-        p_lvj_of_Pgen_tsv(train_pgen_tsv, col_name='data_P_lvj'), pd.read_csv(model_p_lvj_csv, index_col=lvj))
+        lvj_frequency_of_olga_tsv(train_tsv, col_name='data_P_lvj'), pd.read_csv(model_p_lvj_csv, index_col=lvj))
     # We need to do this merge so we can add a pseudocount:
     add_pseudocount(df, 'model_P_lvj', pseudocount_multiplier)
     normalize_column(df, 'model_P_lvj')
@@ -225,13 +209,13 @@ def lvj_frequency(col_name, in_tsv, out_csv):
 @click.option('--max-q', type=int, default=None, show_default=True, help="Limit q to be at most this value.")
 # Here we use a click.Path so we can pass a .bz2'd CSV.
 @click.argument('model_p_lvj_csv', type=click.Path(exists=True))
-@click.argument('train_pgen_tsv', type=click.File('r'))
+@click.argument('train_tsv', type=click.File('r'))
 @click.argument('out_csv', type=click.File('w'))
-def q(max_q, model_p_lvj_csv, train_pgen_tsv, out_csv):
+def q(max_q, model_p_lvj_csv, train_tsv, out_csv):
     """
     Calculate q_lvj given training data and p_lvj obtained from the model.
     """
-    q_of_train_and_model_pgen(model_p_lvj_csv, train_pgen_tsv, max_q=max_q).to_csv(out_csv)
+    q_of_train_and_model_pgen(model_p_lvj_csv, train_tsv, max_q=max_q).to_csv(out_csv)
 
 
 @cli.command()
