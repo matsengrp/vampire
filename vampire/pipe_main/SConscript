@@ -162,7 +162,7 @@ def base_dict():
     max_q: the level for truncating q_{lvj} in the thymic Q calculation.
     """
 
-    d = {'nseqs': 1000,
+    d = {'nseqs': 10000,
          'val_frac': 0.1,
          'max_q': 100,
          }
