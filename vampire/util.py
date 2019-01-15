@@ -3,6 +3,7 @@ Utilities, accessible via subcommands.
 """
 
 import datetime
+import json
 import os
 import re
 import shutil
@@ -12,6 +13,8 @@ import click
 import common
 import numpy as np
 import pandas as pd
+
+from vampire import preprocess_adaptive
 
 from sklearn.model_selection import train_test_split
 
@@ -191,44 +194,52 @@ def sharedwith(l_csv_path, r_csv_path, out_csv):
 
 
 @cli.command()
-@click.option('--ncols', default=17, show_default=True, help="Only take the first this many columns.")
 @click.option('--out-prefix', metavar='PRE', type=click.Path(writable=True), help="Output prefix.", required=True)
 @click.option('--test-size', default=1 / 3, show_default=True, help="Proportion of sample to hold out for testing.")
 @click.argument('in_paths', nargs=-1)
-def split_repertoires(ncols, out_prefix, test_size, in_paths):
+def split_repertoires(out_prefix, test_size, in_paths):
     """
     Do a test-train split on the level of repertoires. Writes out
 
     PRE.train.tsv: a TSV with all of the sequences from the test set,
     PRE.test.txt: a text file with the test paths (one per line),
+    PRE.test-extras.txt: a text file with the test paths and some train paths (one per line),
     PRE.log: information about this train-test split.
+
+    test-extras includes as many train sets as there are test sets (if that many exists).
     """
     train_paths, test_paths = train_test_split(in_paths, test_size=test_size)
 
-    with open(out_prefix + '.log', 'w') as fp:
-        fp.write(' '.join(sys.argv) + '\n')
-        fp.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M") + '\n')
-        fp.write("train paths: " + str(train_paths) + '\n')
-        fp.write("test paths: " + str(test_paths) + '\n')
+    info = {
+        'call': ' '.join(sys.argv),
+        'date': datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+        'train_paths': train_paths,
+        'test_paths': test_paths,
+    }
+
+    with open(out_prefix + '.json', 'w') as fp:
+        fp.write(json.dumps(info, indent=4))
 
     with open(out_prefix + '.test.txt', 'w') as fp:
         for path in test_paths:
             fp.write(os.path.abspath(path) + '\n')
 
-    columns = None
+    with open(out_prefix + '.test-extras.txt', 'w') as fp:
+        for path in test_paths:
+            fp.write(os.path.abspath(path) + '\n')
+        for path in train_paths[:len(test_paths)]:
+            fp.write(os.path.abspath(path) + '\n')
+
+    header_written = False
 
     with open(out_prefix + '.train.tsv', 'w') as fp:
         for path in train_paths:
-            df = pd.read_csv(path, sep='\t', usecols=range(ncols))
-            if columns:
-                # This is not our first file to write.
-                # Make sure that colnames match.
-                if columns != list(df.columns):
-                    raise Exception("Column doesn't match!")
+            df = preprocess_adaptive.read_adaptive_tsv(path)
+            if header_written:
                 df.to_csv(fp, sep='\t', header=False, index=False)
             else:
                 # This is our first file to write.
-                columns = list(df.columns)
+                header_written = True
                 df.to_csv(fp, sep='\t', index=False)
 
 

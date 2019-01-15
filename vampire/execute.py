@@ -22,8 +22,8 @@ set -eu
 set -o pipefail
 hostname
 source activate py36
-cd /home/matsen/re/vampire/vampire/
-"""
+cd {dir}
+""".format(dir=os.getcwd())
 
 
 def translate_paths(in_paths, dest_dir):

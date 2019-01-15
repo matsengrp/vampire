@@ -266,7 +266,8 @@ class TCRVAE:
 
         p(x|z) (p(z) / q(z|x))
 
-        where the ratio in parentheses is the importance weight.
+        over z drawn from q(z|x). The ratio in parentheses is the importance
+        weight.
 
         We emphasize that this is _one_ importance sample. Run this lots and
         take the average to get a good estimate.

@@ -1,9 +1,10 @@
 from os.path import join
 import glob
 import json
+import os
 import re
 
-import numpy as np
+import numpy as np  # noqa
 
 import nestly
 import nestly.scons as ns
@@ -27,9 +28,15 @@ seshadri_path = join(data_path, 'seshadri/data/Adaptive/clinical_cohort/')
 ignore_path = '/home/matsen/re/vampire/vampire/_ignore/'
 
 
-def paths_of_file(path):
-    with open(path) as fp:
-        return [s.strip() for s in fp.readlines()]
+def lines_of_file(path):
+    """
+    Return the lines in the file at path if it exists, otherwise an empty list.
+    """
+    if os.path.exists(path):
+        with open(path) as fp:
+            return [s.strip() for s in fp.readlines()]
+    else:
+        return []
 
 
 DATA = {
@@ -75,12 +82,38 @@ DATA = {
     'xmas-train': {
         'paths': [join(ignore_path, 'seshadri-split-2018-12-26.train.tsv')],
         'base': {
-            # Only use a random quarter of this data set.
-            'val_frac': 0.75
+            'val_frac': 0.88
         }
     },
     'xmas-test': {
-        'paths': paths_of_file(join(ignore_path, 'seshadri-split-2018-12-26.test.txt')),
+        'paths': lines_of_file(join(ignore_path, 'seshadri-split-2018-12-26.test.txt')),
+    },
+    'xmas-test-extras': {
+        'paths': lines_of_file(join(ignore_path, 'seshadri-split-2018-12-26.test-with-extras.txt')),
+    },
+    'xmas-train-2': {
+        'paths': [join(ignore_path, 'seshadri-split-2018-12-30.train.tsv')],
+        'base': {
+            'val_frac': 0.88
+        }
+    },
+    'xmas-test-2': {
+        'paths': lines_of_file(join(ignore_path, 'seshadri-split-2018-12-30.test.txt')),
+    },
+    'xmas-test-2-extras': {
+        'paths': lines_of_file(join(ignore_path, 'seshadri-split-2018-12-30.test-with-extras.txt')),
+    },
+    'deneuter-train': {
+        'paths': [join(ignore_path, 'deneuter-2018-12-31.train.tsv')],
+        'base': {
+            'val_frac': 0.90
+        }
+    },
+    'deneuter-test': {
+        'paths': lines_of_file(join(ignore_path, 'deneuter-2018-12-31.test.txt')),
+    },
+    'deneuter-test-extras': {
+        'paths': lines_of_file(join(ignore_path, 'deneuter-2018-12-31.test-extras.txt')),
     },
 }
 
@@ -129,7 +162,7 @@ def base_dict():
     max_q: the level for truncating q_{lvj} in the thymic Q calculation.
     """
 
-    d = {'nseqs': 500,
+    d = {'nseqs': 10000,
          'val_frac': 0.1,
          'max_q': 100,
          }
@@ -187,7 +220,7 @@ nest.add_aggregate('test_set_info_agg', dict)
 # The summarized_agg gathers everything we want to summarize and then stack at the end.
 nest.add_aggregate('summarized_agg', list)
 summarized_agg_names = []
-nest.add_aggregate('loss_regression_agg', list)
+# nest.add_aggregate('loss_regression_agg', list)
 
 
 @nest.add_target_with_env(localenv)
@@ -230,7 +263,7 @@ def preprocess_test(env, outdir, c):
 
 @nest.add_target_with_env(localenv)
 def test_head(env, outdir, c):
-    test_head_path = join(outdir, common.strip_dirpath_extn(c['preprocess_test'])+f'.head.csv')
+    test_head_path = join(outdir, common.strip_dirpath_extn(c['preprocess_test'])+'.head.csv')
     # Remove a pesky and meaningless leading `./` that was making trouble later.
     c['test_set_agg'].append(re.sub('^\./', '', test_head_path))
     return env.Command(
@@ -270,8 +303,8 @@ def preprocess(env, outdir, c):
 
 
 # Nest: validation fraction.
-numerical_nest_add('val_frac', common.logspace(0.99, 0.75, 6))
-summarized_agg_names.append('val_frac')
+# numerical_nest_add('val_frac', common.logspace(0.99, 0.75, 6))
+# summarized_agg_names.append('val_frac')
 
 
 @nest.add_target_with_env(localenv, 'split')
@@ -290,28 +323,39 @@ def split(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
-def training_pgen(env, outdir, c):
+def training_olga_tsv(env, outdir, c):
     """
     Get Pgen for the training data.
     """
     return env.Command(
-        join(outdir, 'training.pgen.tsv'),
+        join(outdir, 'training.olga.tsv'),
         c['split']['training'],
-        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
+        'gene-name-conversion adaptive2olga $SOURCE $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
-def training_pgen_head(env, outdir, c):
+def training_head(env, outdir, c):
     return env.Command(
-        common.strip_extn(c['training_pgen'])+f".{c['nseqs']}.csv",
-        c['training_pgen'],
+        common.strip_extn(c['split']['training'])+'.head.csv',
+        c['split']['training'],
         f"head -n {c['nseqs']+1} $SOURCE > $TARGET")[0]
+
+
+@nest.add_target_with_env(localenv)
+def training_head_pgen(env, outdir, c):
+    """
+    Get Pgen for some of the training data.
+    """
+    return env.Command(
+        join(outdir, 'training.head.pgen.tsv'),
+        c['training_head'],
+        'adaptive-pgen.sh $SOURCE $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
 def validation_head(env, outdir, c):
     return env.Command(
-        common.strip_extn(c['split']['validation'])+f".{c['nseqs']}.csv",
+        common.strip_extn(c['split']['validation'])+'.head.csv',
         c['split']['validation'],
         f"head -n {c['nseqs']+1} $SOURCE > $TARGET")[0]
 
@@ -323,15 +367,15 @@ def q_csv(env, outdir, c):
     """
     return env.Command(
         join(outdir, 'q.tsv'),
-        c['training_pgen'],
+        c['training_olga_tsv'],
         f"python3 thymic_Q.py q --max-q {c['max_q']} data/thymic-Q/model-lvj-frequency.csv.bz2 $SOURCE $TARGET")[0]
 
 
 @nest.add_target_with_env(localenv)
 def training_ppost(env, outdir, c):
     return env.Command(
-        join(outdir, common.strip_dirpath_extn(c['training_pgen_head'])+'.ppost.csv'),
-        [c['q_csv'], c['training_pgen_head']],
+        join(outdir, common.strip_dirpath_extn(c['training_head_pgen'])+'.ppost.csv'),
+        [c['q_csv'], c['training_head_pgen']],
         'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
 
 
@@ -358,7 +402,7 @@ nest.add('test_set', lambda c: c['test_set_agg'], label_func=common.strip_dirpat
 @nest.add_target_with_env(localenv)
 def test_ppost(env, outdir, c):
     c['test_pgen'] = c['test_set_info_agg'][(c['test_set'], 'test_pgen')]
-    test_ppost_path = join(outdir, common.strip_extn(c['test_set'])+'.ppost.csv'),
+    test_ppost_path = join(outdir, 'ppost.csv'),
     c['test_set_info_agg'][(c['test_set'], 'test_ppost')] = test_ppost_path
     return env.Command(
         test_ppost_path,
@@ -389,8 +433,8 @@ nest.pop('test_set')
 # summarized_agg_names.append('v_gene_embedding_dim')
 
 # Nest: the strength of the KL component of the VAE loss.
-# numerical_nest_add('beta', np.linspace(0.75, 1, 3))
-# summarized_agg_names.append('beta')
+numerical_nest_add('beta', np.linspace(0.625, 1, 7))
+summarized_agg_names.append('beta')
 
 # Nest: monitor for EarlyStopping.
 # nest.add('stopping_monitor', ['loss', 'val_loss'])
@@ -409,7 +453,7 @@ def olga_generated_tsv(env, outdir, c):
     return env.Command(
         join(outdir, 'olga-generated.tsv'),
         c['q_csv'],
-        f"python3 thymic_Q.py sample --max-q {c['max_q']} --proposal-size {10*c['nseqs']} "
+        f"python3 thymic_Q.py sample --proposal-size {10*c['nseqs']} "
         f"--max-iter 10000 {c['nseqs']} $SOURCE $TARGET")[0]
 
 
@@ -422,6 +466,22 @@ def olga_generated(env, outdir, c):
         join(outdir, 'olga-generated.csv'),
         c['olga_generated_tsv'],
         'python3 gene_name_conversion.py olga2adaptive $SOURCE $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def olga_generated_pgen(env, outdir, c):
+    return env.Command(
+        join(outdir, 'olga-generated.pgen.tsv'),
+        c['olga_generated'],
+        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
+
+
+@nest.add_target_with_env(localenv)
+def olga_generated_ppost(env, outdir, c):
+    return env.Command(
+        join(outdir, 'olga-generated.ppost.csv'),
+        [c['q_csv'], c['olga_generated_pgen']],
+        'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
 
 
 # Nest: the model.
@@ -461,21 +521,21 @@ def trained(env, outdir, c):
         cluster_execution_string('tcr-vae train {sources} {targets}'))
 
 
-@nest.add_target_with_env(localenv)
-def loss(env, outdir, c):
-    loss = join(outdir, 'loss.csv')
-    return env.Command(
-        loss,
-        [c['model_params'], c['trained']['weights'], c['split']['training'],
-            c['split']['validation']],
-        cluster_execution_string('tcr-vae loss {sources} {targets}'))[0]
+# @nest.add_target_with_env(localenv)
+# def loss(env, outdir, c):
+#     loss = join(outdir, 'loss.csv')
+#     return env.Command(
+#         loss,
+#         [c['model_params'], c['trained']['weights'], c['split']['training'],
+#             c['split']['validation']],
+#         cluster_execution_string('tcr-vae loss {sources} {targets}'))[0]
 
 
 @nest.add_target_with_env(localenv)
 def training_pvae(env, outdir, c):
     pvae_call = f"tcr-vae pvae --limit-input-to {c['nseqs']}"
     return env.Command(
-        join(outdir, common.strip_dirpath_extn(c['split']['training'])+f".{c['nseqs']}.pvae.csv"),
+        join(outdir, common.strip_dirpath_extn(c['split']['training'])+'.head.pvae.csv'),
         [c['model_params'], c['trained']['weights'], c['split']['training']],
         cluster_execution_string(pvae_call + ' {sources} {targets}'))[0]
 
@@ -507,9 +567,17 @@ def vae_generated_pgen(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def vae_generated_ppost(env, outdir, c):
     return env.Command(
-        join(outdir, 'vae-generated.ppost.tsv'),
+        join(outdir, 'vae-generated.ppost.csv'),
         [c['q_csv'], c['vae_generated_pgen']],
         'python3 thymic_Q.py ppost $SOURCES $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def vae_generated_pvae(env, outdir, c):
+    return env.Command(
+        join(outdir, 'vae-generated.pvae.csv'),
+        [c['model_params'], c['trained']['weights'], c['vae_generated']],
+        cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -570,31 +638,30 @@ def vae_sumrep_divergences(env, outdir, c):
 #         f'R/regress_loss.R --idx "{get_idx(c)}" --idx-name "{idx_name}" $SOURCES $TARGET')[0]
 
 
-@nest.add_target_with_env(localenv)
-def auc_ppost(env, outdir, c):
-    c['test_ppost'] = c['test_set_info_agg'][(c['test_set'], 'test_ppost')]
-    return env.Command(
-        join(outdir, 'ppost-auc.csv'),
-        [c['test_ppost'], c['vae_generated_ppost']],
-        'R/auc.R $SOURCES $TARGET')[0]
+# @nest.add_target_with_env(localenv)
+# def auc_ppost(env, outdir, c):
+#     c['test_ppost'] = c['test_set_info_agg'][(c['test_set'], 'test_ppost')]
+#     return env.Command(
+#         join(outdir, 'ppost-auc.csv'),
+#         [c['test_ppost'], c['vae_generated_ppost']],
+#         'R/auc.R $SOURCES $TARGET')[0]
 
 
-@nest.add_target_with_env(localenv)
-def auc_pvae(env, outdir, c):
-    return env.Command(
-        join(outdir, 'pvae-auc.csv'),
-        [c['test_pvae'], c['olga_generated_pvae']],
-        'R/auc.R --pvae $SOURCES $TARGET')[0]
-
+# @nest.add_target_with_env(localenv)
+# def auc_pvae(env, outdir, c):
+#     return env.Command(
+#         join(outdir, 'pvae-auc.csv'),
+#         [c['test_pvae'], c['olga_generated_pvae']],
+#         'R/auc.R --pvae $SOURCES $TARGET')[0]
+#
 
 @nest.add_target_with_env(localenv)
 def summarized(env, outdir, c):
     summarized = join(outdir, 'summarized.csv')
     # Adding things to the summarized_agg aggregate.
     c['summarized_agg'].append(summarized)
-    to_pass = ['loss',
-               'training_pvae', 'validation_pvae', 'test_pvae',
-               'vae_sumrep_divergences', 'auc_ppost', 'auc_pvae']
+    to_pass = ['training_pvae', 'validation_pvae', 'test_pvae',
+               'vae_sumrep_divergences']
     colnames = ','.join(to_pass)
     idx = get_idx(c)
     return env.Command(
