@@ -26,12 +26,13 @@ dat_b <- getDataTableFromCsv(2)
 divs <- {}
 divs$pairwise_distance <- comparePairwiseDistanceDistributions(dat_a,
                                                                dat_b,
-                                                               column="junction_aa"
+                                                               column="junction_aa",
+                                                               tol=0.000001
                                                               )
 divs$nn_distance <- compareNNDistanceDistributions(dat_a,
                                                    dat_b,
                                                    column="junction_aa",
-                                                   approximate=FALSE
+                                                   tol=0.000001
                                                   )
 divs$cdr3_length <- compareCDR3LengthDistributions(dat_a, dat_b, by_amino_acid=TRUE)
 divs$aliphatic_index <- compareAliphaticIndexDistributions(dat_a, dat_b)
