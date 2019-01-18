@@ -10,11 +10,13 @@ import shutil
 import sys
 
 import click
-import common
+import vampire.common as common
 import numpy as np
 import pandas as pd
 
 from vampire import preprocess_adaptive
+from vampire.gene_name_conversion import convert_gene_names
+from vampire.gene_name_conversion import olga_to_adaptive_dict
 
 from sklearn.model_selection import train_test_split
 
@@ -22,6 +24,36 @@ from sklearn.model_selection import train_test_split
 @click.group()
 def cli():
     pass
+
+
+@cli.command()
+@click.argument('seq_path', type=click.Path(exists=True))
+@click.argument('pvae_path', type=click.Path(exists=True))
+@click.argument('ppost_path', type=click.Path(exists=True))
+@click.argument('out_path', type=click.Path(writable=True))
+def merge_ps(seq_path, pvae_path, ppost_path, out_path):
+    """
+    Merge probability estimates from Pvae and Ppost into a single data frame and write to an output CSV.
+
+    SEQ_PATH should be a path to sequences in canonical CSV format, with
+    sequences in the same order as PVAE_PATH.
+    """
+    def prep_index(df):
+        df.set_index(['amino_acid', 'v_gene', 'j_gene'], inplace=True)
+        df.sort_index(inplace=True)
+
+    pvae_df = pd.read_csv(seq_path)
+    pvae_df['log_Pvae'] = pd.read_csv(pvae_path)['log_p_x']
+    prep_index(pvae_df)
+    ppost_df = convert_gene_names(pd.read_csv(ppost_path), olga_to_adaptive_dict())
+    prep_index(ppost_df)
+
+    # If we don't drop duplicates then merge will expand the number of rows.
+    # See https://stackoverflow.com/questions/39019591/duplicated-rows-when-merging-dataframes-in-python
+    # We deduplicate Ppost, which is guaranteed to be identical among repeated elements.
+    merged = pd.merge(pvae_df, ppost_df.drop_duplicates(), how='left', left_index=True, right_index=True)
+    merged['log_Ppost'] = np.log(merged['Ppost'])
+    merged.to_csv(out_path)
 
 
 @cli.command()

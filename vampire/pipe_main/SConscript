@@ -621,6 +621,15 @@ def test_pvae(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
+def merged_ps(env, outdir, c):
+    c['test_ppost'] = c['test_set_info_agg'][(c['test_set'], 'test_ppost')]
+    return env.Command(
+        join(outdir, 'merged_ps.csv'),
+        [c['test_set'], c['test_pvae'], c['test_ppost']],
+        'python3 util.py merge-ps $SOURCES $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
 def vae_sumrep_divergences(env, outdir, c):
     return env.Command(
         join(outdir, 'vae.sumdiv.csv'),
