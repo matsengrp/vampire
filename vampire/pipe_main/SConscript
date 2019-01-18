@@ -106,7 +106,7 @@ DATA = {
     'deneuter-train': {
         'paths': [join(ignore_path, 'deneuter-2018-12-31.train.tsv')],
         'base': {
-            'val_frac': 0.90
+            'val_frac': 0.80
         }
     },
     'deneuter-test': {

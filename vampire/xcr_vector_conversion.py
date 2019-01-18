@@ -75,6 +75,10 @@ TCRB_J_GENE_DICT = {c: i for i, c in enumerate(TCRB_J_GENE_LIST)}
 TCRB_J_GENE_DICT_REV = {i: c for i, c in enumerate(TCRB_J_GENE_LIST)}
 TCRB_J_GENE_SET = set(TCRB_J_GENE_LIST)
 
+for gene in TCRB_V_GENE_LIST + TCRB_J_GENE_LIST:
+    # We need to specify how long strings are for numpy initialization. See onehot_to_padded_tcrbs.
+    assert len(gene) < 20
+
 
 def jgene_to_onehot(j_gene):
     v = np.zeros(len(TCRB_J_GENE_SET))
@@ -116,10 +120,9 @@ def avj_raw_triple_to_tcr_df(amino_acid, v_gene, j_gene):
     """
     A "raw" triple here means as a big np array.
     """
-    return avj_triple_to_tcr_df(
-        [amino_acid[i,:,:] for i in range(amino_acid.shape[0])],
-        [v_gene[i,:] for i in range(v_gene.shape[0])],
-        [j_gene[i,:] for i in range(j_gene.shape[0])])
+    return avj_triple_to_tcr_df([amino_acid[i, :, :] for i in range(amino_acid.shape[0])],
+                                [v_gene[i, :] for i in range(v_gene.shape[0])],
+                                [j_gene[i, :] for i in range(j_gene.shape[0])])
 
 
 def unpadded_tcrbs_to_onehot(df, desired_length):
@@ -148,10 +151,26 @@ def onehot_to_padded_tcrbs(amino_acid_arr, v_gene_arr, j_gene_arr):
     :param j_gene_arr: onehot array of shape (n, n_j_genes).
     """
 
+    def aux(f, a):
+        """
+        Convert 2D numpy array to an array of strings by applying f to every row.
+        It's like np.apply_along_axis(f, 1, a) but without this truncation problem:
+        https://github.com/numpy/numpy/issues/8352
+
+        Note that we assume the strings are of maximum length 20. We check that the
+        gene names satisfy this with an assert above.
+        """
+        nrows = a.shape[0]
+        # Here's where the length-20 assumption lives.
+        out = np.empty((nrows, ), dtype=np.dtype('<U20'))
+        for i in range(nrows):
+            out[i] = f(a[i])
+        return out
+
     return avj_triple_to_tcr_df(
         np.array([onehot_to_seq(amino_acid_arr[i]) for i in range(amino_acid_arr.shape[0])]),
-        np.apply_along_axis(onehot_to_vgene, 1, v_gene_arr),
-        np.apply_along_axis(onehot_to_jgene, 1, j_gene_arr)
+        aux(onehot_to_vgene, v_gene_arr),
+        aux(onehot_to_jgene, j_gene_arr)
         )  # yapf: disable
 
 
@@ -207,7 +226,8 @@ def contiguous_match_counts(padded_onehot, v_germline_aa_onehot, j_germline_aa_o
     return np.array([
         # Here cumprod ensures that as soon as we get a zero, it's zero thereafter.
         np.sum(np.cumprod(np.sum(np.multiply(padded_onehot, v_germline_aa_onehot), axis=1))),
-        np.sum(np.flip(np.cumprod(np.flip(np.sum(np.multiply(padded_onehot, j_germline_aa_onehot), axis=1)))))])
+        np.sum(np.flip(np.cumprod(np.flip(np.sum(np.multiply(padded_onehot, j_germline_aa_onehot), axis=1)))))
+    ])
 
 
 def contiguous_match_counts_df(onehot_df, v_germline_aa_tensor, j_germline_aa_tensor):
@@ -221,11 +241,12 @@ def contiguous_match_counts_df(onehot_df, v_germline_aa_tensor, j_germline_aa_te
     :return: a numpy array of shape (2, len(onehot_df)) giving the v and j
     contiguous match count for every input.
     """
-    return np.vstack(onehot_df.apply(
-        lambda row: contiguous_match_counts(
-            row['amino_acid'],
-            # The following two lines obtain the germline aas for the germline
-            # calls of the row.
-            np.tensordot(row['v_gene'], v_germline_aa_tensor, axes=1),
-            np.tensordot(row['j_gene'], j_germline_aa_tensor, axes=1)),
-        axis=1))
+    return np.vstack(
+        onehot_df.apply(
+            lambda row: contiguous_match_counts(
+                row['amino_acid'],
+                # The following two lines obtain the germline aas for the germline
+                # calls of the row.
+                np.tensordot(row['v_gene'], v_germline_aa_tensor, axes=1),
+                np.tensordot(row['j_gene'], j_germline_aa_tensor, axes=1)),
+            axis=1))
