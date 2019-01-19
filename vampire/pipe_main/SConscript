@@ -219,6 +219,8 @@ nest.add_aggregate('test_set_agg', list)
 nest.add_aggregate('test_set_info_agg', dict)
 # The summarized_agg gathers everything we want to summarize and then stack at the end.
 nest.add_aggregate('summarized_agg', list)
+# The merged gathers merged per-sequence information on the test set.
+nest.add_aggregate('merged_agg', list)
 summarized_agg_names = []
 # nest.add_aggregate('loss_regression_agg', list)
 
@@ -624,10 +626,12 @@ def test_pvae(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def merged_ps(env, outdir, c):
     c['test_ppost'] = c['test_set_info_agg'][(c['test_set'], 'test_ppost')]
+    merged = join(outdir, 'merged_ps.csv'),
+    c['merged_agg'].append(merged)
     return env.Command(
-        join(outdir, 'merged_ps.csv'),
+        merged,
         [c['test_set'], c['test_pvae'], c['test_ppost']],
-        'python3 util.py merge-ps $SOURCES $TARGET')[0]
+        f'python3 util.py merge-ps --idx "{get_idx(c)}" --idx-name "{idx_name}" $SOURCES $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -724,7 +728,22 @@ def summarized_agg_target(env, outdir, c):
     return env.Command(
         join(outdir, 'summarized.agg.csv'),
         c['summarized_agg'],
-        'python3 util.py stackrows --out $TARGET $SOURCES')[0]
+        'python3 util.py fancystack --out $TARGET $SOURCES')[0]
+
+
+@nest.add_target_with_env(localenv)
+def merged_agg_target(env, outdir, c):
+    return env.Command(
+        join(outdir, 'merged.agg.csv'),
+        c['merged_agg'],
+        'python3 util.py fancystack --out $TARGET $SOURCES')[0]
+
+@nest.add_target_with_env(localenv)
+def merged_agg_target_bz2(env, outdir, c):
+    return env.Command(
+        str(c['merged_agg_target'])+'.bz2',
+        c['merged_agg_target'],
+        'bzip2 $SOURCE')[0]
 
 
 # @nest.add_target_with_env(localenv)
