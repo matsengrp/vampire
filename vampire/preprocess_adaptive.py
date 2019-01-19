@@ -59,12 +59,8 @@ def filter_on_olga(df):
     """
     Only take sequences with genes that are present in both the OLGA and the
     Adaptive gene sets.
-
-    Also, exclude TCRBJ1-6 and TCRBJ2-7, which appear to be problematic for OLGA.
     """
     d = conversion.adaptive_to_olga_dict()
-    del d['TRBJ']['TCRBJ01-06']
-    del d['TRBJ']['TCRBJ02-07']
     return conversion.filter_by_gene_names(df, d)
 
 
