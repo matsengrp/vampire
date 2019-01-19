@@ -626,12 +626,20 @@ def test_pvae(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def merged_ps(env, outdir, c):
     c['test_ppost'] = c['test_set_info_agg'][(c['test_set'], 'test_ppost')]
-    merged = join(outdir, 'merged_ps.csv'),
+    return env.Command(
+        join(outdir, 'merged_ps.csv'),
+        [c['test_set'], c['test_pvae'], c['test_ppost']],
+        f'python3 util.py merge-ps --idx "{get_idx(c)}" --idx-name "{idx_name}" $SOURCES $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def merged_plus_sumrep(env, outdir, c):
+    merged = join(outdir, 'merged_ps.sumrep.csv')
     c['merged_agg'].append(merged)
     return env.Command(
         merged,
-        [c['test_set'], c['test_pvae'], c['test_ppost']],
-        f'python3 util.py merge-ps --idx "{get_idx(c)}" --idx-name "{idx_name}" $SOURCES $TARGET')[0]
+        c['merged_ps'],
+        'R/add_cdr3_summaries.R $SOURCE $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
