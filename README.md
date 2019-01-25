@@ -14,7 +14,7 @@ Then:
 ```
 git clone https://github.com/matsengrp/vampire.git
 cd vampire
-pip install .
+pip install -e .
 ```
 
 ### OLGA
