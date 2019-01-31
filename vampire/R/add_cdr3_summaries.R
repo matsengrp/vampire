@@ -11,7 +11,7 @@ args = parser$parse_args()
 
 suppressMessages(devtools::load_all('R/sumrep', quiet=TRUE))
 
-df = read.csv(args$in_csv, stringsAsFactors=FALSE)
+df = read.csv(args$in_csv, stringsAsFactors=FALSE, check.names=FALSE)
 df$cdr3_length = nchar(df$amino_acid)
 
 # sumrep likes the CDR3 column to be called junction_aa.
