@@ -10,11 +10,13 @@ import shutil
 import sys
 
 import click
-import common
+import vampire.common as common
 import numpy as np
 import pandas as pd
 
 from vampire import preprocess_adaptive
+from vampire.gene_name_conversion import convert_gene_names
+from vampire.gene_name_conversion import olga_to_adaptive_dict
 
 from sklearn.model_selection import train_test_split
 
@@ -22,6 +24,41 @@ from sklearn.model_selection import train_test_split
 @click.group()
 def cli():
     pass
+
+
+@cli.command()
+@click.option('--idx', required=True, help='The row index for the summary output.')
+@click.option('--idx-name', required=True, help='The row index name.')
+@click.argument('seq_path', type=click.Path(exists=True))
+@click.argument('pvae_path', type=click.Path(exists=True))
+@click.argument('ppost_path', type=click.Path(exists=True))
+@click.argument('out_path', type=click.Path(writable=True))
+def merge_ps(idx, idx_name, seq_path, pvae_path, ppost_path, out_path):
+    """
+    Merge probability estimates from Pvae and Ppost into a single data frame and write to an output CSV.
+
+    SEQ_PATH should be a path to sequences in canonical CSV format, with
+    sequences in the same order as PVAE_PATH.
+    """
+    def prep_index(df):
+        df.set_index(['amino_acid', 'v_gene', 'j_gene'], inplace=True)
+        df.sort_index(inplace=True)
+
+    pvae_df = pd.read_csv(seq_path)
+    pvae_df['log_Pvae'] = pd.read_csv(pvae_path)['log_p_x']
+    prep_index(pvae_df)
+    ppost_df = convert_gene_names(pd.read_csv(ppost_path), olga_to_adaptive_dict())
+    prep_index(ppost_df)
+
+    # If we don't drop duplicates then merge will expand the number of rows.
+    # See https://stackoverflow.com/questions/39019591/duplicated-rows-when-merging-dataframes-in-python
+    # We deduplicate Ppost, which is guaranteed to be identical among repeated elements.
+    merged = pd.merge(pvae_df, ppost_df.drop_duplicates(), how='left', left_index=True, right_index=True)
+    merged['log_Ppost'] = np.log(merged['Ppost'])
+    merged.reset_index(inplace=True)
+    merged[idx_name] = idx
+    merged.set_index(idx_name, inplace=True)
+    merged.to_csv(out_path)
 
 
 @cli.command()
@@ -124,7 +161,7 @@ def csvstack(out, in_paths):
 @cli.command()
 @click.option('--out', type=click.File('w'), help='Output file path.', required=True)
 @click.argument('in_paths', nargs=-1)
-def stackrows(out, in_paths):
+def fancystack(out, in_paths):
     """
     Like csvkit's csvstack, but fancy.
     Assumes the first column is a semicolon-separted thing to split into a
@@ -133,23 +170,25 @@ def stackrows(out, in_paths):
     Note that this sorts the columns by name (part of merging columns).
     """
 
-    def read_row(path):
-        row = pd.read_csv(path)
-        assert len(row) == 1
-        idx_names = row.columns[0].split(';')
-        idx = row.iloc[0, 0].split(';')
-        row.drop(row.columns[0], axis=1, inplace=True)
+    def read_df(path):
+        df = pd.read_csv(path)
+        idx_names = df.columns[0].split(';')
+        idx_str = df.iloc[0, 0]
+        # Make sure the index column is constant.
+        assert((df.iloc[:, 0] == idx_str).all())
+        idx = idx_str.split(';')
+        df.drop(df.columns[0], axis=1, inplace=True)
 
         for k, v in zip(idx_names, idx):
             if k in ['sample', 'test_set']:
                 v = common.strip_dirpath_extn(v)
-            row[k] = v
+            df[k] = v
 
-        row.set_index(idx_names, inplace=True)
+        df.set_index(idx_names, inplace=True)
 
-        return row
+        return df
 
-    pd.concat([read_row(path) for path in in_paths], sort=True).to_csv(out)
+    pd.concat([read_df(path) for path in in_paths], sort=True).to_csv(out)
 
 
 @cli.command()

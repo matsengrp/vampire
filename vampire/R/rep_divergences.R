@@ -27,12 +27,14 @@ divs <- {}
 divs$pairwise_distance <- comparePairwiseDistanceDistributions(dat_a,
                                                                dat_b,
                                                                column="junction_aa",
-                                                               approximate=TRUE
+                                                               approximate=TRUE,
+                                                               tol=1e-6
                                                               )
 divs$nn_distance <- compareNNDistanceDistributions(dat_a,
                                                    dat_b,
                                                    column="junction_aa",
-                                                   approximate=TRUE
+                                                   approximate=TRUE,
+                                                   tol=1e-6
                                                   )
 divs$cdr3_length <- compareCDR3LengthDistributions(dat_a, dat_b, by_amino_acid=TRUE)
 divs$aliphatic_index <- compareAliphaticIndexDistributions(dat_a, dat_b)
