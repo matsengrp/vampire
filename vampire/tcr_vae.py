@@ -32,6 +32,7 @@ import scipy.special as special
 import scipy.stats as stats
 
 import vampire.common as common
+import vampire.tcregex as tcregex
 import vampire.xcr_vector_conversion as conversion
 
 
@@ -438,6 +439,41 @@ def pvae(limit_input_to, nsamples, params_json, model_weights, test_csv, out_csv
     # Calculate log of mean of numbers given in log space.
     avg = special.logsumexp(log_p_x, axis=0) - np.log(nsamples)
     pd.DataFrame({'log_p_x': avg}).to_csv(out_csv, index=False)
+
+
+@cli.command()
+@click.option('--nsamples', default=500, show_default=True, help="Number of importance samples to use.")
+@click.option('--nbatch', default=100, show_default=True, help="Batch size for tcregex calculation.")
+@click.option('--tol', default=1, show_default=True, help="Tolerance for tcregex accuracy.")
+@click.argument('params_json', type=click.Path(exists=True))
+@click.argument('model_weights', type=click.Path(exists=True))
+@click.argument('in_tcregex')
+@click.argument('out_csv', type=click.File('w'))
+def tcregex_pvae(nsamples, nbatch, tol, params_json, model_weights, in_tcregex, out_csv):
+    """
+    Calculate P_VAE for a TCR specified by a tcregex.
+
+    A tcregex is specified as a string triple "v_gene,j_gene,cdr3_tcregex" where
+    cdr3_tcregex uses regex symbols appropriate for amino acids.
+
+    Keep on sampling sequences from the tcregex until the P_VAE converges.
+    """
+    v = TCRVAE.of_json_file(params_json)
+    v.vae.load_weights(model_weights)
+
+    df_generated = tcregex.sample_tcregex(in_tcregex, nbatch)
+    df_x = conversion.unpadded_tcrbs_to_onehot(df_generated, v.params['max_cdr3_len'])
+
+    log_p_x = np.zeros((nsamples, len(df_x)))
+
+    with click.progressbar(range(nsamples)) as bar:
+        for i in bar:
+            v.log_pvae_importance_sample(df_x, log_p_x[i])
+
+    # Calculate log of mean of numbers given in log space.
+    avg = special.logsumexp(log_p_x, axis=0) - np.log(nsamples)
+    df_generated['log_p_x'] = avg
+    df_generated.to_csv(out_csv, index=False)
 
 
 @cli.command()
