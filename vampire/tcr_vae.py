@@ -32,6 +32,7 @@ import scipy.special as special
 import scipy.stats as stats
 
 import vampire.common as common
+import vampire.tcregex as tcregex
 import vampire.xcr_vector_conversion as conversion
 
 
@@ -438,6 +439,64 @@ def pvae(limit_input_to, nsamples, params_json, model_weights, test_csv, out_csv
     # Calculate log of mean of numbers given in log space.
     avg = special.logsumexp(log_p_x, axis=0) - np.log(nsamples)
     pd.DataFrame({'log_p_x': avg}).to_csv(out_csv, index=False)
+
+
+@cli.command()
+@click.option('--nsamples', default=100, show_default=True, help="Number of importance samples to use.")
+@click.option('--batch-size', default=100, show_default=True, help="Batch size for tcregex calculation.")
+@click.option('--max-iters', default=100, show_default=True, help="The maximum number of batch iterations to use.")
+@click.option(
+    '--track-last', default=5, show_default=True, help="We want the SD of the last track-last to be less than tol.")
+@click.option('--tol', default=0.005, show_default=True, help="Tolerance for tcregex accuracy.")
+@click.argument('params_json', type=click.Path(exists=True))
+@click.argument('model_weights', type=click.Path(exists=True))
+@click.argument('in_tcregex')
+@click.argument('out_csv', type=click.File('w'))
+def tcregex_pvae(nsamples, batch_size, max_iters, track_last, tol, params_json, model_weights, in_tcregex, out_csv):
+    """
+    Calculate P_VAE for a TCR specified by a tcregex.
+
+    A tcregex is specified as a string triple "v_gene,j_gene,cdr3_tcregex" where
+    cdr3_tcregex uses regex symbols appropriate for amino acids.
+
+    Keep on sampling sequences from the tcregex until the P_VAE converges.
+
+    Note that the default number of importance samples is less than that for
+    the usual pvae, because we're averaging out stochasticity anyhow.
+    """
+    v = TCRVAE.of_json_file(params_json)
+    v.vae.load_weights(model_weights)
+
+    # Accumulates the sequences and their P_VAEs across iters.
+    generated_dfs = []
+    # Accumulates the P_VAE means across iters.
+    means = []
+
+    for batch_i in range(max_iters):
+        df_generated = tcregex.sample_tcregex(in_tcregex, batch_size)
+        df_x = conversion.unpadded_tcrbs_to_onehot(df_generated, v.params['max_cdr3_len'])
+
+        log_p_x = np.zeros((nsamples, len(df_x)))
+
+        for i in range(nsamples):
+            v.log_pvae_importance_sample(df_x, log_p_x[i])
+
+        # Calculate log of mean of numbers given in log space.
+        # This calculates the per-sequence log_p_x estimate.
+        df_generated['log_p_x'] = special.logsumexp(log_p_x, axis=0) - np.log(nsamples)
+        generated_dfs.append(df_generated)
+        catted = pd.concat(generated_dfs)
+        means.append(special.logsumexp(catted['log_p_x'], axis=0) - np.log(len(catted)))
+        if len(means) > track_last:
+            recent_sd = np.std(np.array(means[-track_last:]))
+            click.echo("[Iter {}]\tmean: {:.6}\trecent SD: {:.5}\ttol: {}".format(batch_i, means[-1], recent_sd, tol))
+            if recent_sd < tol:
+                break
+        else:
+            click.echo("[Iter {}]\tmean: {:.6}".format(batch_i, means[-1]))
+
+    click.echo("tcregex P_VAE estimate: {}".format(means[-1]))
+    catted.to_csv(out_csv, index=False)
 
 
 @cli.command()
