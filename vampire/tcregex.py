@@ -29,11 +29,17 @@ def build_regex(cdr3_tcregex):
 
 
 def sample_cdr3_tcregex(cdr3_tcregex, n):
+    """
+    Sample from a CDR3 tcregex.
+    """
     r = build_regex(cdr3_tcregex)
     return [exrex.getone(r) for i in range(n)]
 
 
 def sample_split_tcregex(v_gene, j_gene, cdr3_tcregex, n):
+    """
+    Sample from a tcregex that has been split into its components.
+    """
     df = pd.DataFrame({'amino_acid': sample_cdr3_tcregex(cdr3_tcregex, n)})
     df['v_gene'] = v_gene
     df['j_gene'] = j_gene
