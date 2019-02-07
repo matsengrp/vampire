@@ -15,7 +15,6 @@ from vampire import gene_name_conversion as conversion
 
 # Sometimes Adaptive uses one set of column names, and sometimes another.
 HEADER_TRANSLATION_DICT = {
-    'nucleotide': 'rearrangement',
     'sequenceStatus': 'frame_type',
     'aminoAcid': 'amino_acid',
     'vGeneName': 'v_gene',
@@ -124,7 +123,7 @@ def dedup_on_vjcdr3(df):
 def read_adaptive_tsv(path):
     """
     Read an Adaptive TSV file and extract the columns we use, namely
-    rearrangement, amino_acid, frame_type, v_gene,and j_gene.
+    amino_acid, frame_type, v_gene, and j_gene.
 
     I have seen two flavors of the Adaptive header names, one of which uses
     snake_case and the other that uses camelCase.
