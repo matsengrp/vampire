@@ -359,7 +359,7 @@ def validation_head(env, outdir, c):
     return env.Command(
         common.strip_extn(c['split']['validation'])+'.head.csv',
         c['split']['validation'],
-        f"head -n {c['nseqs']+1} $SOURCE > $TARGET")[0]
+        f"cut -f 2-4 -d, $SOURCE | head -n {c['nseqs']+1} > $TARGET")[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -724,6 +724,30 @@ def olga_summarized(env, outdir, c):
         summarized,
         [c[k] for k in to_pass],
         f'python3 util.py summarize --out $TARGET --idx "{idx}" --idx-name "{idx_name}" --colnames {colnames} $SOURCES'
+    )[0]
+
+
+@nest.add_target_with_env(localenv)
+def train_sumrep_divergences(env, outdir, c):
+    return env.Command(
+        join(outdir, 'train.sumdiv.csv'),
+        [c['test_set'], c['validation_head']],
+        'R/rep_divergences.R $SOURCES $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def train_summarized(env, outdir, c):
+    summarized = join(outdir, 'train-summarized.csv')
+    c['summarized_agg'].append(summarized)
+    # Here we populate the train indices with some things that are not relevant, such as VAE model parameters.
+    # This repeats unnecessarily, but it makes downstream plotting easier because we can treat all the models the same.
+    c_copy = dict(c)
+    c_copy['model'] = 'train'
+    idx = get_idx(c_copy)
+    return env.Command(
+        summarized,
+        c['train_sumrep_divergences'],
+        f'python3 util.py summarize --out $TARGET --idx "{idx}" --idx-name "{idx_name}" --colnames train_sumrep_divergences $SOURCE'
     )[0]
 
 
