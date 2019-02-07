@@ -240,10 +240,10 @@ def split_repertoires(out_prefix, test_size, in_paths):
     """
     Do a test-train split on the level of repertoires. Writes out
 
-    PRE.train.tsv: a TSV with all of the sequences from the test set,
-    PRE.test.txt: a text file with the test paths (one per line),
-    PRE.test-extras.txt: a text file with the test paths and some train paths (one per line),
-    PRE.log: information about this train-test split.
+    PRE.json: information about this train-test split
+    PRE.train.tsv: a TSV with all of the sequences from the test set
+    PRE.test.txt: a text file with the test paths (one per line)
+    PRE.test-extras.txt: a text file with the test paths and some train paths (one per line)
 
     test-extras includes as many train sets as there are test sets (if that many exists).
     """
