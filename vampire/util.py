@@ -3,6 +3,7 @@ Utilities, accessible via subcommands.
 """
 
 import datetime
+import itertools
 import json
 import os
 import re
@@ -235,15 +236,26 @@ def sharedwith(l_csv_path, r_csv_path, out_csv):
 @cli.command()
 @click.option('--out-prefix', metavar='PRE', type=click.Path(writable=True), help="Output prefix.", required=True)
 @click.option('--test-size', default=1 / 3, show_default=True, help="Proportion of sample to hold out for testing.")
+@click.option('--test-regex', help="A regular expression that is used to identify the test set.")
 @click.argument('in_paths', nargs=-1)
-def split_repertoires(out_prefix, test_size, in_paths):
+def split_repertoires(out_prefix, test_size, test_regex, in_paths):
     """
-    Do a test-train split on the level of repertoires. Writes out
+    Do a test-train split on the level of repertoires.
 
-    PRE.json: information about this train-test split
-    PRE.train.tsv: a TSV with all of the sequences from the train set
+    By default does a random split, but if --test-regex is supplied it uses
+    samples matching the regex as test.
+
+    Writes out
+    PRE.json, information about this train-test split, and
+    PRE.train.tsv, a TSV with all of the sequences from the train set.
     """
-    train_paths, test_paths = train_test_split(in_paths, test_size=test_size)
+    if test_regex:
+        regex = re.compile(test_regex)
+        test_paths = list(filter(regex.search, in_paths))
+        train_paths = list(itertools.filterfalse(regex.search, in_paths))
+    else:
+        train_paths, test_paths = train_test_split(in_paths, test_size=test_size)
+
     train_tsv_path = out_prefix + '.train.tsv'
 
     info = {
