@@ -62,16 +62,16 @@ def merge_ps(idx, idx_name, seq_path, pvae_path, ppost_path, out_path):
 
 
 @cli.command()
-@click.option('--test-size', default=0.5, help="Proportion of sample to hold out for testing.")
+@click.option('--train-size', default=1000, help="Data count to use for train.")
 @click.argument('in_csv', type=click.File('r'))
 @click.argument('out1_csv', type=click.File('w'))
 @click.argument('out2_csv', type=click.File('w'))
-def split(test_size, in_csv, out1_csv, out2_csv):
+def split(train_size, in_csv, out1_csv, out2_csv):
     """
     Do a train/test split.
     """
     df = pd.read_csv(in_csv)
-    (df1, df2) = train_test_split(df, test_size=test_size)
+    (df1, df2) = train_test_split(df, train_size=train_size)
     df1.to_csv(out1_csv, index=False)
     df2.to_csv(out2_csv, index=False)
 
@@ -165,7 +165,7 @@ def fancystack(out, in_paths):
     """
     Like csvkit's csvstack, but fancy.
     Assumes the first column is a semicolon-separted thing to split into a
-    multi-index. Also runs strip_dirpath_extn on anything named 'sample'.
+    multi-index. Also runs strip_dirpath_extn on paths.
 
     Note that this sorts the columns by name (part of merging columns).
     """
@@ -180,7 +180,7 @@ def fancystack(out, in_paths):
         df.drop(df.columns[0], axis=1, inplace=True)
 
         for k, v in zip(idx_names, idx):
-            if k in ['sample', 'test_set']:
+            if k in ['train_data', 'test_set']:
                 v = common.strip_dirpath_extn(v)
             df[k] = v
 
@@ -240,38 +240,26 @@ def split_repertoires(out_prefix, test_size, in_paths):
     """
     Do a test-train split on the level of repertoires. Writes out
 
-    PRE.train.tsv: a TSV with all of the sequences from the test set,
-    PRE.test.txt: a text file with the test paths (one per line),
-    PRE.test-extras.txt: a text file with the test paths and some train paths (one per line),
-    PRE.log: information about this train-test split.
-
-    test-extras includes as many train sets as there are test sets (if that many exists).
+    PRE.json: information about this train-test split
+    PRE.train.tsv: a TSV with all of the sequences from the train set
     """
     train_paths, test_paths = train_test_split(in_paths, test_size=test_size)
+    train_tsv_path = out_prefix + '.train.tsv'
 
     info = {
-        'call': ' '.join(sys.argv),
-        'date': datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+        'split_call': ' '.join(sys.argv),
+        'split_date': datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
         'train_paths': train_paths,
         'test_paths': test_paths,
+        'train_tsv_path': train_tsv_path,
     }
 
     with open(out_prefix + '.json', 'w') as fp:
         fp.write(json.dumps(info, indent=4))
 
-    with open(out_prefix + '.test.txt', 'w') as fp:
-        for path in test_paths:
-            fp.write(os.path.abspath(path) + '\n')
-
-    with open(out_prefix + '.test-extras.txt', 'w') as fp:
-        for path in test_paths:
-            fp.write(os.path.abspath(path) + '\n')
-        for path in train_paths[:len(test_paths)]:
-            fp.write(os.path.abspath(path) + '\n')
-
     header_written = False
 
-    with open(out_prefix + '.train.tsv', 'w') as fp:
+    with open(train_tsv_path, 'w') as fp:
         for path in train_paths:
             df = preprocess_adaptive.read_adaptive_tsv(path)
             if header_written:
