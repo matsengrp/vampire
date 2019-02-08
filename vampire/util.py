@@ -266,7 +266,8 @@ def split_repertoires(out_prefix, test_size, test_regex, in_paths):
         'train_tsv_path': train_tsv_path,
     }
 
-    with open(out_prefix + '.json', 'w') as fp:
+    json_path = out_prefix + '.json'
+    with open(json_path, 'w') as fp:
         fp.write(json.dumps(info, indent=4))
 
     header_written = False
@@ -280,6 +281,9 @@ def split_repertoires(out_prefix, test_size, test_regex, in_paths):
                 # This is our first file to write.
                 header_written = True
                 df.to_csv(fp, sep='\t', index=False)
+
+    click.echo("Check JSON file with")
+    click.echo("cat {json_path}")
 
 
 if __name__ == '__main__':
