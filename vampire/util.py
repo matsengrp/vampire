@@ -283,7 +283,7 @@ def split_repertoires(out_prefix, test_size, test_regex, in_paths):
                 df.to_csv(fp, sep='\t', index=False)
 
     click.echo("Check JSON file with")
-    click.echo("cat {json_path}")
+    click.echo(f"cat {json_path}")
 
 
 if __name__ == '__main__':
