@@ -1,5 +1,6 @@
-from os.path import join
 import json
+import os
+from os.path import join
 import re
 
 import numpy as np  # noqa
@@ -131,6 +132,17 @@ def sconscript(env, outdir, c):
     return env.Command(
         join(outdir, 'SConscript'),
         'SConscript',
+        'cp $SOURCE $TARGET')[0]
+
+
+@nest.add_target_with_env(localenv)
+def json_data(env, outdir, c):
+    """
+    Copy JSON data file into repo.
+    """
+    return env.Command(
+        join(outdir, os.path.basename(localenv['data'])),
+        localenv['data'],
         'cp $SOURCE $TARGET')[0]
 
 
