@@ -288,7 +288,7 @@ def split_repertoires(out_prefix, test_size, test_regex, limit_each, in_paths):
             if limit_each:
                 if limit_each > len(df):
                     raise ValueError(
-                        "--limit-each parameter is greater than the number of sequences in {train_tsv_path}")
+                        f"--limit-each parameter is greater than the number of sequences in {path}")
                 df = df.sample(n=limit_each)
             if header_written:
                 df.to_csv(fp, sep='\t', header=False, index=False)
