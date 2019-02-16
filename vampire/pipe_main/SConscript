@@ -344,8 +344,8 @@ nest.pop('test_set')
 # summarized_agg_names.append('v_gene_embedding_dim')
 
 # Nest: the strength of the KL component of the VAE loss.
-numerical_nest_add('beta', np.linspace(0.625, 1, 7))
-# numerical_nest_add('beta', [0.75])
+# numerical_nest_add('beta', np.linspace(0.625, 1, 7))
+numerical_nest_add('beta', [0.75])
 summarized_agg_names.append('beta')
 
 # Nest: monitor for EarlyStopping.
