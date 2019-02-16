@@ -3,6 +3,7 @@ Utilities, accessible via subcommands.
 """
 
 import datetime
+import itertools
 import json
 import os
 import re
@@ -40,6 +41,7 @@ def merge_ps(idx, idx_name, seq_path, pvae_path, ppost_path, out_path):
     SEQ_PATH should be a path to sequences in canonical CSV format, with
     sequences in the same order as PVAE_PATH.
     """
+
     def prep_index(df):
         df.set_index(['amino_acid', 'v_gene', 'j_gene'], inplace=True)
         df.sort_index(inplace=True)
@@ -175,7 +177,7 @@ def fancystack(out, in_paths):
         idx_names = df.columns[0].split(';')
         idx_str = df.iloc[0, 0]
         # Make sure the index column is constant.
-        assert((df.iloc[:, 0] == idx_str).all())
+        assert (df.iloc[:, 0] == idx_str).all()
         idx = idx_str.split(';')
         df.drop(df.columns[0], axis=1, inplace=True)
 
@@ -235,15 +237,35 @@ def sharedwith(l_csv_path, r_csv_path, out_csv):
 @cli.command()
 @click.option('--out-prefix', metavar='PRE', type=click.Path(writable=True), help="Output prefix.", required=True)
 @click.option('--test-size', default=1 / 3, show_default=True, help="Proportion of sample to hold out for testing.")
+@click.option('--test-regex', help="A regular expression that is used to identify the test set.")
+@click.option(
+    '--limit-each',
+    metavar='N',
+    type=int,
+    help="Limit the contribution of each repertoire to the training set "
+    "to a random N sequences. Will fail if any repertoire has less than N seqs.")
 @click.argument('in_paths', nargs=-1)
-def split_repertoires(out_prefix, test_size, in_paths):
+def split_repertoires(out_prefix, test_size, test_regex, limit_each, in_paths):
     """
-    Do a test-train split on the level of repertoires. Writes out
+    Do a test-train split on the level of repertoires.
 
-    PRE.json: information about this train-test split
-    PRE.train.tsv: a TSV with all of the sequences from the train set
+    By default does a random split, but if --test-regex is supplied it uses
+    samples matching the regex as test.
+
+    The --limit-each flag can be handy to ensure equal contribution of each
+    repertoire to the training set.
+
+    Writes out
+    PRE.json, information about this train-test split, and
+    PRE.train.tsv, a TSV with all of the sequences from the train set.
     """
-    train_paths, test_paths = train_test_split(in_paths, test_size=test_size)
+    if test_regex:
+        regex = re.compile(test_regex)
+        test_paths = list(filter(regex.search, in_paths))
+        train_paths = list(itertools.filterfalse(regex.search, in_paths))
+    else:
+        train_paths, test_paths = train_test_split(in_paths, test_size=test_size)
+
     train_tsv_path = out_prefix + '.train.tsv'
 
     info = {
@@ -254,7 +276,8 @@ def split_repertoires(out_prefix, test_size, in_paths):
         'train_tsv_path': train_tsv_path,
     }
 
-    with open(out_prefix + '.json', 'w') as fp:
+    json_path = out_prefix + '.json'
+    with open(json_path, 'w') as fp:
         fp.write(json.dumps(info, indent=4))
 
     header_written = False
@@ -262,12 +285,20 @@ def split_repertoires(out_prefix, test_size, in_paths):
     with open(train_tsv_path, 'w') as fp:
         for path in train_paths:
             df = preprocess_adaptive.read_adaptive_tsv(path)
+            if limit_each:
+                if limit_each > len(df):
+                    raise ValueError(
+                        f"--limit-each parameter is greater than the number of sequences in {path}")
+                df = df.sample(n=limit_each)
             if header_written:
                 df.to_csv(fp, sep='\t', header=False, index=False)
             else:
                 # This is our first file to write.
                 header_written = True
                 df.to_csv(fp, sep='\t', index=False)
+
+    click.echo("Check JSON file with")
+    click.echo(f"cat {json_path}")
 
 
 if __name__ == '__main__':
