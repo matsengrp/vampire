@@ -10,7 +10,7 @@ import nestly.scons as ns
 import SCons.Script as sc
 
 import common
-import tcr_vae
+import bcr_vae
 
 sc.Import('env')
 localenv = env.Clone()  # noqa
@@ -36,7 +36,7 @@ def default_params_by_mode():
     """
     Mini mode doesn't train for long.
     """
-    params = tcr_vae.TCRVAE.default_params()
+    params = bcr_vae.TCRVAE.default_params()
 
     if localenv['mode'] == 'mini':
         params['pretrains'] = 2
