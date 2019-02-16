@@ -127,7 +127,7 @@ summarized_agg_names = []
 @nest.add_target_with_env(localenv)
 def sconscript(env, outdir, c):
     """
-    Copy SConscript file.
+    Copy SConscript file into output directory.
     """
     return env.Command(
         join(outdir, 'SConscript'),
@@ -138,7 +138,7 @@ def sconscript(env, outdir, c):
 @nest.add_target_with_env(localenv)
 def json_data(env, outdir, c):
     """
-    Copy JSON data file into repo.
+    Copy JSON data file into output directory.
     """
     return env.Command(
         join(outdir, os.path.basename(localenv['data'])),
