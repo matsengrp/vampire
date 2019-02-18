@@ -66,12 +66,15 @@ def filter_on_olga(df):
     return conversion.filter_by_gene_names(df, d)
 
 
-def apply_all_filters(df, max_len=30):
+def apply_all_filters(df, max_len=30, fail_fraction_remaining=None):
     """
     Apply all filters.
+
+    Fail if only `fail_fraction_remaining` of the sequences remain.
     """
     click.echo(f"Original data: {len(df)} rows")
     df = filter_and_drop_frame(df)
+    original_count = len(df)
     click.echo(f"Restricting to in-frame: {len(df)} rows")
     df = filter_on_cdr3_bounding_aas(df)
     click.echo(f"Requiring sane CDR3 bounding AAs: {len(df)} rows")
@@ -81,6 +84,9 @@ def apply_all_filters(df, max_len=30):
     click.echo(f"Requiring resolved TCRB genes: {len(df)} rows")
     df = filter_on_olga(df)
     click.echo(f"Requiring genes that are also present in the OLGA set: {len(df)} rows")
+    if fail_fraction_remaining:
+        if original_count / len(df) < fail_fraction_remaining:
+            raise Exception(f"We started with {original_count} sequences and now we have {len(df)}. Failing.")
     return df.reset_index(drop=True)
 
 
@@ -149,15 +155,20 @@ def read_adaptive_tsv(path):
 @click.command()
 # Below we use Path rather than File because we don't want to have to figure
 # out whether a file is compressed or not-- Pandas will figure that out for us.
+@click.option(
+    '--fail-fraction-remaining',
+    show_default=True,
+    default=0.25,
+    help="Fail if the post-filtration fraction is below this number.")
 @click.argument('in_tsv', type=click.Path(exists=True))
 @click.argument('out_csv', type=click.File('w'))
-def preprocess_tsv(in_tsv, out_csv):
+def preprocess_tsv(fail_fraction_remaining, in_tsv, out_csv):
     """
     Preprocess the Adaptive TSV at IN_TSV and output to OUT_CSV.
 
     This includes doing filters as well as deduplicating on vjcdr3s.
     """
-    df = apply_all_filters(read_adaptive_tsv(in_tsv))
+    df = apply_all_filters(read_adaptive_tsv(in_tsv), fail_fraction_remaining=fail_fraction_remaining)
     df.to_csv(out_csv, index=False)
 
 
