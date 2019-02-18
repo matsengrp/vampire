@@ -70,7 +70,7 @@ def apply_all_filters(df, max_len=30, fail_fraction_remaining=None):
     """
     Apply all filters.
 
-    Fail if only `fail_fraction_remaining` of the sequences remain.
+    Fail if less than `fail_fraction_remaining` of the sequences remain.
     """
     click.echo(f"Original data: {len(df)} rows")
     df = filter_and_drop_frame(df)
