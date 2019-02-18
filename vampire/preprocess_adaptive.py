@@ -85,7 +85,7 @@ def apply_all_filters(df, max_len=30, fail_fraction_remaining=None):
     df = filter_on_olga(df)
     click.echo(f"Requiring genes that are also present in the OLGA set: {len(df)} rows")
     if fail_fraction_remaining:
-        if original_count / len(df) < fail_fraction_remaining:
+        if len(df) / original_count < fail_fraction_remaining:
             raise Exception(f"We started with {original_count} sequences and now we have {len(df)}. Failing.")
     return df.reset_index(drop=True)
 
