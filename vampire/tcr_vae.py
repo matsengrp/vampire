@@ -24,9 +24,9 @@ import click
 import numpy as np
 import pandas as pd
 
-import keras
-import keras.backend as K
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+import tensorflow.keras as keras
+import tensorflow.keras.backend as K
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 
 import scipy.special as special
 import scipy.stats as stats

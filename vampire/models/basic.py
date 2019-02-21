@@ -7,11 +7,10 @@ https://user-images.githubusercontent.com/112708/48358766-4f7a7e00-e650-11e8-9ba
 
 import numpy as np
 
-import keras
-from keras.models import Model
-from keras.layers import Activation, Dense, Lambda, Input, Reshape
-from keras import backend as K
-from keras import objectives
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Activation, Dense, Lambda, Input, Reshape
+from tensorflow.keras import backend as K
+from tensorflow.keras import objectives
 
 import vampire.common as common
 from vampire.custom_keras import BetaWarmup, EmbedViaMatrix

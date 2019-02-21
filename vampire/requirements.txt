@@ -3,7 +3,6 @@ click
 delegator.py
 exrex
 flake8
-keras
 matplotlib
 nestly
 pandas
@@ -12,5 +11,6 @@ pytest
 scikit-learn
 scons
 seaborn
+tensorflow
 versioneer
 yapf

@@ -9,11 +9,10 @@ https://user-images.githubusercontent.com/112708/48387933-78306100-e6ac-11e8-9de
 
 import numpy as np
 
-import keras
-from keras.models import Model
-from keras.layers import Activation, Add, Dense, Lambda, Input, Reshape
-from keras import backend as K
-from keras import objectives
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Activation, Add, Dense, Lambda, Input, Reshape
+from tensorflow.keras import backend as K
+from tensorflow.keras import objectives
 
 import vampire.common as common
 import vampire.xcr_vector_conversion as conversion
