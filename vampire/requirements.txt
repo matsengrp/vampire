@@ -12,4 +12,5 @@ pytest
 scikit-learn
 scons
 seaborn
+versioneer
 yapf

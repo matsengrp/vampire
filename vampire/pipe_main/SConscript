@@ -66,15 +66,10 @@ def base_dict():
     if localenv['mode'] == 'mini':
         d['nseqs'] = 100
 
-    if localenv['data'] == 'dryrun':
-        sample_data = 'sample_data/02-0249_TCRB.4000.tsv.bz2'
-        d['train_tsv_path'] = sample_data
-        d['test_paths'] = [sample_data]
-        d['train_size'] = 1000
-    else:
-        with open(localenv['data']) as fp:
-            for k, v in json.load(fp).items():
-                d[k] = v
+    # Slurp up all key-value pairs in the JSON file into the base_dict.
+    with open(localenv['data']) as fp:
+        for k, v in json.load(fp).items():
+            d[k] = v
 
     return d
 
@@ -147,14 +142,14 @@ def json_data(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
-def git_sha(env, outdir, c):
+def vampire_version(env, outdir, c):
     """
-    Echo git sha to file.
+    Echo vampire version to file.
     """
     return env.Command(
-        join(outdir, 'git-sha.txt'),
+        join(outdir, 'vampire-version.txt'),
         [],
-        "git log --pretty=format:'%H' -n 1 > $TARGET")[0]
+        'python -c "import vampire; print(vampire.__version__)" > $TARGET')[0]
 
 
 # Nest: initial processing of the test sets.
