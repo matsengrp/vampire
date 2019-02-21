@@ -147,14 +147,14 @@ def json_data(env, outdir, c):
 
 
 @nest.add_target_with_env(localenv)
-def git_sha(env, outdir, c):
+def vampire_version(env, outdir, c):
     """
-    Echo git sha to file.
+    Echo vampire version to file.
     """
     return env.Command(
-        join(outdir, 'git-sha.txt'),
+        join(outdir, 'vampire-version.txt'),
         [],
-        "git log --pretty=format:'%H' -n 1 > $TARGET")[0]
+        'python -c "import vampire; print(vampire.__version__)" > $TARGET')[0]
 
 
 # Nest: initial processing of the test sets.
