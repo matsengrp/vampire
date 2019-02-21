@@ -13,7 +13,7 @@ import tensorflow.keras as keras
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Activation, Add, Dense, Lambda, Input, Reshape
 from tensorflow.keras import backend as K
-from tensorflow.keras import objectives
+from tensorflow.keras import losses
 
 import vampire.common as common
 import vampire.xcr_vector_conversion as conversion
@@ -41,7 +41,7 @@ def build(params):
         """
         # Here we multiply by the number of sites, so that we have a
         # total loss across the sites rather than a mean loss.
-        xent_loss = params['max_cdr3_len'] * K.mean(objectives.categorical_crossentropy(io_encoder, io_decoder))
+        xent_loss = params['max_cdr3_len'] * K.mean(losses.categorical_crossentropy(io_encoder, io_decoder))
         kl_loss = -0.5 * K.sum(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
         kl_loss *= beta
         return (xent_loss + kl_loss)
