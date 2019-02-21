@@ -1,5 +1,6 @@
 _ignore*
 _output_*
+_output/
 .sconsign.dblite
 
 notebook.tex
