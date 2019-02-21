@@ -178,7 +178,7 @@ class TCRVAE:
             new_val_loss = history.history['val_loss'][-1]
             if new_val_loss < best_val_loss:
                 best_val_loss = new_val_loss
-                self.vae.save_weights(best_weights_fname, overwrite=True)
+                self.vae.save_weights(best_weights_fname, save_format='h5', overwrite=True)
 
         self.vae.load_weights(best_weights_fname)
 
@@ -353,7 +353,7 @@ def train(params_json, train_csv, best_weights_fname, diagnostics_fname):
     train_data = v.get_data(train_csv, min_data_size)
     tensorboard_log_dir = os.path.join(os.path.dirname(best_weights_fname), 'logs')
     v.fit(train_data, validation_split, best_weights_fname, tensorboard_log_dir)
-    v.vae.save_weights(best_weights_fname, overwrite=True)
+    v.vae.save_weights(best_weights_fname, save_format='h5', overwrite=True)
 
     # Test weights reloading.
     vp = TCRVAE.of_json_file(params_json)

@@ -227,7 +227,7 @@ def contiguous_match_counts(padded_onehot, v_germline_aa_onehot, j_germline_aa_o
     return np.array([
         # Here cumprod ensures that as soon as we get a zero, it's zero thereafter.
         np.sum(np.cumprod(np.sum(np.multiply(padded_onehot, v_germline_aa_onehot), axis=1))),
-        np.sum(np.flip(np.cumprod(np.flip(np.sum(np.multiply(padded_onehot, j_germline_aa_onehot), axis=1)))))
+        np.sum(np.cumprod(np.flip(np.sum(np.multiply(padded_onehot, j_germline_aa_onehot), axis=1))))
     ])
 
 

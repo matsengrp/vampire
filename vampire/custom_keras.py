@@ -1,7 +1,7 @@
 import tensorflow.keras as keras
 from keras import backend as K
 from keras.callbacks import Callback
-from keras.engine.topology import Layer
+from tensorflow.keras.layers import Layer
 import tensorflow as tf
 
 # ### Callbacks ###

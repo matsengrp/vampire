@@ -1,6 +1,6 @@
 import tensorflow.keras as keras
 from tensorflow.keras import backend as K
-from tensorflow.keras.engine.topology import Layer
+from tensorflow.keras.layers import Layer
 import numpy as np
 import tensorflow as tf
 
