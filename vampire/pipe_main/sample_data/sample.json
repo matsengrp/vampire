@@ -1,0 +1,7 @@
+{
+   "test_paths" : [
+      "sample_data/02-0249_TCRB.4000.tsv.bz2"
+   ],
+   "train_tsv_path" : "sample_data/02-0249_TCRB.4000.tsv.bz2",
+   "train_size" : 1000
+}
