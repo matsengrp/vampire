@@ -206,7 +206,7 @@ def preprocess(env, outdir, c):
     return env.Command(
         join(outdir, 'train.processed.csv'),
         in_path,
-        'python3 preprocess_adaptive.py --sample {n_to_sample} $SOURCE $TARGET')[0]
+        f'python3 preprocess_adaptive.py --sample {n_to_sample} $SOURCE $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv, 'split')
