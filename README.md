@@ -58,6 +58,11 @@ Get a list of example commands by running `scons -n` inside the `vampire` direct
 Execute the commands by running `scons`.
 
 
+## Limitations
+
+* Our preprocessing scripts exclude TCRBJ2-5, which Adaptive annotates badly, and TCRBJ2-7, which appears to be problematic for OLGA.
+
+
 ## Contributors
 
 * Original version (immortalized in the [`original` branch](https://github.com/matsengrp/vampire/tree/original)) by Kristian Davidsen.
