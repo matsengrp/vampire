@@ -18,8 +18,9 @@ sbatch_prelude = """#!/bin/bash
 #SBATCH -e job_%j.err
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=matsen@fredhutch.org
-set -eu
-set -o pipefail
+# The following are commented out because of a conda issue https://github.com/ContinuumIO/anaconda-issues/issues/8838
+# set -eu
+# set -o pipefail
 hostname
 source activate py36
 cd {dir}
