@@ -3,7 +3,8 @@
 # This wrapper converts an Adaptive sequence file to an OLGA TSV, runs OLGA's
 # Pgen computation, and puts the result in a file with the original data.
 
-set -eux
+# The following is commented out because of a conda issue https://github.com/ContinuumIO/anaconda-issues/issues/8838
+# set -eux
 
 INFILE=$1
 OUTFILE=$2

@@ -1,5 +1,6 @@
 #!/bin/bash
-set -eu
+# The following is commented out because of a conda issue https://github.com/ContinuumIO/anaconda-issues/issues/8838
+# set -eu
 
 NSEQS=$1
 OUTFILE=$2
