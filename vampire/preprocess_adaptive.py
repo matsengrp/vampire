@@ -163,15 +163,28 @@ def read_adaptive_tsv(path):
     show_default=True,
     default=0.25,
     help="Fail if the post-filtration fraction is below this number.")
+@click.option(
+    '--sample',
+    type=int,
+    metavar='N',
+    help="Sample N sequences without replacement from the preprocessed sequences for output.")
 @click.argument('in_tsv', type=click.Path(exists=True))
 @click.argument('out_csv', type=click.File('w'))
-def preprocess_tsv(fail_fraction_remaining, in_tsv, out_csv):
+def preprocess_tsv(fail_fraction_remaining, sample, in_tsv, out_csv):
     """
     Preprocess the Adaptive TSV at IN_TSV and output to OUT_CSV.
 
     This includes doing filters as well as deduplicating on vjcdr3s.
     """
     df = apply_all_filters(read_adaptive_tsv(in_tsv), fail_fraction_remaining=fail_fraction_remaining)
+
+    if sample:
+        if len(df) < sample:
+            raise Exception(
+                f"We only have {len(df)} sequences so we can't sample {sample} of them without replacement. Failing.")
+        df = df.sample(n=sample)
+        click.echo(f"Sampling: {sample} rows")
+
     df.to_csv(out_csv, index=False)
 
 
