@@ -1,5 +1,9 @@
 """
-Execute commands locally or via sbatch.
+Execute commands locally or via sbatch/singularity.
+
+For sbatch/singularity, we write out two files. First, the "run" script that
+actually runs the specified command, and second, the "batch" script that gets
+submitted to the cluster.
 """
 
 import click
@@ -9,13 +13,12 @@ import time
 import uuid
 import re
 
-sbatch_prelude = """#!/bin/bash
+batch_prelude = """#!/bin/bash
 #SBATCH -c 4
 #SBATCH -N 1
-#SBATCH --exclusive
 #SBATCH -p campus
-#SBATCH -o job_%j.out
-#SBATCH -e job_%j.err
+#SBATCH -o {execution_dir}/job_cpu_%j.out
+#SBATCH -e {execution_dir}/job_cpu_%j.err
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=matsen@fredhutch.org
 # The following are commented out because of a conda issue https://github.com/ContinuumIO/anaconda-issues/issues/8838
@@ -24,7 +27,15 @@ sbatch_prelude = """#!/bin/bash
 hostname
 source activate py36
 cd {dir}
+module load Singularity/2.5.2-GCC-5.4.0-2.26
 """.format(dir=os.getcwd())
+
+
+run_prelude = """#!/bin/bash
+set -eux
+
+pip install /home/matsen/re/vampire
+"""
 
 
 def translate_paths(in_paths, dest_dir):
@@ -92,15 +103,22 @@ def cli(clusters, script_prefix, sources, targets, to_execute_f_string):
     # Put the batch script in the directory of the first target.
     execution_dir = os.path.dirname(targets.split()[0])
     sentinel_path = os.path.join(execution_dir, 'sentinel.' + job_uuid)
-    script_name = f'{script_prefix}.{job_uuid}.sh'
-    with open(os.path.join(execution_dir, script_name), 'w') as fp:
-        fp.write(sbatch_prelude)
+    run_path = os.path.join(execution_dir, f'{script_prefix}.{job_uuid}.run.sh')
+    with open(run_path, 'w') as fp:
+        fp.write(run_prelude)
         for instruction in cp_instructions:
             fp.write(instruction + '\n')
         fp.write(to_execute_f_string.format(sources=sources, targets=targets) + '\n')
         fp.write(f'touch {sentinel_path}\n')
+    # This chmod appears necessary for `singularity run` to work.
+    os.chmod(run_path, 0o755)
 
-    out = subprocess.check_output(f'cd {execution_dir}; sbatch --clusters {clusters} {script_name}', shell=True)
+    batch_path = os.path.join(execution_dir, f'{script_prefix}.{job_uuid}.batch.sh')
+    with open(batch_path, 'w') as fp:
+        fp.write(batch_prelude.format(execution_dir=execution_dir))
+        fp.write("singularity exec docker://matsen/vampire " + run_path + '\n')
+
+    out = subprocess.check_output(f'sbatch --clusters {clusters} {batch_path}', shell=True)
     click.echo(out.decode('UTF-8'))
 
     # Wait until the sentinel file appears, then clean up.
