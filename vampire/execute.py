@@ -16,7 +16,8 @@ import re
 batch_prelude = """#!/bin/bash
 #SBATCH -c 4
 #SBATCH -N 1
-#SBATCH -p campus
+#SBATCH -p gpu
+#SBATCH --gres=gpu:V100-SXM2-16GB:1
 #SBATCH -o {execution_dir}/job_cpu_%j.out
 #SBATCH -e {execution_dir}/job_cpu_%j.err
 #SBATCH --mail-type=ALL
@@ -28,13 +29,14 @@ hostname
 source activate py36
 cd {dir}
 module load Singularity/2.5.2-GCC-5.4.0-2.26
+export SINGULARITYENV_PATH=$PATH
 """.format(dir=os.getcwd())
 
 
 run_prelude = """#!/bin/bash
 set -eux
 
-pip install /home/matsen/re/vampire
+pip install -e /home/matsen/re/vampire
 """
 
 
@@ -116,7 +118,7 @@ def cli(clusters, script_prefix, sources, targets, to_execute_f_string):
     batch_path = os.path.join(execution_dir, f'{script_prefix}.{job_uuid}.batch.sh')
     with open(batch_path, 'w') as fp:
         fp.write(batch_prelude.format(execution_dir=execution_dir))
-        fp.write("singularity exec docker://matsen/vampire " + run_path + '\n')
+        fp.write("singularity exec --nv docker://matsen/vampire:latest-gpu-py3 " + run_path + '\n')
 
     out = subprocess.check_output(f'sbatch --clusters {clusters} {batch_path}', shell=True)
     click.echo(out.decode('UTF-8'))
