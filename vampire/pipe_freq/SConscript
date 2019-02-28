@@ -13,7 +13,8 @@ from common import cluster_execution_string
 sc.Import('env')
 localenv = env.Clone()  # noqa
 
-DATA = '../_ignore/mini.subject_subsampled.csv.bz2'
+# DATA = '../_ignore/mini.subject_subsampled.csv.bz2'
+DATA = '/home/matsen/re/vampire-analysis-1/output/hansen666.subject_subsampled.csv.bz2'
 
 
 def base_dict():
@@ -57,7 +58,7 @@ def split_rows(env, outdir, c):
         DATA,
         f"python3 util.py split-rows --train-size {c['training_row_fraction']} $SOURCE $TARGETS")
 
-# nest.add('column', 'count,count_in_5,count_in_10,count_in_100'.split(','))
+nest.add('column', 'count,count_in_5,count_in_10,count_in_100'.split(','))
 
 @nest.add_target_with_env(localenv)
 def training_sequences(env, outdir, c):

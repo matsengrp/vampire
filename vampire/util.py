@@ -361,7 +361,10 @@ def sample_data_set(include_freq, n_to_sample, min_count, column, in_csv,
         seq_counts = np.array(df[colname])
         if apply_min_count:
             seq_counts[seq_counts < min_count] = 0
-        return seq_counts / sum(seq_counts)
+        count_sum = sum(seq_counts)
+        if count_sum == 0:
+            raise ZeroDivisionError
+        return seq_counts / count_sum
 
     sampled_seq_v = np.random.multinomial(n_to_sample, seq_freqs_of_colname(column, apply_min_count=True))
 
