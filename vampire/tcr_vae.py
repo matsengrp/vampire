@@ -166,14 +166,18 @@ class TCRVAE:
             # we get the number of specifed warmup epochs.
             # Below we apply the fact that right now the only thing in self.callbacks is the BetaSchedule callback.
             # If other callbacks appear we'll need to change this.
-            tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir + '_warmup_' + str(pretrain_idx))
+            if tensorboard_log_dir:
+                callbacks = [keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir + '_warmup_' + str(pretrain_idx))]
+            else:
+                callbacks = []
+            callbacks += self.callbacks  # <- here re callbacks
             history = self.vae.fit(
                 x=data,  # y=X for a VAE.
                 y=data,
                 epochs=1 + self.params['warmup_period'],
                 batch_size=self.params['batch_size'],
                 validation_split=validation_split,
-                callbacks=[tensorboard] + self.callbacks,  # <- here re callbacks
+                callbacks=callbacks,
                 verbose=2)
             new_val_loss = history.history['val_loss'][-1]
             if new_val_loss < best_val_loss:
@@ -185,14 +189,16 @@ class TCRVAE:
         checkpoint = ModelCheckpoint(best_weights_fname, save_best_only=True, mode='min')
         early_stopping = EarlyStopping(
             monitor=self.params['stopping_monitor'], patience=self.params['patience'], mode='min')
-        tensorboard = keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir)
+        callbacks = [checkpoint, early_stopping]
+        if tensorboard_log_dir:
+            callbacks += [keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir)]
         self.vae.fit(
             x=data,  # y=X for a VAE.
             y=data,
             epochs=self.params['epochs'],
             batch_size=self.params['batch_size'],
             validation_split=validation_split,
-            callbacks=[checkpoint, early_stopping, tensorboard],
+            callbacks=callbacks,
             verbose=2)
 
     def evaluate(self, x_df, per_sequence=False):
@@ -330,11 +336,12 @@ def cli():
 
 
 @cli.command()
+@click.option('--tensorboard', is_flag=True, help="Record logs for TensorBoard.")
 @click.argument('params_json', type=click.Path(exists=True))
 @click.argument('train_csv', type=click.File('r'))
 @click.argument('best_weights_fname', type=click.Path(writable=True))
 @click.argument('diagnostics_fname', type=click.Path(writable=True))
-def train(params_json, train_csv, best_weights_fname, diagnostics_fname):
+def train(tensorboard, params_json, train_csv, best_weights_fname, diagnostics_fname):
     """
     Train the model described in params_json using data in train_csv, saving
     the best weights to best_weights_fname and some diagnostics to
@@ -351,7 +358,10 @@ def train(params_json, train_csv, best_weights_fname, diagnostics_fname):
     min_data_size = validation_split_multiplier * v.params['batch_size']
 
     train_data = v.get_data(train_csv, min_data_size)
-    tensorboard_log_dir = os.path.join(os.path.dirname(best_weights_fname), 'logs')
+    if tensorboard:
+        tensorboard_log_dir = os.path.join(os.path.dirname(best_weights_fname), 'logs')
+    else:
+        tensorboard_log_dir = None
     v.fit(train_data, validation_split, best_weights_fname, tensorboard_log_dir)
     v.vae.save_weights(best_weights_fname, overwrite=True)
 

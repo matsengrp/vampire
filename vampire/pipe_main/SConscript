@@ -157,26 +157,18 @@ nest.add('test_data', lambda c: c['test_paths'], label_func=common.strip_dirpath
 
 
 @nest.add_target_with_env(localenv)
-def preprocess_test(env, outdir, c):
-    """
-    Run the preprocess_adaptive.py script on the test data.
-    """
-    in_path = c['test_data']
-    return env.Command(
-        join(outdir, common.strip_dirpath_extn(in_path) + '.for-test.csv'),
-        in_path,
-        'python3 preprocess_adaptive.py $SOURCE $TARGET')[0]
-
-
-@nest.add_target_with_env(localenv)
 def test_head(env, outdir, c):
-    test_head_path = join(outdir, common.strip_dirpath_extn(c['preprocess_test'])+'.head.csv')
+    """
+    Run the preprocess_adaptive.py script on the test data, which incorporates
+    downsampling.
+    """
+    test_head_path = join(outdir, common.strip_dirpath_extn(c['test_data'])+'.head.csv')
     # Remove a pesky and meaningless leading `./` that was making trouble later.
     c['test_set_agg'].append(re.sub('^\./', '', test_head_path))
     return env.Command(
         test_head_path,
-        c['preprocess_test'],
-        f"head -n {c['nseqs']+1} $SOURCE > $TARGET")[0]
+        c['test_data'],
+        f"python3 preprocess_adaptive.py --sample {c['nseqs']} $SOURCE $TARGET")[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -198,21 +190,23 @@ nest.add('train_data', lambda c: [c['train_tsv_path']], label_func=common.strip_
 summarized_agg_names.append('train_data')
 
 
+# Nest: training set size
+# numerical_nest_add('train_size', np.floor(common.logspace(5000, 500000, 6)))
+# summarized_agg_names.append('train_size')
+
+
 @nest.add_target_with_env(localenv)
 def preprocess(env, outdir, c):
     """
     Run the preprocess_adaptive.py script on the training/validation data.
     """
     in_path = c['train_data']
+    # We take enough for training and validation_head, with nseqs to spare.
+    n_to_sample = c['train_size'] + 2 * c['nseqs']
     return env.Command(
         join(outdir, 'train.processed.csv'),
         in_path,
-        'python3 preprocess_adaptive.py $SOURCE $TARGET')[0]
-
-
-# Nest: training set size
-# numerical_nest_add('train_size', np.floor(common.logspace(5000, 500000, 6)))
-# summarized_agg_names.append('train_size')
+        f'python3 preprocess_adaptive.py --sample {n_to_sample} $SOURCE $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv, 'split')
