@@ -1,0 +1,44 @@
+"""
+In this SConscript we do frequency estimation benchmarking.
+"""
+
+from os.path import join
+
+import nestly
+import nestly.scons as ns
+import SCons.Script as sc
+
+sc.Import('env')
+localenv = env.Clone()  # noqa
+
+DATA = '../_ignore/mini.subject_subsampled.csv.bz2'
+
+
+def base_dict():
+    """
+    The dictionary that will be shared by all the nests.
+    """
+
+    d = {
+        'train_size': 0.5,
+    }
+
+    return d
+
+
+# ### Nests and targets ###
+
+nest = ns.SConsWrap(nestly.Nest(base_dict=base_dict()), dest_dir='_output', alias_environment=localenv)
+
+
+@nest.add_target_with_env(localenv, 'split')
+@ns.name_targets
+def split_rows(env, outdir, c):
+    """
+    Split the sequences into training and validation.
+    """
+    prefix = 'subject_subsampled'
+    return 'training', 'validation', env.Command(
+        [join(outdir, prefix+'.training.csv.bz2'), join(outdir, prefix+'.test.csv.bz2')],
+        DATA,
+        f"python3 util.py split-rows --train-size {c['train_size']} $SOURCE $TARGETS")

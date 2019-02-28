@@ -287,8 +287,7 @@ def split_repertoires(out_prefix, test_size, test_regex, limit_each, in_paths):
             df = preprocess_adaptive.read_adaptive_tsv(path)
             if limit_each:
                 if limit_each > len(df):
-                    raise ValueError(
-                        f"--limit-each parameter is greater than the number of sequences in {path}")
+                    raise ValueError(f"--limit-each parameter is greater than the number of sequences in {path}")
                 df = df.sample(n=limit_each)
             if header_written:
                 df.to_csv(fp, sep='\t', header=False, index=False)
@@ -299,6 +298,18 @@ def split_repertoires(out_prefix, test_size, test_regex, limit_each, in_paths):
 
     click.echo("Check JSON file with")
     click.echo(f"cat {json_path}")
+
+
+@cli.command()
+@click.option('--train-size', default=0.5, help="Data fraction to use for train.")
+@click.argument('in_csv')
+@click.argument('out_train_csv_bz2')
+@click.argument('out_test_csv_bz2')
+def split_rows(train_size, in_csv, out_train_csv_bz2, out_test_csv_bz2):
+    df = pd.read_csv(in_csv, index_col=0)
+    (df1, df2) = train_test_split(df, train_size=train_size)
+    df1.to_csv(out_train_csv_bz2, compression='bz2')
+    df2.to_csv(out_test_csv_bz2, compression='bz2')
 
 
 if __name__ == '__main__':
