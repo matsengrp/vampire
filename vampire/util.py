@@ -331,7 +331,7 @@ def to_fake_csv(seq_list, path, include_freq=False):
 @click.option(
     '--include-freq',
     is_flag=True,
-    help="Include frequencies as a column in CSV.")
+    help="Include frequencies from 'count' as a column in CSV.")
 @click.option(
     '--n-to-sample', default=100, help="Number of sequences to sample.")
 @click.option(
@@ -350,18 +350,24 @@ def sample_data_set(include_freq, n_to_sample, min_count, column, in_csv,
     """
     Sample sequences according to the counts given in the specified column and
     then output in a CSV file.
+
+    Note that reported frequencies in --include-freq are from the 'count'
+    column by design, irrespective of the --column argument.
     """
     df = pd.read_csv(in_csv, index_col=0)
 
     # This is the total number of occurrences of each sequence in selected_m.
-    seq_counts = np.array(df[column])
-    seq_counts[seq_counts < min_count] = 0
-    seq_freqs = seq_counts / sum(seq_counts)
-    sampled_seq_v = np.random.multinomial(n_to_sample, seq_freqs)
+    def seq_freqs_of_colname(colname, apply_min_count=False):
+        seq_counts = np.array(df[colname])
+        if apply_min_count:
+            seq_counts[seq_counts < min_count] = 0
+        return seq_counts / sum(seq_counts)
+
+    sampled_seq_v = np.random.multinomial(n_to_sample, seq_freqs_of_colname(column, apply_min_count=True))
 
     if include_freq:
         df.reset_index(inplace=True)
-        out_vect = df['index'] + ',' + seq_freqs.astype('str')
+        out_vect = df['index'] + ',' + seq_freqs_of_colname('count').astype('str')
     else:
         out_vect = df.index
 

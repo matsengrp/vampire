@@ -31,7 +31,7 @@ def base_dict():
     else:
         d = {
             'training_row_fraction': 0.5,
-            'nn_training_set_size': 200000,
+            'nn_training_set_size': 100000,
             'evaluation_size': 10000,
             'model_params': 'basic_params.json',
         }
@@ -57,6 +57,7 @@ def split_rows(env, outdir, c):
         DATA,
         f"python3 util.py split-rows --train-size {c['training_row_fraction']} $SOURCE $TARGETS")
 
+# nest.add('column', 'count,count_in_5,count_in_10,count_in_100'.split(','))
 
 @nest.add_target_with_env(localenv)
 def training_sequences(env, outdir, c):
@@ -66,7 +67,7 @@ def training_sequences(env, outdir, c):
     return env.Command(
         join(outdir, 'training-sequences.csv'),
         c['split']['train'],
-        f"python util.py sample-data-set --n-to-sample {c['nn_training_set_size']} $SOURCE $TARGET")
+        f"python util.py sample-data-set --column {c['column']} --n-to-sample {c['nn_training_set_size']} $SOURCE $TARGET")
 
 
 @nest.add_target_with_env(localenv, 'trained')
@@ -86,7 +87,7 @@ def evaluation_sequences_from_train(env, outdir, c):
     return env.Command(
         join(outdir, 'evaluation-sequences-from-train.csv'),
         c['split']['train'],
-        f"python util.py sample-data-set --n-to-sample {c['evaluation_size']} $SOURCE $TARGET")
+        f"python util.py sample-data-set --column {c['column']} --n-to-sample {c['evaluation_size']} --include-freq $SOURCE $TARGET")
 
 
 @nest.add_target_with_env(localenv)
@@ -97,7 +98,7 @@ def evaluation_sequences_from_test(env, outdir, c):
     return env.Command(
         join(outdir, 'evaluation-sequences-from-test.csv'),
         c['split']['test'],
-        f"python util.py sample-data-set --n-to-sample {c['evaluation_size']} $SOURCE $TARGET")
+        f"python util.py sample-data-set --column {c['column']} --n-to-sample {c['evaluation_size']} --include-freq $SOURCE $TARGET")
 
 
 @nest.add_target_with_env(localenv)
