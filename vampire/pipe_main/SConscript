@@ -12,6 +12,8 @@ import SCons.Script as sc
 import common
 import tcr_vae
 
+from common import cluster_execution_string
+
 sc.Import('env')
 localenv = env.Clone()  # noqa
 
@@ -72,24 +74,6 @@ def base_dict():
             d[k] = v
 
     return d
-
-
-def cluster_execution_string(command, prefix_position=1):
-    """
-    Apply this to your scons command string* to get it to execute on the
-    cluster.
-
-    *The command string but where $SOURCES is replaced by {sources} and
-    $TARGETS is replaced by {targets}.
-
-    prefix_position: from where in the command we should get the name of
-    the script. 0 for scripts and 1 for subcommands.
-    """
-    script_prefix = common.strip_extn(command.split()[prefix_position])
-    return (
-        f"python3 execute.py --clusters='{localenv['clusters']}' --script-prefix={script_prefix} "
-        f"'$SOURCES' '$TARGETS' '{command}'"
-    )
 
 
 def numerical_nest_add(nest_name, number_list):
@@ -178,7 +162,7 @@ def test_pgen(env, outdir, c):
     return env.Command(
         test_pgen_path,
         c['test_head'],
-        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
+        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', localenv, 0))[0]
 
 
 nest.pop('test_data')
@@ -284,7 +268,7 @@ def validation_pgen(env, outdir, c):
     return env.Command(
         join(outdir, common.strip_dirpath_extn(c['validation_head'])+'.pgen.csv'),
         c['validation_head'],
-        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
+        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', localenv, 0))[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -374,7 +358,7 @@ def olga_generated_pgen(env, outdir, c):
     return env.Command(
         join(outdir, 'olga-generated.pgen.tsv'),
         c['olga_generated'],
-        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
+        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', localenv, 0))[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -419,7 +403,7 @@ def trained(env, outdir, c):
     return 'weights', 'diagnostics', env.Command(
         [join(outdir, 'best_weights.h5'), join(outdir, 'diagnostics.csv')],
         [c['model_params'], c['split']['training']],
-        cluster_execution_string('tcr-vae train {sources} {targets}'))
+        cluster_execution_string('tcr-vae train {sources} {targets}', localenv))
 
 
 # @nest.add_target_with_env(localenv)
@@ -438,7 +422,7 @@ def training_pvae(env, outdir, c):
     return env.Command(
         join(outdir, common.strip_dirpath_extn(c['split']['training'])+'.head.pvae.csv'),
         [c['model_params'], c['trained']['weights'], c['split']['training']],
-        cluster_execution_string(pvae_call + ' {sources} {targets}'))[0]
+        cluster_execution_string(pvae_call + ' {sources} {targets}', localenv))[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -446,7 +430,7 @@ def validation_pvae(env, outdir, c):
     return env.Command(
         join(outdir, common.strip_dirpath_extn(c['validation_head'])+'.pvae.csv'),
         [c['model_params'], c['trained']['weights'], c['validation_head']],
-        cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
+        cluster_execution_string('tcr-vae pvae {sources} {targets}', localenv))[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -462,7 +446,7 @@ def vae_generated_pgen(env, outdir, c):
     return env.Command(
         join(outdir, 'vae-generated.pgen.tsv'),
         c['vae_generated'],
-        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', 0))[0]
+        cluster_execution_string('adaptive-pgen.sh {sources} {targets}', localenv, 0))[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -478,7 +462,7 @@ def vae_generated_pvae(env, outdir, c):
     return env.Command(
         join(outdir, 'vae-generated.pvae.csv'),
         [c['model_params'], c['trained']['weights'], c['vae_generated']],
-        cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
+        cluster_execution_string('tcr-vae pvae {sources} {targets}', localenv))[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -486,7 +470,7 @@ def olga_generated_pvae(env, outdir, c):
     return env.Command(
         join(outdir, 'olga-generated.pvae.csv'),
         [c['model_params'], c['trained']['weights'], c['olga_generated']],
-        cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
+        cluster_execution_string('tcr-vae pvae {sources} {targets}', localenv))[0]
 
 
 # Nest: evaluation on the test sets.
@@ -518,7 +502,7 @@ def test_pvae(env, outdir, c):
     return env.Command(
         join(outdir, 'test.pvae.csv'),
         [c['model_params'], c['trained']['weights'], c['test_set']],
-        cluster_execution_string('tcr-vae pvae {sources} {targets}'))[0]
+        cluster_execution_string('tcr-vae pvae {sources} {targets}', localenv))[0]
 
 
 @nest.add_target_with_env(localenv)

@@ -11,9 +11,10 @@ import shutil
 import sys
 
 import click
-import vampire.common as common
 import numpy as np
 import pandas as pd
+
+import vampire.common as common
 
 from vampire import preprocess_adaptive
 from vampire.gene_name_conversion import convert_gene_names
@@ -310,6 +311,67 @@ def split_rows(train_size, in_csv, out_train_csv_bz2, out_test_csv_bz2):
     (df1, df2) = train_test_split(df, train_size=train_size)
     df1.to_csv(out_train_csv_bz2, compression='bz2')
     df2.to_csv(out_test_csv_bz2, compression='bz2')
+
+
+def to_fake_csv(seq_list, path, include_freq=False):
+    """
+    Write a list of our favorite triples to a file.
+    """
+    with open(path, 'w') as fp:
+        if include_freq:
+            fp.write('amino_acid,v_gene,j_gene,frequency\n')
+        else:
+            fp.write('amino_acid,v_gene,j_gene\n')
+
+        for line in seq_list:
+            fp.write(line + '\n')
+
+
+@cli.command()
+@click.option(
+    '--include-freq',
+    is_flag=True,
+    help="Include frequencies as a column in CSV.")
+@click.option(
+    '--n-to-sample', default=100, help="Number of sequences to sample.")
+@click.option(
+    '--min-count',
+    default=5,
+    help="Only include sequences that are found at least this number of times."
+)
+@click.option(
+    '--column',
+    default='count',
+    help="Counts column to use for sampling probabilities.")
+@click.argument('in_csv')
+@click.argument('out_csv')
+def sample_data_set(include_freq, n_to_sample, min_count, column, in_csv,
+                    out_csv):
+    """
+    Sample sequences according to the counts given in the specified column and
+    then output in a CSV file.
+    """
+    df = pd.read_csv(in_csv, index_col=0)
+
+    # This is the total number of occurrences of each sequence in selected_m.
+    seq_counts = np.array(df[column])
+    seq_counts[seq_counts < min_count] = 0
+    seq_freqs = seq_counts / sum(seq_counts)
+    sampled_seq_v = np.random.multinomial(n_to_sample, seq_freqs)
+
+    if include_freq:
+        df.reset_index(inplace=True)
+        out_vect = df['index'] + ',' + seq_freqs.astype('str')
+    else:
+        out_vect = df.index
+
+    # In order to get the correct count, we take those that appear once or
+    # more, then those twice or more, etc, until we exceed the maximum entry.
+    sampled_seqs = []
+    for i in range(np.max(sampled_seq_v)):
+        sampled_seqs += list(out_vect[sampled_seq_v > i])
+
+    to_fake_csv(sampled_seqs, out_csv, include_freq)
 
 
 if __name__ == '__main__':
