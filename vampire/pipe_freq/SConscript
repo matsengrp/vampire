@@ -48,6 +48,7 @@ def base_dict():
 nest = ns.SConsWrap(nestly.Nest(base_dict=base_dict()), dest_dir='_output', alias_environment=localenv)
 
 summarized_agg_names = []
+nest.add_aggregate('merged_agg', list)
 
 @nest.add_target_with_env(localenv, 'split')
 @ns.name_targets
@@ -192,16 +193,38 @@ def get_idx(c):
 
 @nest.add_target_with_env(localenv)
 def merged_ps_train(env, outdir, c):
+    merged = join(outdir, 'merged_ps_train.csv')
+    c['merged_agg'].append(merged)
     return env.Command(
-        join(outdir, 'merged_ps_train.csv'),
+        merged,
         [c['evaluation_sequences_from_train'], c['pvae_train'], c['ppost_train']],
-        f'python3 util.py merge-ps --idx "{get_idx(c)}" --idx-name "{idx_name}" $SOURCES $TARGET')[0]
+        f'python3 util.py merge-ps --idx "{get_idx(c)};train" --idx-name "{idx_name};split" $SOURCES $TARGET')[0]
 
 
 @nest.add_target_with_env(localenv)
-def merged_ps_train(env, outdir, c):
+def merged_ps_test(env, outdir, c):
+    merged = join(outdir, 'merged_ps_test.csv')
+    c['merged_agg'].append(merged)
     return env.Command(
-        join(outdir, 'merged_ps_test.csv'),
-        [c['evaluation_sequences_from_train'], c['pvae_train'], c['ppost_train']],
-        f'python3 util.py merge-ps --idx "{get_idx(c)}" --idx-name "{idx_name}" $SOURCES $TARGET')[0]
+        merged,
+        [c['evaluation_sequences_from_test'], c['pvae_test'], c['ppost_test']],
+        f'python3 util.py merge-ps --idx "{get_idx(c)};test" --idx-name "{idx_name};split" $SOURCES $TARGET')[0]
+
+# Pop all the way back to the very beginning for a complete summary.
+nest.pop(summarized_agg_names[0])
+
+@nest.add_target_with_env(localenv)
+def merged_agg_target(env, outdir, c):
+    return env.Command(
+        join(outdir, 'merged.agg.csv'),
+        c['merged_agg'],
+        'python3 util.py fancystack --out $TARGET $SOURCES')[0]
+
+
+@nest.add_target_with_env(localenv)
+def merged_agg_target_bz2(env, outdir, c):
+    return env.Command(
+        str(c['merged_agg_target'])+'.bz2',
+        c['merged_agg_target'],
+        'bzip2 $SOURCE')[0]
 
