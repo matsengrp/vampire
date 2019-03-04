@@ -319,7 +319,7 @@ def to_fake_csv(seq_list, path, include_freq=False):
     """
     with open(path, 'w') as fp:
         if include_freq:
-            fp.write('amino_acid,v_gene,j_gene,frequency\n')
+            fp.write('amino_acid,v_gene,j_gene,count,frequency\n')
         else:
             fp.write('amino_acid,v_gene,j_gene\n')
 
@@ -336,7 +336,8 @@ def to_fake_csv(seq_list, path, include_freq=False):
     '--n-to-sample', default=100, help="Number of sequences to sample.")
 @click.option(
     '--min-count',
-    default=5,
+    default=4,
+    show_default=True,
     help="Only include sequences that are found at least this number of times."
 )
 @click.option(
@@ -370,7 +371,7 @@ def sample_data_set(include_freq, n_to_sample, min_count, column, in_csv,
 
     if include_freq:
         df.reset_index(inplace=True)
-        out_vect = df['index'] + ',' + seq_freqs_of_colname('count').astype('str')
+        out_vect = df['index'] + ',' + df['count'].astype('str') + ',' + seq_freqs_of_colname('count').astype('str')
     else:
         out_vect = df.index
 

@@ -2,11 +2,15 @@
 In this SConscript we do frequency estimation benchmarking.
 """
 
+import json
+
 from os.path import join
 
 import nestly
 import nestly.scons as ns
 import SCons.Script as sc
+
+import tcr_vae
 
 from common import cluster_execution_string
 
@@ -15,6 +19,20 @@ localenv = env.Clone()  # noqa
 
 # DATA = '../_ignore/mini.subject_subsampled.csv.bz2'
 DATA = '/home/matsen/re/vampire-analysis-1/output/hansen666.subject_subsampled.csv.bz2'
+
+
+def default_params_by_mode():
+    """
+    Mini mode doesn't train for long.
+    """
+    params = tcr_vae.TCRVAE.default_params()
+
+    if localenv['mode'] == 'mini':
+        params['pretrains'] = 2
+        params['warmup_period'] = 3
+        params['epochs'] = 10
+
+    return params
 
 
 def base_dict():
@@ -27,14 +45,12 @@ def base_dict():
             'training_row_fraction': 0.5,
             'nn_training_set_size': 2000,
             'evaluation_size': 100,
-            'model_params': 'mini_params.json',
         }
     else:
         d = {
             'training_row_fraction': 0.5,
-            'nn_training_set_size': 100000,
+            'nn_training_set_size': 200000,
             'evaluation_size': 10000,
-            'model_params': 'basic_params.json',
         }
 
     # Shared options
@@ -64,7 +80,7 @@ def split_rows(env, outdir, c):
         f"python3 util.py split-rows --train-size {c['training_row_fraction']} $SOURCE $TARGETS")
 
 summarized_agg_names.append('column')
-nest.add('column', 'count,count_in_5,count_in_10,count_in_100'.split(','))
+nest.add('column', 'count,count_in_16,count_in_32,count_in_64,count_in_128,count_in_256'.split(','))
 
 @nest.add_target_with_env(localenv)
 def training_sequences(env, outdir, c):
@@ -75,6 +91,26 @@ def training_sequences(env, outdir, c):
         join(outdir, 'training-sequences.csv'),
         c['split']['train'],
         f"python util.py sample-data-set --column {c['column']} --n-to-sample {c['nn_training_set_size']} $SOURCE $TARGET")
+
+nest.add('model', ['basic', 'count_match'])
+summarized_agg_names.append('model')
+
+@nest.add_target_with_env(localenv)
+def model_params(env, outdir, c):
+    """
+    Write out a file with parameters from which we can build our VAE.
+    """
+
+    # Copy over any relevant parameters from c into the params dictionary.
+    params = default_params_by_mode()
+    for k, v in c.items():
+        if k in params:
+            params[k] = v
+
+    return env.Command(
+        join(outdir, 'model_params.json'),
+        [],
+        f"echo '{json.dumps(params)}' > $TARGET")[0]
 
 
 @nest.add_target_with_env(localenv, 'trained')
