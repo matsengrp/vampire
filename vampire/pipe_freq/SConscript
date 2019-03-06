@@ -66,6 +66,7 @@ nest = ns.SConsWrap(nestly.Nest(base_dict=base_dict()), dest_dir='_output', alia
 summarized_agg_names = []
 nest.add_aggregate('merged_agg', list)
 
+
 @nest.add_target_with_env(localenv, 'split')
 @ns.name_targets
 def split_rows(env, outdir, c):
@@ -79,8 +80,10 @@ def split_rows(env, outdir, c):
         DATA,
         f"python3 util.py split-rows --train-size {c['training_row_fraction']} $SOURCE $TARGETS")
 
+
 summarized_agg_names.append('column')
 nest.add('column', 'count,count_in_16,count_in_32,count_in_64,count_in_128,count_in_256'.split(','))
+
 
 @nest.add_target_with_env(localenv)
 def training_sequences(env, outdir, c):
@@ -90,10 +93,13 @@ def training_sequences(env, outdir, c):
     return env.Command(
         join(outdir, 'training-sequences.csv'),
         c['split']['train'],
-        f"python util.py sample-data-set --column {c['column']} --n-to-sample {c['nn_training_set_size']} $SOURCE $TARGET")
+        f"python util.py sample-data-set --column {c['column']} "
+        f"--n-to-sample {c['nn_training_set_size']} $SOURCE $TARGET")
+
 
 nest.add('model', ['basic', 'count_match'])
 summarized_agg_names.append('model')
+
 
 @nest.add_target_with_env(localenv)
 def model_params(env, outdir, c):
@@ -133,7 +139,6 @@ def training_olga_tsv(env, outdir, c):
         'gene-name-conversion adaptive2olga $SOURCE $TARGET')[0]
 
 
-
 @nest.add_target_with_env(localenv)
 def q_csv(env, outdir, c):
     """
@@ -145,7 +150,6 @@ def q_csv(env, outdir, c):
         f"python3 thymic_Q.py q --max-q {c['max_q']} data/thymic-Q/model-lvj-frequency.csv.bz2 $SOURCE $TARGET")[0]
 
 
-
 @nest.add_target_with_env(localenv)
 def evaluation_sequences_from_train(env, outdir, c):
     """
@@ -154,7 +158,8 @@ def evaluation_sequences_from_train(env, outdir, c):
     return env.Command(
         join(outdir, 'evaluation-sequences-from-train.csv'),
         c['split']['train'],
-        f"python util.py sample-data-set --column {c['column']} --n-to-sample {c['evaluation_size']} --include-freq $SOURCE $TARGET")
+        f"python util.py sample-data-set --column {c['column']} "
+        f"--n-to-sample {c['evaluation_size']} --include-freq $SOURCE $TARGET")
 
 
 @nest.add_target_with_env(localenv)
@@ -165,7 +170,8 @@ def evaluation_sequences_from_test(env, outdir, c):
     return env.Command(
         join(outdir, 'evaluation-sequences-from-test.csv'),
         c['split']['test'],
-        f"python util.py sample-data-set --column {c['column']} --n-to-sample {c['evaluation_size']} --include-freq $SOURCE $TARGET")
+        f"python util.py sample-data-set --column {c['column']} --n-to-sample {c['evaluation_size']} "
+        f"--include-freq $SOURCE $TARGET")
 
 
 @nest.add_target_with_env(localenv)
@@ -246,8 +252,10 @@ def merged_ps_test(env, outdir, c):
         [c['evaluation_sequences_from_test'], c['pvae_test'], c['ppost_test']],
         f'python3 util.py merge-ps --idx "{get_idx(c)};test" --idx-name "{idx_name};split" $SOURCES $TARGET')[0]
 
+
 # Pop all the way back to the very beginning for a complete summary.
 nest.pop(summarized_agg_names[0])
+
 
 @nest.add_target_with_env(localenv)
 def merged_agg_target(env, outdir, c):
@@ -263,4 +271,3 @@ def merged_agg_target_bz2(env, outdir, c):
         str(c['merged_agg_target'])+'.bz2',
         c['merged_agg_target'],
         'bzip2 $SOURCE')[0]
-
