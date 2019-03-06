@@ -331,14 +331,14 @@ def to_fake_csv(seq_list, path, include_freq=False):
 @click.option(
     '--include-freq',
     is_flag=True,
-    help="Include frequencies from 'count' as a column in CSV.")
+    help="Include frequencies from 'count' and the counts themselves as columns in CSV.")
 @click.option(
     '--n-to-sample', default=100, help="Number of sequences to sample.")
 @click.option(
     '--min-count',
     default=4,
     show_default=True,
-    help="Only include sequences that are found at least this number of times."
+    help="Only include sequences that are found in at least this number of subjects."
 )
 @click.option(
     '--column',

@@ -1,1 +1,0 @@
-{"model": "basic", "latent_dim": 20, "dense_nodes": 25, "aa_embedding_dim": 21, "v_gene_embedding_dim": 30, "j_gene_embedding_dim": 13, "beta": 0.75, "max_cdr3_len": 30, "n_aas": 21, "n_v_genes": 59, "n_j_genes": 13, "stopping_monitor": "val_loss", "batch_size": 100, "pretrains": 1, "warmup_period": 2, "epochs": 5, "patience": 20}
