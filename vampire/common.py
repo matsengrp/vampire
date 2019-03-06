@@ -124,3 +124,21 @@ def cols_of_df(df):
     numpy arrays.
     """
     return [np.stack(col.values) for _, col in df.items()]
+
+
+def cluster_execution_string(command, localenv, prefix_position=1):
+    """
+    Apply this to your scons command string* to get it to execute on the
+    cluster.
+
+    *The command string but where $SOURCES is replaced by {sources} and
+    $TARGETS is replaced by {targets}.
+
+    prefix_position: from where in the command we should get the name of
+    the script. 0 for scripts and 1 for subcommands.
+    """
+    script_prefix = strip_extn(command.split()[prefix_position])
+    return (
+        f"python3 execute.py --clusters='{localenv['clusters']}' --script-prefix={script_prefix} "
+        f"'$SOURCES' '$TARGETS' '{command}'"
+    )

@@ -11,9 +11,10 @@ import shutil
 import sys
 
 import click
-import vampire.common as common
 import numpy as np
 import pandas as pd
+
+import vampire.common as common
 
 from vampire import preprocess_adaptive
 from vampire.gene_name_conversion import convert_gene_names
@@ -287,8 +288,7 @@ def split_repertoires(out_prefix, test_size, test_regex, limit_each, in_paths):
             df = preprocess_adaptive.read_adaptive_tsv(path)
             if limit_each:
                 if limit_each > len(df):
-                    raise ValueError(
-                        f"--limit-each parameter is greater than the number of sequences in {path}")
+                    raise ValueError(f"--limit-each parameter is greater than the number of sequences in {path}")
                 df = df.sample(n=limit_each)
             if header_written:
                 df.to_csv(fp, sep='\t', header=False, index=False)
@@ -299,6 +299,89 @@ def split_repertoires(out_prefix, test_size, test_regex, limit_each, in_paths):
 
     click.echo("Check JSON file with")
     click.echo(f"cat {json_path}")
+
+
+@cli.command()
+@click.option('--train-size', default=0.5, help="Data fraction to use for train.")
+@click.argument('in_csv')
+@click.argument('out_train_csv_bz2')
+@click.argument('out_test_csv_bz2')
+def split_rows(train_size, in_csv, out_train_csv_bz2, out_test_csv_bz2):
+    df = pd.read_csv(in_csv, index_col=0)
+    (df1, df2) = train_test_split(df, train_size=train_size)
+    df1.to_csv(out_train_csv_bz2, compression='bz2')
+    df2.to_csv(out_test_csv_bz2, compression='bz2')
+
+
+def to_fake_csv(seq_list, path, include_freq=False):
+    """
+    Write a list of our favorite triples to a file.
+    """
+    with open(path, 'w') as fp:
+        if include_freq:
+            fp.write('amino_acid,v_gene,j_gene,count,frequency\n')
+        else:
+            fp.write('amino_acid,v_gene,j_gene\n')
+
+        for line in seq_list:
+            fp.write(line + '\n')
+
+
+@cli.command()
+@click.option(
+    '--include-freq',
+    is_flag=True,
+    help="Include frequencies from 'count' and the counts themselves as columns in CSV.")
+@click.option(
+    '--n-to-sample', default=100, help="Number of sequences to sample.")
+@click.option(
+    '--min-count',
+    default=4,
+    show_default=True,
+    help="Only include sequences that are found in at least this number of subjects."
+)
+@click.option(
+    '--column',
+    default='count',
+    help="Counts column to use for sampling probabilities.")
+@click.argument('in_csv')
+@click.argument('out_csv')
+def sample_data_set(include_freq, n_to_sample, min_count, column, in_csv,
+                    out_csv):
+    """
+    Sample sequences according to the counts given in the specified column and
+    then output in a CSV file.
+
+    Note that reported frequencies in --include-freq are from the 'count'
+    column by design, irrespective of the --column argument.
+    """
+    df = pd.read_csv(in_csv, index_col=0)
+
+    # This is the total number of occurrences of each sequence in selected_m.
+    def seq_freqs_of_colname(colname, apply_min_count=False):
+        seq_counts = np.array(df[colname])
+        if apply_min_count:
+            seq_counts[seq_counts < min_count] = 0
+        count_sum = sum(seq_counts)
+        if count_sum == 0:
+            raise ZeroDivisionError
+        return seq_counts / count_sum
+
+    sampled_seq_v = np.random.multinomial(n_to_sample, seq_freqs_of_colname(column, apply_min_count=True))
+
+    if include_freq:
+        df.reset_index(inplace=True)
+        out_vect = df['index'] + ',' + df['count'].astype('str') + ',' + seq_freqs_of_colname('count').astype('str')
+    else:
+        out_vect = df.index
+
+    # In order to get the correct count, we take those that appear once or
+    # more, then those twice or more, etc, until we exceed the maximum entry.
+    sampled_seqs = []
+    for i in range(np.max(sampled_seq_v)):
+        sampled_seqs += list(out_vect[sampled_seq_v > i])
+
+    to_fake_csv(sampled_seqs, out_csv, include_freq)
 
 
 if __name__ == '__main__':
