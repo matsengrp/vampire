@@ -159,7 +159,7 @@ def evaluation_sequences_from_train(env, outdir, c):
         join(outdir, 'evaluation-sequences-from-train.csv'),
         c['split']['train'],
         f"python util.py sample-data-set --column {c['column']} "
-        f"--n-to-sample {c['evaluation_size']} --include-freq $SOURCE $TARGET")
+        f"--n-to-sample {c['evaluation_size']} --include-freq $SOURCE $TARGET")[0]
 
 
 @nest.add_target_with_env(localenv)
@@ -171,7 +171,7 @@ def evaluation_sequences_from_test(env, outdir, c):
         join(outdir, 'evaluation-sequences-from-test.csv'),
         c['split']['test'],
         f"python util.py sample-data-set --column {c['column']} --n-to-sample {c['evaluation_size']} "
-        f"--include-freq $SOURCE $TARGET")
+        f"--include-freq $SOURCE $TARGET")[0]
 
 
 @nest.add_target_with_env(localenv)
