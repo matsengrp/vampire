@@ -7,7 +7,8 @@ Install dependencies:
 ```
 conda create -n py36 python=3.6
 source activate py36
-conda install -y biopython click flake8 keras matplotlib pandas parallel pydot pytest scikit-learn scons seaborn yapf
+conda install -y biopython click flake8 keras matplotlib pandas pydot pytest scikit-learn scons seaborn yapf
+conda install -y -c conda-forge parallel
 pip install exrex delegator.py nestly versioneer
 ```
 Then:

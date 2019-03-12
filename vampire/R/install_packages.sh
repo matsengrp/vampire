@@ -4,7 +4,7 @@ set -eu
 conda install -y glpk libgfortran libgfortran-ng libiconv r-base
 # I had to add the following line to get svglite to install. You may not need it.
 conda install -y -c conda-forge r-gdtools
-for PACKAGE in alakazam ape argparse cowplot CollessLike data.table devtools dplyr entropy HDMD jsonlite magrittr pegas Peptides pROC RecordLinkage shazam seqinr stringdist stringr svglite testthat textmineR yaml
+for PACKAGE in alakazam ape argparse cowplot CollessLike data.table devtools dplyr entropy HDMD jsonlite latex2exp magrittr pegas Peptides pROC RecordLinkage shazam seqinr stringdist stringr svglite testthat textmineR yaml
 do
     R --vanilla --slave -e "if(!require($PACKAGE)){install.packages('$PACKAGE', '$CONDA_PREFIX/lib/R/library', repos='https://cloud.r-project.org')}"
 done
