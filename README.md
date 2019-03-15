@@ -66,6 +66,15 @@ This will make a JSON file pointing to various paths.
 You can run the pipeline on those data by running `scons --data=/path/to/your/file.json`.
 
 
+## Documentation
+
+The documentation consists of
+
+1. the example pipeline, which will give you commands to try
+2. command line help, which is accessed for example via `tcr-vae --help` and `tcr-vae train --help`
+3. lots of docstrings in the source code
+
+
 ## Limitations
 
 * Our preprocessing scripts exclude TCRBJ2-5, which Adaptive annotates badly, and TCRBJ2-7, which appears to be problematic for OLGA.
