@@ -100,8 +100,9 @@ def build(params):
     v_gene_output_l = Dense(params['n_v_genes'], activation='softmax', name='v_gene_output')
     j_gene_output_l = Dense(params['n_j_genes'], activation='softmax', name='j_gene_output')
 
-    v_gene_output = v_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_l([z_mean, z_log_var]))))
-    j_gene_output = j_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_l([z_mean, z_log_var]))))
+    post_decoder = decoder_dense_2_l(decoder_dense_1_l(z_l([z_mean, z_log_var])))
+    v_gene_output = v_gene_output_l(post_decoder)
+    j_gene_output = j_gene_output_l(post_decoder)
 
     # Here's where we incorporate germline amino acid sequences into the output.
     germline_cdr3_tensors = conversion.adaptive_aa_encoding_tensors(params['max_cdr3_len'])
@@ -123,8 +124,9 @@ def build(params):
 
     # Define the decoder components separately so we can have it as its own model.
     z_mean_input = Input(shape=(params['latent_dim'], ))
-    decoder_v_gene_output = v_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))
-    decoder_j_gene_output = j_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))
+    decoder_post_decoder = decoder_dense_2_l(decoder_dense_1_l(z_mean_input))
+    decoder_v_gene_output = v_gene_output_l(decoder_post_decoder)
+    decoder_j_gene_output = j_gene_output_l(decoder_post_decoder)
     decoder_v_germline_cdr3 = v_germline_cdr3_l(decoder_v_gene_output)
     decoder_j_germline_cdr3 = j_germline_cdr3_l(decoder_j_gene_output)
     decoder_cdr3_output = cdr3_output_l(
