@@ -17,7 +17,6 @@ from common import cluster_execution_string
 sc.Import('env')
 localenv = env.Clone()  # noqa
 
-# DATA = '../_ignore/mini.subject_subsampled.csv.bz2'
 DATA = '/home/matsen/re/vampire-analysis-1/output/hansen666.subject_subsampled.csv.bz2'
 
 

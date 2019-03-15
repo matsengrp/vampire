@@ -2,6 +2,8 @@
 
 ## Install
 
+First [install conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
+
 ### vampire itself
 Install dependencies:
 ```
@@ -56,12 +58,18 @@ There is a script `vampire/R/install_packages.sh` which should serve as a starti
 ## Running
 
 Get a list of example commands by running `scons -n` inside the `vampire` directory.
-Execute the commands by running `scons`.
+Execute the commands on example data by running `scons`.
+You can run these in parallel using the `-j` flag for scons.
+
+In order to run on your own data, use `python util.py split-repertoires` to split your repertoires into train and test.
+This will make a JSON file pointing to various paths.
+You can run the pipeline on those data by running `scons --data=/path/to/your/file.json`.
 
 
 ## Limitations
 
 * Our preprocessing scripts exclude TCRBJ2-5, which Adaptive annotates badly, and TCRBJ2-7, which appears to be problematic for OLGA.
+* We use Adaptive gene names and sequences, but will extend to more flexible TCR gene sets in the future.
 
 
 ## Contributors
