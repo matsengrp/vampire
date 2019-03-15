@@ -46,7 +46,7 @@ def logprob_of_obs_vect(probs, obs):
 
     Kristian implemented this as
         np.sum(np.log(np.matmul(probs, obs.T).diagonal()))
-    but that's equivalent but harder to follow.
+    which is equivalent but harder to follow.
     """
     # Here axis=1 means sum across columns (the sum will be empty except for
     # the single nonzero entry).
@@ -425,8 +425,8 @@ def per_seq_loss(params_json, model_weights, in_csv, out_csv):
 @click.argument('out_csv', type=click.File('w'))
 def pvae(limit_input_to, nsamples, params_json, model_weights, test_csv, out_csv):
     """
-    Estimate the log generation probability of the sequences in test_csv on the
-    VAE determined by params_json and model_weights.
+    Estimate Pvae of the sequences in test_csv for the VAE determined by
+    params_json and model_weights.
 
     Output the results into out_csv, one estimate per line.
     """
@@ -464,12 +464,12 @@ def pvae(limit_input_to, nsamples, params_json, model_weights, test_csv, out_csv
 @click.argument('out_csv', type=click.File('w'))
 def tcregex_pvae(nsamples, batch_size, max_iters, track_last, tol, params_json, model_weights, in_tcregex, out_csv):
     """
-    Calculate P_VAE for a TCR specified by a tcregex.
+    Calculate Pvae for a TCR specified by a tcregex.
 
     A tcregex is specified as a string triple "v_gene,j_gene,cdr3_tcregex" where
     cdr3_tcregex uses regex symbols appropriate for amino acids.
 
-    Keep on sampling sequences from the tcregex until the P_VAE converges.
+    We keep on sampling sequences from the tcregex until the P_VAE converges.
 
     Note that the default number of importance samples is less than that for
     the usual pvae, because we're averaging out stochasticity anyhow.
