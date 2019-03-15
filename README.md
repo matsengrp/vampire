@@ -2,12 +2,15 @@
 
 ## Install
 
+First [install conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
+
 ### vampire itself
 Install dependencies:
 ```
 conda create -n py36 python=3.6
 source activate py36
-conda install -y biopython click flake8 keras matplotlib pandas parallel pydot pytest scikit-learn scons seaborn yapf
+conda install -y biopython click flake8 keras matplotlib pandas pydot pytest scikit-learn scons seaborn yapf
+conda install -y -c conda-forge parallel
 pip install exrex delegator.py nestly versioneer
 ```
 Then:
@@ -55,12 +58,27 @@ There is a script `vampire/R/install_packages.sh` which should serve as a starti
 ## Running
 
 Get a list of example commands by running `scons -n` inside the `vampire` directory.
-Execute the commands by running `scons`.
+Execute the commands on example data by running `scons`.
+You can run these in parallel using the `-j` flag for scons.
+
+In order to run on your own data, use `python util.py split-repertoires` to split your repertoires into train and test.
+This will make a JSON file pointing to various paths.
+You can run the pipeline on those data by running `scons --data=/path/to/your/file.json`.
+
+
+## Documentation
+
+The documentation consists of
+
+1. the example pipeline, which will give you commands to try
+2. command line help, which is accessed for example via `tcr-vae --help` and `tcr-vae train --help`
+3. lots of docstrings in the source code
 
 
 ## Limitations
 
 * Our preprocessing scripts exclude TCRBJ2-5, which Adaptive annotates badly, and TCRBJ2-7, which appears to be problematic for OLGA.
+* We use Adaptive gene names and sequences, but will extend to more flexible TCR gene sets in the future.
 
 
 ## Contributors
