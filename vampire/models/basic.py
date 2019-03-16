@@ -69,22 +69,22 @@ def build(params):
     decoder_dense_1_l = Dense(params['dense_nodes'], activation='elu', name='decoder_dense_1')
     decoder_dense_2_l = Dense(params['dense_nodes'], activation='elu', name='decoder_dense_2')
     cdr3_post_dense_flat_l = Dense(np.array(cdr3_input_shape).prod(), activation='linear', name='cdr3_post_dense_flat')
-    cdr3_post_dense_l = Reshape(cdr3_input_shape, name='cdr3_post_dense')
+    cdr3_post_dense_reshape_l = Reshape(cdr3_input_shape, name='cdr3_post_dense')
     cdr3_output_l = Activation(activation='softmax', name='cdr3_output')
     v_gene_output_l = Dense(params['n_v_genes'], activation='softmax', name='v_gene_output')
     j_gene_output_l = Dense(params['n_j_genes'], activation='softmax', name='j_gene_output')
 
-    cdr3_output = cdr3_output_l(
-        cdr3_post_dense_l(cdr3_post_dense_flat_l(decoder_dense_2_l(decoder_dense_1_l(z_l([z_mean, z_log_var]))))))
-    v_gene_output = v_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_l([z_mean, z_log_var]))))
-    j_gene_output = j_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_l([z_mean, z_log_var]))))
+    post_decoder = decoder_dense_2_l(decoder_dense_1_l(z_l([z_mean, z_log_var])))
+    cdr3_output = cdr3_output_l(cdr3_post_dense_reshape_l(cdr3_post_dense_flat_l(post_decoder)))
+    v_gene_output = v_gene_output_l(post_decoder)
+    j_gene_output = j_gene_output_l(post_decoder)
 
     # Define the decoder components separately so we can have it as its own model.
     z_mean_input = Input(shape=(params['latent_dim'], ))
-    decoder_cdr3_output = cdr3_output_l(
-        cdr3_post_dense_l(cdr3_post_dense_flat_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))))
-    decoder_v_gene_output = v_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))
-    decoder_j_gene_output = j_gene_output_l(decoder_dense_2_l(decoder_dense_1_l(z_mean_input)))
+    decoder_post_decoder = decoder_dense_2_l(decoder_dense_1_l(z_mean_input))
+    decoder_cdr3_output = cdr3_output_l(cdr3_post_dense_reshape_l(cdr3_post_dense_flat_l(decoder_post_decoder)))
+    decoder_v_gene_output = v_gene_output_l(decoder_post_decoder)
+    decoder_j_gene_output = j_gene_output_l(decoder_post_decoder)
 
     encoder = Model([cdr3_input, v_gene_input, j_gene_input], [z_mean, z_log_var])
     decoder = Model(z_mean_input, [decoder_cdr3_output, decoder_v_gene_output, decoder_j_gene_output])
