@@ -22,7 +22,7 @@ sbatch_prelude = """#!/bin/bash
 # set -eu
 # set -o pipefail
 hostname
-source activate py36
+conda activate py36
 cd {dir}
 """.format(dir=os.getcwd())
 
