@@ -1,0 +1,8 @@
+FROM continuumio/anaconda3
+
+RUN conda update -y conda
+COPY . /vampire
+WORKDIR /vampire
+RUN /opt/conda/bin/conda env create -f install/environment.yml
+RUN /opt/conda/bin/conda env update -n vampire -f install/environment-R.yml
+RUN /opt/conda/bin/conda env create -f install/environment-olga.yml

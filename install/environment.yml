@@ -1,0 +1,25 @@
+name: vampire
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.6
+  - biopython
+  - click
+  - flake8
+  - keras
+  - matplotlib
+  - pandas
+  - parallel
+  - pip
+  - pydot
+  - pytest
+  - scikit-learn
+  - scons
+  - seaborn
+  - yapf
+  - pip:
+    - delegator.py
+    - exrex
+    - nestly
+    - versioneer

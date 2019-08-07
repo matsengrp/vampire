@@ -1,0 +1,9 @@
+name: olga
+channels:
+  - defaults
+dependencies:
+  - python=2.7
+  - numpy
+  - pip
+  - pip:
+    - olga
