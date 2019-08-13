@@ -1,0 +1,12 @@
+name: vampire
+channels:
+  - anaconda
+  - conda-forge
+dependencies:
+  - glpk
+  - libgfortran
+  - libgfortran-ng
+  - libiconv
+  - r-base
+  - r-git2r
+  - r-gdtools

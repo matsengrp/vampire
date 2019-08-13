@@ -8,7 +8,7 @@ setup(
     url='https://github.com/matsengrp/vampire',
     author='Matsen group',
     author_email='ematsen@gmail.com',
-    packages=['vampire'],
+    packages=['vampire', 'vampire.models'],
     package_data={'vampire': ['data/*']},
     scripts=glob.glob('vampire/scripts/*.sh'),
     entry_points={
