@@ -77,7 +77,7 @@ Please get in touch if anything isn't clear.
 ## Contributors
 
 * Original version (immortalized in the [`original` branch](https://github.com/matsengrp/vampire/tree/original)) by Kristian Davidsen.
-* Pedantic rewrite, sconsery, extension, additional models, and comparative evaluation by Frederick ``Erick'' Matsen.
+* Pedantic rewrite, sconsery, extension, additional models, and comparative evaluation by Frederick "Erick" Matsen.
 * Contributions from Phil Bradley, Will DeWitt, Jean Feng, Eli Harkins, and Branden Olson.
 
 
