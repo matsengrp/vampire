@@ -37,26 +37,35 @@ If you want to use sumrep, see `install/test.sh` for additional install instruct
 
 ## Running
 
-To get started, check out the demonstration script in `vampire/demo/demo.sh`.
+To get started, check out the demonstration script in `vampire/demo/demo.sh`, which will show you how models and training parameters are specified.
 
-Get a list of example commands by running `scons -n` inside the `vampire` directory.
+For a more complex collection of commands, try running `scons -n` inside the `vampire` directory.
 Execute the commands on example data by running `scons`.
 You can run these in parallel using the `-j` flag for scons.
-Note that this pipeline runs on a very small data set just for example purposes-- it does not give an appropriately trained model.
+Note that this pipeline runs on a very small data set (mixing training and testing) just for example purposes-- it does not give an appropriately trained model.
 
 In order to run on your own data, use `python util.py split-repertoires` to split your repertoires into train and test.
 This will make a JSON file pointing to various paths.
 You can run the pipeline on those data by running `scons --data=/path/to/your/file.json`.
+
+Note that the frequency estimation pipeline is run using `scons --pipe=pipe_freq`.
+
+### cluster execution
+
+The pipeline includes a `--clusters` flag that, if used, will attempt to submit jobs to a [SLURM](https://slurm.schedmd.com/overview.html) cluster with the specified name.
+If you have access to a cluster with a different cluster scheduler, I hope you can modify the `execute.py` script accordingly.
 
 
 ## Documentation
 
 The documentation consists of
 
-0. `
+0. the demonstration script
 1. the example pipeline, which will give you commands to try
 2. command line help, which is accessed for example via `tcr-vae --help` and `tcr-vae train --help`
 3. lots of docstrings in the source code
+
+Please get in touch if anything isn't clear.
 
 
 ## Limitations
