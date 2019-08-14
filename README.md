@@ -1,6 +1,11 @@
 # vampire
 
+[![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/matsengrp/vampire.svg)](https://cloud.docker.com/u/matsengrp/repository/docker/matsengrp/vampire/general) &nbsp;
+[![Travis CI status](https://travis-ci.org/matsengrp/vampire.svg?branch=master)](https://travis-ci.org/matsengrp/vampire)
+
 This is a package to fit and test variational autoencoder (VAE) models for T cell receptor sequences.
+
+It is described in the paper _Deep generative models for T cell receptor protein sequences_ by Kristian Davidsen, Branden J Olson, William S DeWitt III, Jean Feng, Elias Harkins, Philip Bradley and Frederick A Matsen IV.
 
 
 ## Install
@@ -28,7 +33,7 @@ After setting up your environment (if you followed the steps above you'll need t
 
 in the repository.
 
-See `install/test.sh` for additional instructions needed to install and validate sumrep.
+If you want to use sumrep, see `install/test.sh` for additional install instructions.
 
 
 ## Running
