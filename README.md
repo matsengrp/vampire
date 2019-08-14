@@ -28,6 +28,8 @@ After setting up your environment (if you followed the steps above you'll need t
 
 in the repository.
 
+See `install/test.sh` for additional instructions needed to install and validate sumrep.
+
 
 ## Running
 
