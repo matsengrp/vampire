@@ -12,5 +12,7 @@ tcr-vae train model_params.json _output_demo/train.processed.csv _output_demo/be
 # Calculate some P_VAE values.
 tcr-vae pvae model_params.json _output_demo/best_weights.h5 _output_demo/100.csv _output_demo/100.pvae.csv
 
-# Generate some sequences from our VAE. Note that these sequences are going to look silly and repetitive because this is a very badly trained VAE: not enough sequence data and insufficient training time.
+# Generate some sequences from our VAE. Note that these sequences are going to
+# look silly and repetitive because this is a very badly trained VAE: not
+# enough sequence data and insufficient training time.
 tcr-vae generate --nseqs 100 model_params.json _output_demo/best_weights.h5 _output_demo/vae-generated.csv
