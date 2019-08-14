@@ -12,11 +12,10 @@ It is described in the paper _Deep generative models for T cell receptor protein
 
 ### Setting up your environment
 
-[Conda](https://conda.io) is required to run the pipeline, although not strictly a dependency for fitting and using VAEs using this code.
-To follow these instructions, [install Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
+[Conda](https://conda.io) is the canonical way to install and is required run the pipeline, although not strictly a dependency for fitting and using VAEs using this code.
+These instructions will assume that you have [installed Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
-The install process for the entire pipeline is documented in the Dockerfile.
-
+If you want to see the entire installation process, see the Dockerfile.
 However, if you simply want to train and use vampire models, you can only execute
 
     conda env create -f install/environment.yml
@@ -25,9 +24,9 @@ This will create a `vampire` Conda environment which you can use.
 If you also want to be able to compare repertoires using [sumrep](https://github.com/matsengrp/sumrep/) you will need to run the R installation steps in the Dockerfile.
 We also provide an `install/environment-olga.yml` to make a Conda environment in which one can run [OLGA](https://github.com/zsethna/OLGA/).
 
-### Installation
+### vampire installation
 
-After setting up your environment (if you followed the steps above you'll need to `conda activate vampire`),  and run
+After setting up your environment (if you followed the steps above you'll need to `conda activate vampire`), and run
 
     pip install .
 
@@ -37,6 +36,8 @@ If you want to use sumrep, see `install/test.sh` for additional install instruct
 
 
 ## Running
+
+To get started, check out the demonstration script in `vampire/demo/demo.sh`.
 
 Get a list of example commands by running `scons -n` inside the `vampire` directory.
 Execute the commands on example data by running `scons`.
@@ -52,6 +53,7 @@ You can run the pipeline on those data by running `scons --data=/path/to/your/fi
 
 The documentation consists of
 
+0. `
 1. the example pipeline, which will give you commands to try
 2. command line help, which is accessed for example via `tcr-vae --help` and `tcr-vae train --help`
 3. lots of docstrings in the source code
