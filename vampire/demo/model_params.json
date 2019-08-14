@@ -1,4 +1,5 @@
 {
+    "comment": "This is how models and their training parameters are specified. See tcr_vae.py for reference. Note that the training parameters are quite insufficient for training a real model.",
     "model": "basic",
     "latent_dim": 20,
     "dense_nodes": 75,
