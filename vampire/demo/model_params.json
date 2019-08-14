@@ -1,0 +1,20 @@
+{
+    "comment": "This is how models and their training parameters are specified. See tcr_vae.py for reference. Note that the training parameters are quite insufficient for training a real model.",
+    "model": "basic",
+    "latent_dim": 20,
+    "dense_nodes": 75,
+    "aa_embedding_dim": 21,
+    "v_gene_embedding_dim": 30,
+    "j_gene_embedding_dim": 13,
+    "beta": 0.75,
+    "max_cdr3_len": 30,
+    "n_aas": 21,
+    "n_v_genes": 59,
+    "n_j_genes": 13,
+    "stopping_monitor": "val_loss",
+    "batch_size": 100,
+    "pretrains": 2,
+    "warmup_period": 3,
+    "epochs": 10,
+    "patience": 20
+}

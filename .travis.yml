@@ -1,0 +1,7 @@
+language: minimal
+
+services:
+  - docker
+
+script:
+  - docker run -v ${PWD}:/vampire -t matsengrp/vampire sh install/test.sh

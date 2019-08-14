@@ -1,18 +1,34 @@
 # vampire
 
+This is a package to fit and test variational autoencoder (VAE) models for T cell receptor sequences.
+
+
 ## Install
 
-First [install conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
+### Setting up your environment
+
+[Conda](https://conda.io) is required to run the pipeline, although not strictly a dependency for fitting and using VAEs using this code.
+To follow these instructions, [install Conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html).
 
 The install process for the entire pipeline is documented in the Dockerfile.
 
-However, if you simply want to train and use vampire models, you only need to execute
+However, if you simply want to train and use vampire models, you can only execute
 
     conda env create -f install/environment.yml
 
-This will create a `vampire` conda environment which you can use.
+This will create a `vampire` Conda environment which you can use.
 If you also want to be able to compare repertoires using [sumrep](https://github.com/matsengrp/sumrep/) you will need to run the R installation steps in the Dockerfile.
-We also provide an `install/environment-olga.yml` to make a conda environment in which one can run [OLGA](https://github.com/zsethna/OLGA/).
+We also provide an `install/environment-olga.yml` to make a Conda environment in which one can run [OLGA](https://github.com/zsethna/OLGA/).
+
+### Installation
+
+After setting up your environment (if you followed the steps above you'll need to `conda activate vampire`),  and run
+
+    pip install .
+
+in the repository.
+
+See `install/test.sh` for additional instructions needed to install and validate sumrep.
 
 
 ## Running

@@ -1,4 +1,4 @@
-FROM continuumio/anaconda3
+FROM continuumio/anaconda3:2019.07
 
 RUN /opt/conda/bin/conda update -y conda
 RUN mkdir /vampire
