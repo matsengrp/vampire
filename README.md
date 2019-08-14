@@ -20,7 +20,7 @@ However, if you simply want to train and use vampire models, you can only execut
 
     conda env create -f install/environment.yml
 
-This will create a `vampire` Conda environment which you can use.
+This will create a `vampire` Conda environment which you can enter and use for running vampire.
 If you also want to be able to compare repertoires using [sumrep](https://github.com/matsengrp/sumrep/) you will need to run the R installation steps in the Dockerfile.
 We also provide an `install/environment-olga.yml` to make a Conda environment in which one can run [OLGA](https://github.com/zsethna/OLGA/).
 
@@ -39,7 +39,7 @@ If you want to use sumrep, see `install/test.sh` for additional install instruct
 
 To get started, check out the demonstration script in `vampire/demo/demo.sh`, which will show you how models and training parameters are specified.
 
-For a more complex collection of commands, try running `scons -n` inside the `vampire` directory.
+To run the main pipeline on sample data, try running `scons -n` inside the `vampire` directory.
 Execute the commands on example data by running `scons`.
 You can run these in parallel using the `-j` flag for scons.
 Note that this pipeline runs on a very small data set (mixing training and testing) just for example purposes-- it does not give an appropriately trained model.
@@ -50,10 +50,10 @@ You can run the pipeline on those data by running `scons --data=/path/to/your/fi
 
 Note that the frequency estimation pipeline is run using `scons --pipe=pipe_freq`.
 
-### cluster execution
+### Cluster execution
 
 The pipeline includes a `--clusters` flag that, if used, will attempt to submit jobs to a [SLURM](https://slurm.schedmd.com/overview.html) cluster with the specified name.
-If you have access to a cluster with a different cluster scheduler, I hope you can modify the `execute.py` script accordingly.
+If you have access to a cluster with a different cluster scheduler, hopefully you can modify the `execute.py` script accordingly.
 
 
 ## Documentation
@@ -61,7 +61,7 @@ If you have access to a cluster with a different cluster scheduler, I hope you c
 The documentation consists of
 
 0. the demonstration script
-1. the example pipeline, which will give you commands to try
+1. the two pipelines, which will give you commands to try
 2. command line help, which is accessed for example via `tcr-vae --help` and `tcr-vae train --help`
 3. lots of docstrings in the source code
 
@@ -77,7 +77,7 @@ Please get in touch if anything isn't clear.
 ## Contributors
 
 * Original version (immortalized in the [`original` branch](https://github.com/matsengrp/vampire/tree/original)) by Kristian Davidsen.
-* Pedantic rewrite, sconsery, extension, additional models, and comparative evaluation by Erick Matsen.
+* Pedantic rewrite, sconsery, extension, additional models, and comparative evaluation by Frederick ``Erick'' Matsen.
 * Contributions from Phil Bradley, Will DeWitt, Jean Feng, Eli Harkins, and Branden Olson.
 
 
