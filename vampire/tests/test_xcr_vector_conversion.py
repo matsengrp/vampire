@@ -68,4 +68,4 @@ def test_contiguous_match_counts_df():
 
     assert np.array_equal(result[0], np.array([4., 6.]))
     assert np.array_equal(result[1], np.array([5., 5.]))
-    assert np.array_equal(result[6], np.array([5., 0.]))
+    assert np.array_equal(result[5], np.array([5., 0.]))

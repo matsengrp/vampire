@@ -7,6 +7,9 @@ SUMREP_PATH=$(git submodule | grep sumrep | cut -d ' ' -f3); /opt/conda/bin/cond
 # Install vampire.
 /opt/conda/bin/conda run -n vampire pip install .
 
+# Run tests.
+/opt/conda/bin/conda run -n vampire pytest
+
 # Run the demo.
 cd vampire/demo
 /opt/conda/bin/conda run -n vampire sh demo.sh
