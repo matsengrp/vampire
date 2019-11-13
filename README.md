@@ -6,6 +6,7 @@
 This is a package to fit and test variational autoencoder (VAE) models for T cell receptor sequences.
 
 It is described in the paper [_Deep generative models for T cell receptor protein sequences_](https://elifesciences.org/articles/46935) by Kristian Davidsen, Branden J Olson, William S DeWitt III, Jean Feng, Elias Harkins, Philip Bradley and Frederick A Matsen IV.
+This project continues to evolve, but the version in the paper is [tagged 0.2.0](https://github.com/matsengrp/vampire/tree/0.2.0).
 
 
 ## Install
@@ -83,8 +84,7 @@ Please get in touch if anything isn't clear.
 
 ## Code styling
 
-This project uses [YAPF](https://github.com/google/yapf) for code formatting with a format defined in `setup.cfg`.
-You can easily run yapf on all the files with a call to `yapf -ir .` in the root directory.
+This project uses [Black](https://black.readthedocs.io/en/stable/) and [docformatter](https://pypi.org/project/docformatter/) for code formatting.
 
 Code also checked using [flake8](http://flake8.pycqa.org/en/latest/).
 `# noqa` comments cause lines to be ignored by flake8.

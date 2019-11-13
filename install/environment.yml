@@ -3,12 +3,8 @@ channels:
   - defaults
   - conda-forge
 dependencies:
-  - python=3.6
+  - python>=3.6
   - biopython
-  - click
-  - flake8
-  - keras
-  - matplotlib
   - pandas
   - parallel
   - pip
@@ -16,10 +12,13 @@ dependencies:
   - pytest
   - scikit-learn
   - scons
-  - seaborn
   - yapf
   - pip:
-    - delegator.py
+    - black
+    - click
+    - docformatter
     - exrex
+    - flake8
     - nestly
+    - tensorflow
     - versioneer
