@@ -26,7 +26,7 @@ def running_avg(x):
     running_avg = np.cumsum(x, axis=0)
     for i in range(x.shape[1]):
         running_avg[:, i] /= np.arange(1, len(x) + 1)
-    return (running_avg)
+    return running_avg
 
 
 def repeat_row(a, which_entry, n_repeats):
@@ -68,7 +68,7 @@ def strip_extn(in_path):
     Strips the extension.
     """
     (path, extn) = os.path.splitext(str(in_path))
-    if extn in ['.gz', '.bz2']:
+    if extn in [".gz", ".bz2"]:
         # Perhaps there is more to the suffix.
         return os.path.splitext(path)[0]
     else:
@@ -87,7 +87,7 @@ def path_split_tail(in_path):
     Give the farthest right object in a path, whether it be a directory ending
     with a `/` or a file.
     """
-    return os.path.split(in_path.rstrip('/'))[1]
+    return os.path.split(in_path.rstrip("/"))[1]
 
 
 def cjoin(path, *paths):
@@ -103,7 +103,9 @@ def read_data_csv(fname):
     """
     Read a CSV from our data path.
     """
-    return pd.read_csv(pkg_resources.resource_filename('vampire', os.path.join('data', fname)))
+    return pd.read_csv(
+        pkg_resources.resource_filename("vampire", os.path.join("data", fname))
+    )
 
 
 # ### Misc functions ###

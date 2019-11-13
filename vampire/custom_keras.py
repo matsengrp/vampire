@@ -36,15 +36,20 @@ class EmbedViaMatrix(Layer):
 
     def __init__(self, embedding_dim, **kwargs):
         self.embedding_dim = embedding_dim
-        self.kernel_initializer = keras.initializers.get('uniform')
+        self.kernel_initializer = keras.initializers.get("uniform")
         super(EmbedViaMatrix, self).__init__(**kwargs)
 
     def build(self, input_shape):
         # Create a trainable weight variable for this layer.
         # The first component of input_shape is the batch size (see https://keras.io/layers/core/#dense).
         self.kernel = self.add_weight(
-            name='kernel', shape=(input_shape[2], self.embedding_dim), initializer='uniform', trainable=True)
-        super(EmbedViaMatrix, self).build(input_shape)  # Be sure to call this at the end
+            name="kernel",
+            shape=(input_shape[2], self.embedding_dim),
+            initializer="uniform",
+            trainable=True,
+        )
+        # Be sure to call this at the end
+        super(EmbedViaMatrix, self).build(input_shape)
 
     def call(self, x):
         return K.dot(x, self.kernel)
@@ -69,7 +74,8 @@ class RightTensordot(Layer):
         super(RightTensordot, self).__init__(**kwargs)
 
     def build(self, input_shape):
-        super(RightTensordot, self).build(input_shape)  # Be sure to call this at the end
+        # Be sure to call this at the end
+        super(RightTensordot, self).build(input_shape)
 
     def call(self, x):
         # Tensordotting with sums over the last `axes` indices of the first argument
@@ -111,8 +117,9 @@ class CDR3Length(Layer):
             # 20 - argmax will be >= 1 for any site that doesn't have gap in it.
             # Then we clip so it's = 1 for any site that doesn't have gap in it.
             # Note argmax with axis-=1 means over the last (amino acid) axis.
-            tf.clip_by_value(20. - tf.to_float(tf.argmax(x, axis=-1)), 0., 1.),
-            axis=1)
+            tf.clip_by_value(20.0 - tf.to_float(tf.argmax(x, axis=-1)), 0.0, 1.0),
+            axis=1,
+        )
 
     def compute_output_shape(self, input_shape):
         # Make sure we have 21 states for our amino acid space.
@@ -164,7 +171,9 @@ class ContiguousMatch(Layer):
         super(ContiguousMatch, self).__init__(**kwargs)
 
     def build(self, input_shape):
-        super(ContiguousMatch, self).build(input_shape)  # Be sure to call this at the end
+        super(ContiguousMatch, self).build(
+            input_shape
+        )  # Be sure to call this at the end
 
     def call(self, inputs):
         (x, v_germline_aa_onehot, j_germline_aa_onehot) = inputs
@@ -173,11 +182,20 @@ class ContiguousMatch(Layer):
         # then sum is to get an indicator of the germline matches of x across
         # the germline genes. The cumprod_sum then returns the number of
         # contiguous matches for the V and J gene sides.
-        return tf.stack([
-            cumprod_sum(K.sum(tf.multiply(x, v_germline_aa_onehot), axis=2), self.v_max_germline_aas),
-            cumprod_sum(K.sum(tf.multiply(x, j_germline_aa_onehot), axis=2), self.j_max_germline_aas, reverse=True)
-        ],
-                        axis=1)
+        return tf.stack(
+            [
+                cumprod_sum(
+                    K.sum(tf.multiply(x, v_germline_aa_onehot), axis=2),
+                    self.v_max_germline_aas,
+                ),
+                cumprod_sum(
+                    K.sum(tf.multiply(x, j_germline_aa_onehot), axis=2),
+                    self.j_max_germline_aas,
+                    reverse=True,
+                ),
+            ],
+            axis=1,
+        )
 
     def compute_output_shape(self, input_shape):
         # All input should be of shape (batch_size, max_cdr3_len, len(AA_LIST)).

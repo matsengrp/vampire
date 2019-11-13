@@ -56,7 +56,7 @@ def logprob_of_obs_vect(probs, obs):
 class TCRVAE:
     def __init__(self, params):
         self.params = params
-        model = importlib.import_module('vampire.models.' + params['model'])
+        model = importlib.import_module("vampire.models." + params["model"])
         # Digest the dictionary returned by model.build into self attributes.
         for submodel_name, submodel in model.build(params).items():
             setattr(self, submodel_name, submodel)
@@ -75,7 +75,7 @@ class TCRVAE:
         """
         return dict(
             # Models:
-            model='basic',
+            model="basic",
             # Model parameters.
             latent_dim=20,
             dense_nodes=75,
@@ -89,12 +89,13 @@ class TCRVAE:
             n_v_genes=len(conversion.TCRB_V_GENE_LIST),
             n_j_genes=len(conversion.TCRB_J_GENE_LIST),
             # Training parameters.
-            stopping_monitor='val_loss',
+            stopping_monitor="val_loss",
             batch_size=100,
             pretrains=10,
             warmup_period=20,
             epochs=500,
-            patience=20)
+            patience=20,
+        )
 
     @classmethod
     def default(cls):
@@ -108,7 +109,7 @@ class TCRVAE:
         """
         Build a TCRVAE from a parameter dictionary dumped to JSON.
         """
-        with open(fname, 'r') as fp:
+        with open(fname, "r") as fp:
             return cls(json.load(fp))
 
     @classmethod
@@ -120,21 +121,21 @@ class TCRVAE:
         `model_params.json` and a weights file called `best_weights.h5`. Here
         we load that information in.
         """
-        v = cls.of_json_file(os.path.join(path, 'model_params.json'))
-        v.vae.load_weights(os.path.join(path, 'best_weights.h5'))
+        v = cls.of_json_file(os.path.join(path, "model_params.json"))
+        v.vae.load_weights(os.path.join(path, "best_weights.h5"))
         return v
 
     def serialize_params(self, fname):
         """
         Dump model parameters to a file.
         """
-        with open(fname, 'w') as fp:
+        with open(fname, "w") as fp:
             json.dump(self.params, fp)
 
     def reinitialize_weights(self):
         session = K.get_session()
         for layer in self.vae.layers:
-            if hasattr(layer, 'kernel_initializer'):
+            if hasattr(layer, "kernel_initializer"):
                 layer.kernel.initializer.run(session=session)
 
     def get_data(self, fname, data_chunk_size=0):
@@ -142,16 +143,22 @@ class TCRVAE:
         Get data in the correct format from fname. If data_chunk_size is
         nonzero, trim so the data length is a multiple of data_chunk_size.
         """
-        df = pd.read_csv(fname, usecols=['amino_acid', 'v_gene', 'j_gene'])
+        df = pd.read_csv(fname, usecols=["amino_acid", "v_gene", "j_gene"])
         if data_chunk_size == 0:
             sub_df = df
         else:
             assert len(df) >= data_chunk_size
             n_to_take = len(df) - len(df) % data_chunk_size
             sub_df = df[:n_to_take]
-        return conversion.unpadded_tcrbs_to_onehot(sub_df, self.params['max_cdr3_len'])
+        return conversion.unpadded_tcrbs_to_onehot(sub_df, self.params["max_cdr3_len"])
 
-    def fit(self, x_df: pd.DataFrame, validation_split: float, best_weights_fname: str, tensorboard_log_dir: str):
+    def fit(
+        self,
+        x_df: pd.DataFrame,
+        validation_split: float,
+        best_weights_fname: str,
+        tensorboard_log_dir: str,
+    ):
         """
         Fit the vae with warmup and early stopping.
         """
@@ -160,46 +167,57 @@ class TCRVAE:
         best_val_loss = np.inf
 
         # We pretrain a given number of times and take the best run for the full train.
-        for pretrain_idx in range(self.params['pretrains']):
+        for pretrain_idx in range(self.params["pretrains"]):
             self.reinitialize_weights()
             # In our first fitting phase we don't apply EarlyStopping so that
             # we get the number of specifed warmup epochs.
             # Below we apply the fact that right now the only thing in self.callbacks is the BetaSchedule callback.
             # If other callbacks appear we'll need to change this.
             if tensorboard_log_dir:
-                callbacks = [keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir + '_warmup_' + str(pretrain_idx))]
+                callbacks = [
+                    keras.callbacks.TensorBoard(
+                        log_dir=tensorboard_log_dir + "_warmup_" + str(pretrain_idx)
+                    )
+                ]
             else:
                 callbacks = []
             callbacks += self.callbacks  # <- here re callbacks
             history = self.vae.fit(
                 x=data,  # y=X for a VAE.
                 y=data,
-                epochs=1 + self.params['warmup_period'],
-                batch_size=self.params['batch_size'],
+                epochs=1 + self.params["warmup_period"],
+                batch_size=self.params["batch_size"],
                 validation_split=validation_split,
                 callbacks=callbacks,
-                verbose=2)
-            new_val_loss = history.history['val_loss'][-1]
+                verbose=2,
+            )
+            new_val_loss = history.history["val_loss"][-1]
             if new_val_loss < best_val_loss:
                 best_val_loss = new_val_loss
                 self.vae.save_weights(best_weights_fname, overwrite=True)
 
         self.vae.load_weights(best_weights_fname)
 
-        checkpoint = ModelCheckpoint(best_weights_fname, save_best_only=True, mode='min')
+        checkpoint = ModelCheckpoint(
+            best_weights_fname, save_best_only=True, mode="min"
+        )
         early_stopping = EarlyStopping(
-            monitor=self.params['stopping_monitor'], patience=self.params['patience'], mode='min')
+            monitor=self.params["stopping_monitor"],
+            patience=self.params["patience"],
+            mode="min",
+        )
         callbacks = [checkpoint, early_stopping]
         if tensorboard_log_dir:
             callbacks += [keras.callbacks.TensorBoard(log_dir=tensorboard_log_dir)]
         self.vae.fit(
             x=data,  # y=X for a VAE.
             y=data,
-            epochs=self.params['epochs'],
-            batch_size=self.params['batch_size'],
+            epochs=self.params["epochs"],
+            batch_size=self.params["batch_size"],
             validation_split=validation_split,
             callbacks=callbacks,
-            verbose=2)
+            verbose=2,
+        )
 
     def evaluate(self, x_df, per_sequence=False):
         """
@@ -215,7 +233,9 @@ class TCRVAE:
         """
 
         def our_evaluate(data):
-            return self.vae.evaluate(x=data, y=data, batch_size=self.params['batch_size'], verbose=0)
+            return self.vae.evaluate(
+                x=data, y=data, batch_size=self.params["batch_size"], verbose=0
+            )
 
         data = self.prepare_data(x_df)
 
@@ -226,7 +246,12 @@ class TCRVAE:
         # data elements the minimum amount for evaluate to work (the
         # batch_size) and evaluate.
         return [
-            our_evaluate([common.repeat_row(data_elt, i, self.params['batch_size']) for data_elt in data])
+            our_evaluate(
+                [
+                    common.repeat_row(data_elt, i, self.params["batch_size"])
+                    for data_elt in data
+                ]
+            )
             for i in range(len(x_df))
         ]
 
@@ -252,14 +277,16 @@ class TCRVAE:
         """
         Generate a data frame of n_seqs sequences.
         """
-        batch_size = self.params['batch_size']
+        batch_size = self.params["batch_size"]
         # Increase the number of desired sequences as needed so it's divisible by batch_size.
         n_actual = batch_size * math.ceil(n_seqs / batch_size)
         # Sample from the latent space to generate sequences:
-        z_sample = np.random.normal(0, 1, size=(n_actual, self.params['latent_dim']))
+        z_sample = np.random.normal(0, 1, size=(n_actual, self.params["latent_dim"]))
         amino_acid_arr, v_gene_arr, j_gene_arr = self.decode(z_sample)
         # Convert back, restricting to the desired number of sequences.
-        return conversion.onehot_to_tcrbs(amino_acid_arr[:n_seqs], v_gene_arr[:n_seqs], j_gene_arr[:n_seqs])
+        return conversion.onehot_to_tcrbs(
+            amino_acid_arr[:n_seqs], v_gene_arr[:n_seqs], j_gene_arr[:n_seqs]
+        )
 
     def log_pvae_importance_sample(self, x_df, out_ps):
         """
@@ -294,7 +321,7 @@ class TCRVAE:
 
         # We're going to be getting a one-sample estimate, so we want one slot
         # in our output array for each input sequence.
-        assert (len(x_df) == len(out_ps))
+        assert len(x_df) == len(out_ps)
 
         # Get encoding of x's in the latent space.
         z_mean, z_sd = self.encode(x_df)
@@ -310,10 +337,11 @@ class TCRVAE:
 
         # Loop over observations.
         for i in range(len(x_df)):
-            log_p_x_given_z = \
-                logprob_of_obs_vect(aa_probs[i], aa_obs[i]) + \
-                np.log(np.sum(v_gene_probs[i] * v_gene_obs[i])) + \
-                np.log(np.sum(j_gene_probs[i] * j_gene_obs[i]))
+            log_p_x_given_z = (
+                logprob_of_obs_vect(aa_probs[i], aa_obs[i])
+                + np.log(np.sum(v_gene_probs[i] * v_gene_obs[i]))
+                + np.log(np.sum(j_gene_probs[i] * j_gene_obs[i]))
+            )
             # p(z)
             # Here we use that the PDF of a multivariate normal with
             # diagonal covariance is the product of the PDF of the
@@ -336,11 +364,11 @@ def cli():
 
 
 @cli.command()
-@click.option('--tensorboard', is_flag=True, help="Record logs for TensorBoard.")
-@click.argument('params_json', type=click.Path(exists=True))
-@click.argument('train_csv', type=click.File('r'))
-@click.argument('best_weights_fname', type=click.Path(writable=True))
-@click.argument('diagnostics_fname', type=click.Path(writable=True))
+@click.option("--tensorboard", is_flag=True, help="Record logs for TensorBoard.")
+@click.argument("params_json", type=click.Path(exists=True))
+@click.argument("train_csv", type=click.File("r"))
+@click.argument("best_weights_fname", type=click.Path(writable=True))
+@click.argument("diagnostics_fname", type=click.Path(writable=True))
 def train(tensorboard, params_json, train_csv, best_weights_fname, diagnostics_fname):
     """
     Train the model described in params_json using data in train_csv, saving
@@ -355,11 +383,11 @@ def train(tensorboard, params_json, train_csv, best_weights_fname, diagnostics_f
     # If this fails then we may have problems with chunks of the data being the
     # wrong length.
     assert sub_chunk_size == float(int(sub_chunk_size))
-    min_data_size = validation_split_multiplier * v.params['batch_size']
+    min_data_size = validation_split_multiplier * v.params["batch_size"]
 
     train_data = v.get_data(train_csv, min_data_size)
     if tensorboard:
-        tensorboard_log_dir = os.path.join(os.path.dirname(best_weights_fname), 'logs')
+        tensorboard_log_dir = os.path.join(os.path.dirname(best_weights_fname), "logs")
     else:
         tensorboard_log_dir = None
     v.fit(train_data, validation_split, best_weights_fname, tensorboard_log_dir)
@@ -370,18 +398,21 @@ def train(tensorboard, params_json, train_csv, best_weights_fname, diagnostics_f
     vp.vae.load_weights(best_weights_fname)
 
     df = pd.DataFrame(
-        OrderedDict([('train', v.evaluate(train_data)), ('vp_train', vp.evaluate(train_data))]),
-        index=v.vae.metrics_names)
+        OrderedDict(
+            [("train", v.evaluate(train_data)), ("vp_train", vp.evaluate(train_data))]
+        ),
+        index=v.vae.metrics_names,
+    )
     df.to_csv(diagnostics_fname)
     return v
 
 
 @cli.command()
-@click.argument('params_json', type=click.Path(exists=True))
-@click.argument('model_weights', type=click.Path(exists=True))
-@click.argument('train_csv', type=click.File('r'))
-@click.argument('validation_csv', type=click.File('r'))
-@click.argument('out_csv', type=click.File('w'))
+@click.argument("params_json", type=click.Path(exists=True))
+@click.argument("model_weights", type=click.Path(exists=True))
+@click.argument("train_csv", type=click.File("r"))
+@click.argument("validation_csv", type=click.File("r"))
+@click.argument("out_csv", type=click.File("w"))
 def loss(params_json, model_weights, train_csv, validation_csv, out_csv):
     """
     Record aggregate losses.
@@ -391,17 +422,25 @@ def loss(params_json, model_weights, train_csv, validation_csv, out_csv):
     v.vae.load_weights(model_weights)
 
     df = pd.DataFrame(
-        OrderedDict([('train', v.evaluate(v.get_data(train_csv, v.params['batch_size']))),
-                     ('validation', v.evaluate(v.get_data(validation_csv, v.params['batch_size'])))]),
-        index=v.vae.metrics_names)
+        OrderedDict(
+            [
+                ("train", v.evaluate(v.get_data(train_csv, v.params["batch_size"]))),
+                (
+                    "validation",
+                    v.evaluate(v.get_data(validation_csv, v.params["batch_size"])),
+                ),
+            ]
+        ),
+        index=v.vae.metrics_names,
+    )
     df.to_csv(out_csv)
 
 
 @cli.command()
-@click.argument('params_json', type=click.Path(exists=True))
-@click.argument('model_weights', type=click.Path(exists=True))
-@click.argument('in_csv', type=click.File('r'))
-@click.argument('out_csv', type=click.File('w'))
+@click.argument("params_json", type=click.Path(exists=True))
+@click.argument("model_weights", type=click.Path(exists=True))
+@click.argument("in_csv", type=click.File("r"))
+@click.argument("out_csv", type=click.File("w"))
 def per_seq_loss(params_json, model_weights, in_csv, out_csv):
     """
     Record per-sequence losses.
@@ -411,18 +450,31 @@ def per_seq_loss(params_json, model_weights, in_csv, out_csv):
     v.vae.load_weights(model_weights)
 
     df = pd.DataFrame(
-        np.array(v.evaluate(v.get_data(in_csv, v.params['batch_size']), per_sequence=True)),
-        columns=v.vae.metrics_names)
+        np.array(
+            v.evaluate(v.get_data(in_csv, v.params["batch_size"]), per_sequence=True)
+        ),
+        columns=v.vae.metrics_names,
+    )
     df.to_csv(out_csv, index=False)
 
 
 @cli.command()
-@click.option('--limit-input-to', default=None, type=int, help='Only use the first <argument> input sequences.')
-@click.option('--nsamples', default=500, show_default=True, help='Number of importance samples to use.')
-@click.argument('params_json', type=click.Path(exists=True))
-@click.argument('model_weights', type=click.Path(exists=True))
-@click.argument('test_csv', type=click.File('r'))
-@click.argument('out_csv', type=click.File('w'))
+@click.option(
+    "--limit-input-to",
+    default=None,
+    type=int,
+    help="Only use the first <argument> input sequences.",
+)
+@click.option(
+    "--nsamples",
+    default=500,
+    show_default=True,
+    help="Number of importance samples to use.",
+)
+@click.argument("params_json", type=click.Path(exists=True))
+@click.argument("model_weights", type=click.Path(exists=True))
+@click.argument("test_csv", type=click.File("r"))
+@click.argument("out_csv", type=click.File("w"))
 def pvae(limit_input_to, nsamples, params_json, model_weights, test_csv, out_csv):
     """
     Estimate Pvae of the sequences in test_csv for the VAE determined by
@@ -437,10 +489,12 @@ def pvae(limit_input_to, nsamples, params_json, model_weights, test_csv, out_csv
     df_x = v.get_data(test_csv)
 
     if limit_input_to is not None:
-        df_x = df_x.iloc[:int(limit_input_to)]
+        df_x = df_x.iloc[: int(limit_input_to)]
 
     log_p_x = np.zeros((nsamples, len(df_x)))
-    click.echo("Calculating pvae for {} via importance sampling...".format(test_csv.name))
+    click.echo(
+        "Calculating pvae for {} via importance sampling...".format(test_csv.name)
+    )
 
     with click.progressbar(range(nsamples)) as bar:
         for i in bar:
@@ -448,21 +502,52 @@ def pvae(limit_input_to, nsamples, params_json, model_weights, test_csv, out_csv
 
     # Calculate log of mean of numbers given in log space.
     avg = special.logsumexp(log_p_x, axis=0) - np.log(nsamples)
-    pd.DataFrame({'log_p_x': avg}).to_csv(out_csv, index=False)
+    pd.DataFrame({"log_p_x": avg}).to_csv(out_csv, index=False)
 
 
 @cli.command()
-@click.option('--nsamples', default=100, show_default=True, help="Number of importance samples to use.")
-@click.option('--batch-size', default=100, show_default=True, help="Batch size for tcregex calculation.")
-@click.option('--max-iters', default=100, show_default=True, help="The maximum number of batch iterations to use.")
 @click.option(
-    '--track-last', default=5, show_default=True, help="We want the SD of the last track-last to be less than tol.")
-@click.option('--tol', default=0.005, show_default=True, help="Tolerance for tcregex accuracy.")
-@click.argument('params_json', type=click.Path(exists=True))
-@click.argument('model_weights', type=click.Path(exists=True))
-@click.argument('in_tcregex')
-@click.argument('out_csv', type=click.File('w'))
-def tcregex_pvae(nsamples, batch_size, max_iters, track_last, tol, params_json, model_weights, in_tcregex, out_csv):
+    "--nsamples",
+    default=100,
+    show_default=True,
+    help="Number of importance samples to use.",
+)
+@click.option(
+    "--batch-size",
+    default=100,
+    show_default=True,
+    help="Batch size for tcregex calculation.",
+)
+@click.option(
+    "--max-iters",
+    default=100,
+    show_default=True,
+    help="The maximum number of batch iterations to use.",
+)
+@click.option(
+    "--track-last",
+    default=5,
+    show_default=True,
+    help="We want the SD of the last track-last to be less than tol.",
+)
+@click.option(
+    "--tol", default=0.005, show_default=True, help="Tolerance for tcregex accuracy."
+)
+@click.argument("params_json", type=click.Path(exists=True))
+@click.argument("model_weights", type=click.Path(exists=True))
+@click.argument("in_tcregex")
+@click.argument("out_csv", type=click.File("w"))
+def tcregex_pvae(
+    nsamples,
+    batch_size,
+    max_iters,
+    track_last,
+    tol,
+    params_json,
+    model_weights,
+    in_tcregex,
+    out_csv,
+):
     """
     Calculate Pvae for a TCR specified by a tcregex.
 
@@ -484,7 +569,9 @@ def tcregex_pvae(nsamples, batch_size, max_iters, track_last, tol, params_json, 
 
     for batch_i in range(max_iters):
         df_generated = tcregex.sample_tcregex(in_tcregex, batch_size)
-        df_x = conversion.unpadded_tcrbs_to_onehot(df_generated, v.params['max_cdr3_len'])
+        df_x = conversion.unpadded_tcrbs_to_onehot(
+            df_generated, v.params["max_cdr3_len"]
+        )
 
         log_p_x = np.zeros((nsamples, len(df_x)))
 
@@ -493,13 +580,17 @@ def tcregex_pvae(nsamples, batch_size, max_iters, track_last, tol, params_json, 
 
         # Calculate log of mean of numbers given in log space.
         # This calculates the per-sequence log_p_x estimate.
-        df_generated['log_p_x'] = special.logsumexp(log_p_x, axis=0) - np.log(nsamples)
+        df_generated["log_p_x"] = special.logsumexp(log_p_x, axis=0) - np.log(nsamples)
         generated_dfs.append(df_generated)
         catted = pd.concat(generated_dfs)
-        means.append(special.logsumexp(catted['log_p_x'], axis=0) - np.log(len(catted)))
+        means.append(special.logsumexp(catted["log_p_x"], axis=0) - np.log(len(catted)))
         if len(means) > track_last:
             recent_sd = np.std(np.array(means[-track_last:]))
-            click.echo("[Iter {}]\tmean: {:.6}\trecent SD: {:.5}\ttol: {}".format(batch_i, means[-1], recent_sd, tol))
+            click.echo(
+                "[Iter {}]\tmean: {:.6}\trecent SD: {:.5}\ttol: {}".format(
+                    batch_i, means[-1], recent_sd, tol
+                )
+            )
             if recent_sd < tol:
                 break
         else:
@@ -510,10 +601,16 @@ def tcregex_pvae(nsamples, batch_size, max_iters, track_last, tol, params_json, 
 
 
 @cli.command()
-@click.option('-n', '--nseqs', default=100, show_default=True, help='Number of sequences to generate.')
-@click.argument('params_json', type=click.Path(exists=True))
-@click.argument('model_weights', type=click.Path(exists=True))
-@click.argument('out_csv', type=click.File('w'))
+@click.option(
+    "-n",
+    "--nseqs",
+    default=100,
+    show_default=True,
+    help="Number of sequences to generate.",
+)
+@click.argument("params_json", type=click.Path(exists=True))
+@click.argument("model_weights", type=click.Path(exists=True))
+@click.argument("out_csv", type=click.File("w"))
 def generate(nseqs, params_json, model_weights, out_csv):
     """
     Generate some sequences and write them to a file.
@@ -523,5 +620,5 @@ def generate(nseqs, params_json, model_weights, out_csv):
     v.generate(nseqs).to_csv(out_csv, index=False)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     cli()

@@ -15,10 +15,10 @@ from vampire import gene_name_conversion as conversion
 
 # Sometimes Adaptive uses one set of column names, and sometimes another.
 HEADER_TRANSLATION_DICT = {
-    'sequenceStatus': 'frame_type',
-    'aminoAcid': 'amino_acid',
-    'vGeneName': 'v_gene',
-    'jGeneName': 'j_gene'
+    "sequenceStatus": "frame_type",
+    "aminoAcid": "amino_acid",
+    "vGeneName": "v_gene",
+    "jGeneName": "j_gene",
 }
 
 
@@ -26,7 +26,7 @@ def filter_and_drop_frame(df):
     """
     Select in-frame sequences and then drop that column.
     """
-    return df.query('frame_type == "In"').drop('frame_type', axis=1)
+    return df.query('frame_type == "In"').drop("frame_type", axis=1)
 
 
 def filter_on_cdr3_bounding_aas(df):
@@ -37,21 +37,24 @@ def filter_on_cdr3_bounding_aas(df):
     Note that according to the Adaptive docs the `amino_acid` column is indeed
     the CDR3 amino acid.
     """
-    return df[df['amino_acid'].str.contains('^C.*F$') | df['amino_acid'].str.contains('^C.*YV$')]
+    return df[
+        df["amino_acid"].str.contains("^C.*F$")
+        | df["amino_acid"].str.contains("^C.*YV$")
+    ]
 
 
 def filter_on_cdr3_length(df, max_len):
     """
     Only take sequences that have a CDR3 of at most `max_len` length.
     """
-    return df[df['amino_acid'].apply(len) <= max_len]
+    return df[df["amino_acid"].apply(len) <= max_len]
 
 
 def filter_on_TCRB(df):
     """
     Only take sequences that have a resolved TCRB gene for V and J.
     """
-    return df[df['v_gene'].str.contains('^TCRB') & df['j_gene'].str.contains('^TCRB')]
+    return df[df["v_gene"].str.contains("^TCRB") & df["j_gene"].str.contains("^TCRB")]
 
 
 def filter_on_olga(df):
@@ -64,8 +67,8 @@ def filter_on_olga(df):
     * exclude TCRBJ2-7, which appears to be problematic for OLGA.
     """
     d = conversion.adaptive_to_olga_dict()
-    del d['TRBJ']['TCRBJ02-05']
-    del d['TRBJ']['TCRBJ02-07']
+    del d["TRBJ"]["TCRBJ02-05"]
+    del d["TRBJ"]["TCRBJ02-07"]
     return conversion.filter_by_gene_names(df, d)
 
 
@@ -89,7 +92,9 @@ def apply_all_filters(df, max_len=30, fail_fraction_remaining=None):
     click.echo(f"Requiring genes that are also present in the OLGA set: {len(df)} rows")
     if fail_fraction_remaining:
         if len(df) / original_count < fail_fraction_remaining:
-            raise Exception(f"We started with {original_count} sequences and now we have {len(df)}. Failing.")
+            raise Exception(
+                f"We started with {original_count} sequences and now we have {len(df)}. Failing."
+            )
     return df.reset_index(drop=True)
 
 
@@ -106,8 +111,8 @@ def collect_vjcdr3_duplicates(df):
 
     for idx, row in df.iterrows():
         # nan means no CDR3 sequence. We don't want to include those.
-        if row['amino_acid'] is not np.nan:
-            key = '_'.join([row['v_gene'], row['j_gene'], row['amino_acid']])
+        if row["amino_acid"] is not np.nan:
+            key = "_".join([row["v_gene"], row["j_gene"], row["amino_acid"]])
             d[key].append(idx)
 
     return d
@@ -138,7 +143,7 @@ def read_adaptive_tsv(path):
     snake_case and the other that uses camelCase.
     """
 
-    test_bite = pd.read_csv(path, delimiter='\t', nrows=1)
+    test_bite = pd.read_csv(path, delimiter="\t", nrows=1)
 
     camel_columns = set(HEADER_TRANSLATION_DICT.keys())
     snake_columns = set(HEADER_TRANSLATION_DICT.values())
@@ -150,7 +155,7 @@ def read_adaptive_tsv(path):
     else:
         raise Exception("Unknown column names!")
 
-    df = pd.read_csv(path, delimiter='\t', usecols=take_columns)
+    df = pd.read_csv(path, delimiter="\t", usecols=take_columns)
     df.rename(columns=HEADER_TRANSLATION_DICT, inplace=True)
     return df
 
@@ -159,34 +164,39 @@ def read_adaptive_tsv(path):
 # Below we use Path rather than File because we don't want to have to figure
 # out whether a file is compressed or not-- Pandas will figure that out for us.
 @click.option(
-    '--fail-fraction-remaining',
+    "--fail-fraction-remaining",
     show_default=True,
     default=0.25,
-    help="Fail if the post-filtration fraction is below this number.")
+    help="Fail if the post-filtration fraction is below this number.",
+)
 @click.option(
-    '--sample',
+    "--sample",
     type=int,
-    metavar='N',
-    help="Sample N sequences without replacement from the preprocessed sequences for output.")
-@click.argument('in_tsv', type=click.Path(exists=True))
-@click.argument('out_csv', type=click.File('w'))
+    metavar="N",
+    help="Sample N sequences without replacement from the preprocessed sequences for output.",
+)
+@click.argument("in_tsv", type=click.Path(exists=True))
+@click.argument("out_csv", type=click.File("w"))
 def preprocess_tsv(fail_fraction_remaining, sample, in_tsv, out_csv):
     """
     Preprocess the Adaptive TSV at IN_TSV and output to OUT_CSV.
 
     This includes doing filters as well as deduplicating on vjcdr3s.
     """
-    df = apply_all_filters(read_adaptive_tsv(in_tsv), fail_fraction_remaining=fail_fraction_remaining)
+    df = apply_all_filters(
+        read_adaptive_tsv(in_tsv), fail_fraction_remaining=fail_fraction_remaining
+    )
 
     if sample:
         if len(df) < sample:
             raise Exception(
-                f"We only have {len(df)} sequences so we can't sample {sample} of them without replacement. Failing.")
+                f"We only have {len(df)} sequences so we can't sample {sample} of them without replacement. Failing."
+            )
         df = df.sample(n=sample)
         click.echo(f"Sampling: {sample} rows")
 
     df.to_csv(out_csv, index=False)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     preprocess_tsv()
