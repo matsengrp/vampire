@@ -5,7 +5,7 @@
 
 This is a package to fit and test variational autoencoder (VAE) models for T cell receptor sequences.
 
-It is described in the paper _Deep generative models for T cell receptor protein sequences_ by Kristian Davidsen, Branden J Olson, William S DeWitt III, Jean Feng, Elias Harkins, Philip Bradley and Frederick A Matsen IV.
+It is described in the paper [_Deep generative models for T cell receptor protein sequences_](https://elifesciences.org/articles/46935) by Kristian Davidsen, Branden J Olson, William S DeWitt III, Jean Feng, Elias Harkins, Philip Bradley and Frederick A Matsen IV.
 
 
 ## Install
