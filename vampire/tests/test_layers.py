@@ -22,7 +22,7 @@ def test_cumprod_sum():
     for k in range(a.shape[0]):
         for length in range(1, 4):
             for reverse in [True, False]:
-                with tf.Session() as sess:
+                with tf.compat.v1.Session() as sess:
                     tf_input = tf.constant(a[k, :, :], dtype=tf.float32)
                     tf_result = layers.cumprod_sum(tf_input, length, reverse=reverse)
                     tf_result = sess.run(tf_result)

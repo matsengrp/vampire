@@ -11,7 +11,7 @@ from os.path import join
 import SCons.Script as sc
 
 # Command line options
-sc.AddOption('--pipe', type='string', help="Which pipeline to run.", default='pipe_main')
+sc.AddOption('--pipe', type='string', help="Which pipeline to run.", default='pipe_simple')
 sc.AddOption('--data', type='string', help="Path to JSON describing data set. Default means use in-repo data.", default='sample_data/sample.json')
 sc.AddOption(
     '--mode', type='string', help="The mode of the run, which is up to the SConscript to define.", default='default')

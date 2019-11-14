@@ -1,8 +1,8 @@
-import keras
-from keras import backend as K
-from keras.callbacks import Callback
-from keras.engine.topology import Layer
 import tensorflow as tf
+import tensorflow.keras as keras
+from tensorflow.keras import backend as K
+from tensorflow.keras.callbacks import Callback
+from tensorflow.keras.engine.topology import Layer
 
 # ### Callbacks ###
 
@@ -68,7 +68,7 @@ class RightTensordot(Layer):
     """
 
     def __init__(self, right_np_tensor, axes, **kwargs):
-        self.right_tf_tensor = tf.convert_to_tensor(right_np_tensor, dtype=tf.float32)
+        self.right_tf_tensor = tf.convert_to_tensor(value=right_np_tensor, dtype=tf.float32)
         assert type(axes) == int
         self.axes = axes
         super(RightTensordot, self).__init__(**kwargs)
@@ -117,7 +117,7 @@ class CDR3Length(Layer):
             # 20 - argmax will be >= 1 for any site that doesn't have gap in it.
             # Then we clip so it's = 1 for any site that doesn't have gap in it.
             # Note argmax with axis-=1 means over the last (amino acid) axis.
-            tf.clip_by_value(20.0 - tf.to_float(tf.argmax(x, axis=-1)), 0.0, 1.0),
+            tf.clip_by_value(20.0 - tf.cast(tf.argmax(input=x, axis=-1), dtype=tf.float32), 0.0, 1.0),
             axis=1,
         )
 

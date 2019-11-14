@@ -1,0 +1,9 @@
+{
+   "comment": "Just for the purposes of this sample JSON run specification file, the test path overlaps with the train path. Of course, don't do this for a real analysis.",
+   "test_paths" : [
+      "sample_data/02-0249_TCRB.4000.tsv.bz2"
+   ],
+   "train_tsv_path" : "sample_data/02-0249_TCRB.4000.tsv.bz2",
+   "train_size" : 1000,
+   "nseqs" : 100
+}

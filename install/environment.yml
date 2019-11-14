@@ -16,6 +16,7 @@ dependencies:
   - pip:
     - black
     - click
+    - delegator.py
     - docformatter
     - exrex
     - flake8
