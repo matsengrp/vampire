@@ -4,10 +4,11 @@ channels:
   - conda-forge
 dependencies:
   - python=3.6
+  - h5py=2.10.0
   - biopython
   - click
   - flake8
-  - keras
+  - keras=2.2.5
   - matplotlib
   - pandas
   - parallel
