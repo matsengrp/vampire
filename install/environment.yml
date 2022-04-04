@@ -1,7 +1,7 @@
 name: vampire
 channels:
-  - defaults
   - conda-forge
+  - defaults
 dependencies:
   - python=3.6
   - h5py=2.10.0
